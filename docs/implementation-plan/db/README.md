@@ -5,6 +5,18 @@
 Thiết kế lại schema PostgreSQL để dữ liệu tài chính đúng, không bị trộn giữa
 các workspace, có thể tính lại balance và hỗ trợ bank sync.
 
+### DB-00 — Prisma và Supabase
+
+- Backend dùng Prisma ORM với PostgreSQL adapter `pg`.
+- Prisma CLI/migrations dùng `DIRECT_URL`; NestJS runtime dùng
+  `DATABASE_URL` qua Supavisor session pooler.
+- Tất cả model Finwise được map vào PostgreSQL schema `finwise`, không dùng
+  `public` làm namespace cho dữ liệu nghiệp vụ.
+- `finwise` là schema do Prisma quản lý; các schema Supabase managed như
+  `auth` và `storage` không được đưa vào Prisma datasource để tránh drift.
+- Connection strings chỉ nằm trong biến môi trường backend; không đặt vào
+  frontend hoặc log.
+
 ## Thứ tự công việc
 
 ### DB-01 — Chuẩn hóa kiểu dữ liệu

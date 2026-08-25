@@ -31,6 +31,27 @@
 $ pnpm install
 ```
 
+### Supabase and Prisma
+
+Copy `.env.example` to `.env` and replace the placeholders with connection
+strings from the Supabase dashboard. `DATABASE_URL` is used by the NestJS
+runtime; `DIRECT_URL` is used by Prisma CLI migrations.
+The sample uses a dedicated database role named `prisma`; create it and grant
+it access to schema `finwise` in Supabase, or replace that username with the
+role you already use.
+
+```bash
+pnpm db:generate
+pnpm db:validate
+pnpm db:deploy
+```
+
+For a new local schema change, use `pnpm db:migrate --name <migration_name>`
+and commit the generated migration.
+
+All Finwise tables and enums are mapped to the PostgreSQL schema `finwise`.
+Do not expose either database URL to the frontend.
+
 ## Compile and run the project
 
 ```bash
