@@ -5,6 +5,7 @@ export default defineConfig({
   schema: 'prisma/schema.prisma',
   migrations: {
     path: 'prisma/migrations',
+    seed: 'ts-node --transpile-only prisma/seed.ts',
   },
   datasource: {
     // Prisma CLI must use a direct/session connection for migrations.
