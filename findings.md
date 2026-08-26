@@ -1,5 +1,10 @@
 # Findings
 
+> **Historical context only.** The assumptions below predate the product
+> discovery recorded on 2026-08-26 and must not be treated as current
+> requirements. See `docs/requirements/SRS.md`, `docs/requirements/RDS.md`, and
+> `docs/decisions/DECISION-LOG.md`.
+
 ## Repository
 
 - The repository currently contains only `README.md` and `LICENSE`.

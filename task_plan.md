@@ -1,5 +1,9 @@
 # Finwise implementation task plan
 
+> **Superseded on 2026-08-26.** This file describes an earlier database-first
+> planning pass. Use `docs/implementation-plan/README.md` and the linked SRS,
+> RDS, and decision log as the current source of truth.
+
 ## Goal
 
 Create a detailed, implementation-ready plan for Finwise, split by database,

@@ -1,5 +1,19 @@
 # Progress log
 
+## 2026-08-26
+
+- Reopened product discovery with the product owner.
+- Confirmed personal and shared workspace isolation, soft budgets, custom
+  permission-based roles, VND-only MVP, and private bank-import review by the
+  connection custodian.
+- Marked the existing Prisma schema as an unapproved draft pending domain and
+  ledger redesign.
+- Created living SRS, RDS, decision log, and implementation planning index under
+  `docs/`.
+- Recorded savings, lending, investment valuation, cross-workspace movement,
+  and group reimbursement as proposals/open questions rather than silently
+  committing them to the database design.
+
 ## 2026-08-25
 
 - Reviewed the existing repository structure.
