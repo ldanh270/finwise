@@ -1,7 +1,7 @@
 # Finwise implementation planning index
 
 Status: Requirements discovery in progress  
-Last updated: 2026-08-26
+Last updated: 2026-08-27
 
 The previous database schema is not an approved source of domain truth. It will
 be redesigned after the requirements and ledger decisions are confirmed. Do not
@@ -15,6 +15,13 @@ extend the existing Prisma schema merely because a table already exists.
 4. [`../domain/README.md`](../domain/README.md) and the context document relevant
    to the change
 5. repository `AGENTS.md`
+
+## Technical planning documents
+
+| Document | Purpose |
+| --- | --- |
+| [`TECHNICAL-ARCHITECTURE.md`](TECHNICAL-ARCHITECTURE.md) | Proposed web/API/data/monorepo/deployment architecture and vertical delivery slices |
+| [`MOBILE-ARCHITECTURE.md`](MOBILE-ARCHITECTURE.md) | Confirmed Flutter iOS/Android architecture, build requirements, offline model, navigation, sync, and release plan |
 
 ## Planning phases
 

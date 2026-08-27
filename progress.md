@@ -1,5 +1,28 @@
 # Progress log
 
+## 2026-08-27
+
+- Selected Flutter/Dart as the mobile implementation for a shared iOS and
+  Android codebase; removed Expo from the target architecture.
+- Confirmed that Next.js web and both Flutter mobile builds call one shared
+  NestJS business API.
+- Added detailed technical and Flutter mobile architecture documents, including
+  OpenAPI-generated clients, authentication boundaries, offline scope, local
+  storage, environments, build/release requirements, testing, and Expo source
+  migration.
+- Updated the decision log and implementation-plan index with the confirmed
+  platform decisions.
+- Started a planning-with-files audit to verify that no confirmed requirement
+  remains only in the conversation.
+- Replaced stale Expo-only instructions in `mobile/AGENTS.md` with the confirmed
+  Flutter migration and architecture boundaries.
+- Audited requirements, domain, decision, and architecture document headings
+  and searched for stale active Expo guidance.
+- Verified `git diff --check` passes and every relative Markdown link under
+  `docs/` resolves.
+- Completed the Flutter/shared-backend planning phase. Confirmed decisions are
+  persisted; remaining Proposed/Open items remain visible for future sessions.
+
 ## 2026-08-26
 
 - Reopened product discovery with the product owner.

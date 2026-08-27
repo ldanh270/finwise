@@ -37,6 +37,10 @@ entry and link it to the new decision.
 | D-028 | 2026-08-26 | Simple workspace-scoped tags on transaction lines are included in MVP. | Tags provide cross-cutting filters/reporting without multiplying categories. |
 | D-029 | 2026-08-26 | Finwise does not introduce a Project domain entity now. | Personal events use tags; collaborative activities needing isolated accounts, members, permissions, and budgets use workspaces. |
 | D-030 | 2026-08-26 | Account visibility supports normal, exclude-selected, include-only, and owner-only modes. | A workspace can hide an account from some members or everyone except the protected owner without weakening capability checks. |
+| D-031 | 2026-08-27 | Finwise mobile uses one Flutter/Dart codebase targeting iOS and Android. | Expo/React Native is removed from the target architecture; mobile packages, build tooling, and CI follow Flutter. |
+| D-032 | 2026-08-27 | Next.js web, Flutter iOS, and Flutter Android all use the same NestJS business API. | NestJS is the single authorization and financial-rule boundary; client applications cannot create competing business backends. |
+| D-033 | 2026-08-27 | The repository is a polyglot monorepo: pnpm manages Node/TypeScript projects and Dart pub manages Flutter. | One Git repository and root CI orchestrate both ecosystems without forcing Flutter dependencies into pnpm. |
+| D-034 | 2026-08-27 | The tracked Expo starter is superseded and will be replaced by a clean Flutter scaffold in a dedicated migration. | Source replacement remains reviewable and recoverable through Git instead of being mixed into architecture documentation. |
 
 ## Proposed decisions awaiting confirmation
 
@@ -59,6 +63,12 @@ entry and link it to the new decision.
 | P-015 | 2026-08-26 | Model loans as contracts with versioned expected schedules and separately confirmed actual payment allocations. | Due dates and projected interest must never be mistaken for paid principal/interest. |
 | P-016 | 2026-08-26 | Model investments as exact-quantity holdings/trades plus valuation snapshots; price movement is not a cash transaction. | Supports manual MVP input, cost basis, and net worth without fake income. |
 | P-017 | 2026-08-26 | Use permission-filtered, rebuildable read projections in the same database before introducing a separate analytics system. | Keeps reports practical without making derived data authoritative or leaking hidden accounts. |
+| P-018 | 2026-08-27 | **Superseded by D-033.** Consolidate backend, frontend, mobile, and pure shared packages into one root pnpm workspace without Nx/Turborepo initially. | Flutter uses Dart pub and cannot be governed as a pnpm package; only Node/TypeScript projects belong to the root pnpm workspace. |
+| P-019 | 2026-08-27 | Use the NestJS `/v1` REST API and generated OpenAPI client as the canonical web/mobile contract. | Mobile needs a stable platform-neutral boundary; Prisma/domain models must not leak into clients. |
+| P-020 | 2026-08-27 | Use Supabase Auth for MVP identity while keeping all workspace authorization and financial access in NestJS. | It fits the existing Supabase footprint and supports web/mobile sessions without making the Data API the business backend. |
+| P-021 | 2026-08-27 | **Superseded by D-031.** Continue mobile development with Expo React Native and Expo Router rather than PWA, Flutter, or bare React Native. | Product owner selected Flutter for the shared iOS/Android application. |
+| P-022 | 2026-08-27 | Mobile MVP supports cached reads and queued new transaction drafts offline; the server alone confirms transactions and balances. | Preserves useful daily capture on weak networks without implementing a conflicting offline financial ledger. |
+| P-023 | 2026-08-27 | Delay Redis/BullMQ until bank sync, large imports, or notifications require durable background execution. | Manual ledger operations remain simpler; later workers consume idempotent outbox-driven jobs without making Redis financial truth. |
 
 ## Deferred decisions
 
