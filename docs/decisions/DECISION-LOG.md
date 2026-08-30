@@ -41,6 +41,8 @@ entry and link it to the new decision.
 | D-032 | 2026-08-27 | Next.js web, Flutter iOS, and Flutter Android all use the same NestJS business API. | NestJS is the single authorization and financial-rule boundary; client applications cannot create competing business backends. |
 | D-033 | 2026-08-27 | The repository is a polyglot monorepo: pnpm manages Node/TypeScript projects and Dart pub manages Flutter. | One Git repository and root CI orchestrate both ecosystems without forcing Flutter dependencies into pnpm. |
 | D-034 | 2026-08-27 | The tracked Expo starter is superseded and will be replaced by a clean Flutter scaffold in a dedicated migration. | Source replacement remains reviewable and recoverable through Git instead of being mixed into architecture documentation. |
+| D-035 | 2026-08-29 | **Supersedes D-031.** Finwise mobile uses one React Native and TypeScript codebase targeting iOS and Android. | Flutter is no longer the target mobile framework; prior Flutter work remains historical and any source replacement is a separate reviewable migration. |
+| D-036 | 2026-08-29 | **Supersedes the platform wording of D-032 while preserving its backend boundary.** Next.js web and React Native iOS/Android use the same NestJS `/v1` business API. | NestJS remains the single authorization and financial-rule boundary; mobile does not query financial tables through Supabase. |
 
 ## Proposed decisions awaiting confirmation
 
@@ -69,6 +71,11 @@ entry and link it to the new decision.
 | P-021 | 2026-08-27 | **Superseded by D-031.** Continue mobile development with Expo React Native and Expo Router rather than PWA, Flutter, or bare React Native. | Product owner selected Flutter for the shared iOS/Android application. |
 | P-022 | 2026-08-27 | Mobile MVP supports cached reads and queued new transaction drafts offline; the server alone confirms transactions and balances. | Preserves useful daily capture on weak networks without implementing a conflicting offline financial ledger. |
 | P-023 | 2026-08-27 | Delay Redis/BullMQ until bank sync, large imports, or notifications require durable background execution. | Manual ledger operations remain simpler; later workers consume idempotent outbox-driven jobs without making Redis financial truth. |
+| P-024 | 2026-08-29 | Use Expo with development builds and Prebuild/CNG as the React Native baseline; use bare native projects only for a demonstrated requirement. | Finwise can use native modules and store builds without maintaining generated native projects by hand; Expo Go is not the primary verification runtime. |
+| P-025 | 2026-08-29 | **Would supersede D-033 if confirmed.** Consolidate backend, frontend, React Native mobile, and platform-neutral TypeScript packages into one pnpm workspace without Nx/Turborepo initially. | Web and mobile can share a generated OpenAPI client while UI, session, storage, and business-domain implementations remain separate. |
+| P-026 | 2026-08-30 | Use a six-digit email OTP as the only pilot login method; add Google and Apple together later if social login is approved. | Code entry works across web/mobile without password recovery or magic-link device ambiguity; avoiding Google-only iOS login also avoids an incomplete App Store login-service design. |
+| P-027 | 2026-08-30 | Map verified `(providerIssuer, providerSubject)` to internal `UserId` through a concurrency-safe `/v1/session/bootstrap` use case. | Email is mutable and social providers may relay it; identity proof remains separate from Finwise workspace authorization. |
+| P-028 | 2026-08-30 | Block normal logout while unsynced financial drafts exist until the user syncs, exports, or explicitly discards them. | Clearing a session must not silently destroy offline financial input or expose it to the next device user. |
 
 ## Deferred decisions
 

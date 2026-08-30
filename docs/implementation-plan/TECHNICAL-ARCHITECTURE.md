@@ -1,7 +1,7 @@
 # Finwise technical architecture plan
 
 Status: Platform architecture confirmed; remaining infrastructure choices Proposed  
-Last updated: 2026-08-27
+Last updated: 2026-08-29
 
 This document translates the approved product/domain direction into a technical
 architecture. It does not authorize implementation or replacement of the old
@@ -13,27 +13,26 @@ Prisma schema until the open decisions are confirmed.
 | --- | --- |
 | Web | Next.js 16 App Router, React 19, TypeScript, Tailwind CSS 4 starter |
 | API | NestJS 11, TypeScript, Prisma 7, PostgreSQL/Supabase starter |
-| Mobile | Existing Expo starter is superseded; target is one Flutter/Dart app for iOS and Android |
-| Repository | Polyglot monorepo: Node applications currently use separate pnpm workspaces; Flutter source migration is pending |
+| Mobile | React Native/TypeScript for iOS and Android; Expo development builds and Prebuild/CNG are the recommended baseline |
+| Repository | TypeScript monorepo target; applications currently use separate pnpm installs and the mobile source migration is pending |
 | Database | Existing Prisma model is an obsolete database-first draft and is not approved domain truth |
 | Auth | No implementation selected; `externalAuthUserId` indicates an intended external identity provider |
 
 ## 2. Recommended system shape
 
 ```text
-Next.js web                  Flutter iOS / Android
-     |                               |
-     | generated TypeScript client   | generated Dart/Dio client
-     +-------------+-------------+
-                   |
-             NestJS API /v1
-                   |
-       +-----------+------------+
-       |                        |
-PostgreSQL / Supabase     Worker process
-       |                  bank sync/import/
-       |                  notifications
-       +------ outbox/jobs ------+
+Next.js web ----------- shared generated TypeScript client ----+
+                                                               |
+React Native iOS ------ shared generated TypeScript client ----+--> NestJS API /v1
+                                                               |          |
+React Native Android -- shared generated TypeScript client ----+          |
+                                                                          |
+                                                               +----------+----------+
+                                                               |                     |
+                                                     PostgreSQL / Supabase      Worker process
+                                                               |               bank sync/import/
+                                                               |               notifications
+                                                               +--- outbox/jobs -----+
 
 External edges: Supabase Auth, bank providers, object storage,
 push notification service, future market-price providers.
@@ -45,8 +44,8 @@ Recommendations:
 2. NestJS is the only authoritative business API for web and mobile.
 3. Next.js renders the web product and may adapt web sessions, but owns no
    financial rules and does not query PostgreSQL directly.
-4. Mobile uses one Flutter codebase for iOS and Android and the same public API
-   contract as web.
+4. Mobile uses one React Native codebase for iOS and Android and the same public
+   API contract as web.
 5. PostgreSQL is the transactional source of truth. Redis/queues and read
    projections are derived/infrastructure concerns.
 6. Supabase clients may be used for authentication and approved storage flows;
@@ -58,23 +57,23 @@ Recommendations:
 
 | Direction | Advantages | Disadvantages |
 | --- | --- | --- |
-| Keep all projects independent | Minimal immediate change | Dependency drift, duplicate Node installs, awkward root CI and OpenAPI generation |
-| Force every project into pnpm | One apparent tool | Flutter uses Dart `pub`, so pnpm cannot own its dependencies or build graph |
-| Polyglot monorepo with pnpm for Node and pub for Flutter | Correct native toolchains, one repository/CI, explicit generated clients | Root scripts must orchestrate two ecosystems |
+| Keep separate pnpm installs and lockfiles | Minimal immediate migration | Dependency drift, duplicated installs, awkward shared-client generation |
+| One pnpm workspace for all TypeScript projects | One lockfile, shared generated client, consistent tooling | Requires a focused workspace/lockfile migration |
 | Nx/Turborepo immediately | Task graph and caching | Additional framework and configuration before scale proves a need |
 
-**Recommendation:** use a polyglot monorepo. Consolidate `backend`, `frontend`,
-and pure TypeScript packages into one root pnpm workspace; manage `mobile` with
-Flutter `pub`. Root scripts/CI orchestrate both. Do not add Nx/Turborepo yet.
+**Recommendation:** consolidate `backend`, `frontend`, `mobile`, and pure
+TypeScript packages into one root pnpm workspace and lockfile. Root scripts/CI
+orchestrate the applications. Do not add Nx/Turborepo until task-graph scale or
+CI timing demonstrates a need.
 Keep the current directory names:
 
 ```text
 finwise/
   backend/
   frontend/
-  mobile/             # Flutter project: pubspec.yaml, lib/, android/, ios/
+  mobile/             # Expo + React Native TypeScript project
   packages/
-    api-client-ts/    # generated from Nest OpenAPI for Next.js
+    api-client/       # generated from Nest OpenAPI for web and mobile
     eslint-config/    # optional when duplication becomes material
     tsconfig/         # optional shared compiler baselines
   contracts/
@@ -82,11 +81,12 @@ finwise/
   docs/
 ```
 
-Do not try to share UI code between Next/React and Flutter/Dart. Share the
-OpenAPI contract, product terminology, design specification, and behavioral test
-cases—not runtime domain classes. Generate a TypeScript client for Next and a
-Dart/Dio client under the Flutter project. Generated clients are disposable and
-must never contain business rules.
+Do not share UI code between Next.js and React Native merely because both use
+React. Share the OpenAPI contract, generated platform-neutral TypeScript client,
+product terminology, design tokens where semantics match, and behavioral test
+cases—not runtime domain classes. Web and mobile provide separate auth, fetch,
+storage, and presentation adapters. Generated clients are disposable and must
+never contain business rules.
 
 ## 4. API contract
 
@@ -95,7 +95,7 @@ must never contain business rules.
 #### REST + OpenAPI
 
 - Strong fit with NestJS controllers and resource/action workflows.
-- Generates platform-neutral TypeScript and Dart clients.
+- Generates a platform-neutral TypeScript client for web and mobile.
 - HTTP semantics, idempotency, caching, file upload, and error codes are clear.
 - Requires disciplined DTO/version management.
 
@@ -119,7 +119,7 @@ Rules:
 - workspace-owned resources use a trusted route scope such as
   `/v1/workspaces/{workspaceId}/accounts`;
 - Nest DTOs generate the OpenAPI document; OpenAPI Generator produces a
-  `typescript-fetch` client for Next and a `dart-dio` client for Flutter;
+  platform-neutral TypeScript client with injected runtime/auth configuration;
 - never share Prisma models or domain entities as client contracts;
 - money crosses JSON as a string minor-unit value or a structured Money DTO,
   never a JavaScript floating-point number;
@@ -249,12 +249,14 @@ authenticate -> resolve membership -> permission/resource policy
 
 | Option | Advantages | Disadvantages |
 | --- | --- | --- |
-| Supabase Auth | Existing Supabase footprint, Flutter/Next support, OAuth/email, JWT/JWKS | Vendor dependency; SSR/mobile token storage and deep links need care |
+| Supabase Auth | Existing Supabase footprint, Next/React Native support, OAuth/email, JWT/JWKS | Vendor dependency; SSR/mobile token storage and deep links need care |
 | Self-hosted Better Auth | More control and TypeScript-first | More operational/security ownership; mobile integration must be proven |
 | Clerk/Auth0 | Fast polished auth and administration | Higher recurring cost and vendor coupling |
 
 **Recommendation for MVP:** Supabase Auth, subject to product-owner approval.
 It fits the current database provider and the intended `externalAuthUserId`.
+The detailed login, provisioning, refresh, logout, and deletion proposal is in
+[`AUTH-SESSION-ARCHITECTURE.md`](AUTH-SESSION-ARCHITECTURE.md).
 
 Boundary rules:
 
@@ -265,9 +267,8 @@ Boundary rules:
 - Nest maps `sub` to internal `UserId` and performs authorization on every API
   request;
 - web uses secure, HTTP-only session cookie integration where practical;
-- Flutter uses `supabase_flutter` for identity session/deep-link flows, stores
-  sensitive session material through an approved secure-storage adapter, and
-  sends the access token only to NestJS business endpoints;
+- React Native uses `@supabase/supabase-js` behind an approved SecureStore-backed
+  session adapter and sends the access token only to NestJS business endpoints;
 - biometric unlock is a local app-lock convenience, not a replacement for
   server authentication;
 - clients never receive database service keys or bank secrets.
@@ -384,8 +385,9 @@ Deployment provider is Open. The architecture requires:
 - separately runnable worker once background jobs are enabled;
 - managed PostgreSQL/Supabase;
 - managed Redis only when BullMQ is introduced;
-- Flutter Android builds on Linux/Windows/macOS; Flutter iOS builds require a
-  macOS/Xcode runner, code signing, TestFlight, and App Store Connect;
+- React Native Android builds may run locally or in compatible CI; React Native
+  iOS builds require macOS/Xcode locally or a macOS cloud runner, code signing,
+  TestFlight, and App Store Connect;
 - TLS, custom domains, staging, centralized secrets, backups, and regional
   placement appropriate to target users.
 
@@ -398,14 +400,14 @@ expected pilot traffic are known.
 ### Slice 0: foundation decisions
 
 - approve ledger/auth/mobile offline decisions;
-- establish the polyglot monorepo: root pnpm workspace for Node plus Flutter
-  `pub` project and root orchestration scripts;
+- establish one root pnpm workspace for backend, frontend, mobile, and shared
+  TypeScript packages;
 - establish environment validation, OpenAPI generation, generated client, CI;
 - replace starter pages only after the conventions are documented.
 
 ### Slice 1: identity and workspace shell
 
-- Supabase Auth spike for Next + Flutter + Nest JWT verification;
+- Supabase Auth spike for Next + React Native + Nest JWT verification;
 - user provisioning, workspace creation/switching;
 - protected routes and permission-denied contract;
 - web/mobile workspace shell.
@@ -451,7 +453,7 @@ before exposing one usable vertical workflow.
 ## 15. Decisions required before implementation
 
 1. Approve Supabase Auth or choose another identity provider.
-2. Approve the polyglot monorepo and two generated OpenAPI clients.
+2. Approve the pnpm monorepo and one shared generated TypeScript OpenAPI client.
 3. Approve mobile offline level defined in the mobile plan.
 4. Choose first login methods: email/password, email OTP/magic link, Google,
    and/or Apple.

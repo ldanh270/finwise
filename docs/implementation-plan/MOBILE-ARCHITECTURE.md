@@ -1,111 +1,118 @@
-# Finwise Flutter mobile architecture
+# Finwise React Native mobile architecture
 
-Status: Flutter/iOS/Android/shared-backend decision Confirmed; implementation details approved as the baseline unless superseded  
-Last updated: 2026-08-27
+Status: React Native/iOS/Android/shared-backend decision Confirmed; Expo workflow
+recommended as the implementation baseline unless superseded
+Last updated: 2026-08-29
 
 ## 1. Confirmed platform decision
 
-Finwise mobile is one Flutter/Dart application targeting iOS and Android. The
-existing Expo/React Native starter is superseded and must be replaced in a
-separate, reviewable scaffold migration.
+Finwise mobile is one React Native and TypeScript application targeting iOS and
+Android. This decision supersedes the Flutter decision recorded on 2026-08-27.
+The previous Flutter investigation and scaffold work remain historical evidence;
+source and root-script cleanup must happen in a separate reviewable migration.
 
-Flutter Web is not a Finwise product target. Next.js remains the web client.
-
-All three clients use one NestJS backend:
+Next.js remains the web client. React Native Web is not a Finwise product target.
+All clients use the same NestJS business API:
 
 ```text
-Next.js web -------- TypeScript OpenAPI client -----+
-                                                   |
-Flutter iOS -------- Dart/Dio OpenAPI client -------+--> NestJS /v1
-                                                   |       |
-Flutter Android ---- Dart/Dio OpenAPI client -------+       +--> PostgreSQL
-                                                           +--> workers/providers
+Next.js web ---------------- TypeScript OpenAPI client ----+
+                                                         |
+React Native iOS ---------- TypeScript OpenAPI client ----+--> NestJS /v1
+                                                         |       |
+React Native Android ------ TypeScript OpenAPI client ----+       +--> PostgreSQL
+                                                                 +--> workers/providers
 ```
 
 No web or mobile client directly queries Finwise financial tables. Supabase may
-provide identity and signed storage access, but NestJS is the only business API
-and authorization boundary.
+provide identity and signed storage access, but NestJS is the only business API,
+authorization boundary, and source of confirmed financial state.
 
-## 2. What Flutter shares across iOS and Android
+## 2. Recommended Expo workflow
 
-One Dart codebase shares:
+The recommended baseline uses Expo as the React Native framework with:
 
-- features, screens, state management, API client, validation, offline sync;
-- Material/Cupertino-aware design system and most widgets;
-- domain-facing presentation models and formatting;
-- unit, widget, and most integration tests.
+- Expo Router;
+- development builds through `expo-dev-client`;
+- Expo Prebuild/Continuous Native Generation (CNG);
+- the React Native New Architecture;
+- local native builds or EAS Build according to environment and release needs.
 
-Platform folders remain because mobile is not “build once without native work”:
+Expo Go may be used for an early UI experiment only. It is not the primary
+Finwise development or verification runtime because secure storage options,
+biometrics, notifications, SQLCipher, and other native configuration require a
+Finwise-specific development build.
 
-```text
-mobile/
-  android/       Gradle, manifest, signing, notification/deep-link config
-  ios/           Xcode project, plist, entitlements, signing, pods/SPM
-  lib/           shared Dart application
-  test/
-  integration_test/
-  pubspec.yaml
-```
+Prefer generated native projects. Native configuration belongs in app config,
+config plugins, or an explicitly reviewed local Expo module. Do not hand-edit a
+generated `ios/` or `android/` directory and then expect `prebuild --clean` to
+preserve the change.
 
-Camera, biometrics, notifications, deep links, background execution, store
-signing, privacy declarations, and OS-specific bugs still require Android/iOS
-configuration and real-device testing.
+Move to manually maintained bare native projects only after a demonstrated
+requirement cannot be represented safely through Expo modules, config plugins,
+or CNG. Expo services such as EAS Build and EAS Update are operational choices,
+not architectural dependencies; local builds and another CI provider remain
+valid.
 
-## 3. Required development and build tooling
+## 3. What is shared across iOS and Android
 
-### Shared Flutter development
+One TypeScript codebase shares:
 
-- Flutter stable SDK pinned by a version manager or documented repository
-  version;
-- Dart SDK bundled with Flutter;
-- IDE of choice with Flutter/Dart tooling;
-- `flutter doctor` as the environment verification command;
-- `flutter pub get`, `flutter analyze`, and `flutter test` in CI.
+- features, screens, navigation, API integration, validation, and sync logic;
+- design tokens and most React Native components;
+- UI-facing models, exact money formatting, and typed errors;
+- unit, component, repository, and most end-to-end tests.
 
-### Android
+Platform-specific code remains justified for:
 
-Can be developed and built on Windows, Linux, or macOS.
+- application and signing configuration;
+- permissions, notification entitlements, and deep/universal links;
+- native behavior that differs materially between Android and iOS;
+- a config plugin or local Expo module when no maintained package satisfies a
+  proven requirement.
 
-Required:
+Platform-specific files use `.ios.ts(x)` and `.android.ts(x)` only where actual
+behavior differs. Do not fork whole features by platform.
 
-- Android Studio or Android SDK command-line tools;
-- supported JDK/Gradle versions selected by the Flutter stable toolchain;
-- Android emulator or physical device;
-- upload keystore and Play App Signing for release.
+## 4. Repository strategy and shared code
 
-Outputs:
-
-```text
-flutter run
-flutter build apk              # direct/internal distribution
-flutter build appbundle        # preferred Play Store artifact (.aab)
-```
-
-### iOS
-
-iOS compilation and store release require macOS and Xcode. A Windows machine
-can implement most shared Dart code, but cannot produce the final iOS binary
-locally.
-
-Required:
-
-- macOS with a supported Xcode and iOS SDK/simulator;
-- CocoaPods or Swift Package Manager support as required by plugins;
-- Apple ID for signed device testing;
-- paid Apple Developer Program membership for TestFlight/App Store release;
-- certificates/provisioning/App Store Connect configuration.
-
-Output:
+React Native returns Finwise to a TypeScript monorepo. The target structure is:
 
 ```text
-flutter build ipa
+finwise/
+  backend/                    # NestJS
+  frontend/                   # Next.js
+  mobile/                     # Expo + React Native
+  packages/
+    api-client/               # generated platform-neutral OpenAPI client
+    eslint-config/            # optional when duplication becomes material
+    tsconfig/                 # optional shared compiler baselines
+  contracts/
+    openapi.json              # generated canonical transport contract
 ```
 
-If the team has no Mac, use a macOS CI/build service. The architecture does not
-depend on one vendor; GitHub Actions macOS runners, Codemagic, or another secure
-macOS runner can perform signing/build/upload after credentials are configured.
+Use one root pnpm workspace and lockfile once the dedicated migration is
+approved. Do not introduce Nx or Turborepo until task-graph scale or CI timing
+demonstrates a need.
 
-## 4. Mobile product responsibility
+Share only code with identical semantics on both clients:
+
+- generated OpenAPI DTOs and operations;
+- stable public error codes;
+- pure transport-neutral primitives where duplication is material.
+
+Do not share:
+
+- React Native and web UI components;
+- navigation or storage implementations;
+- session adapters;
+- Prisma types or backend domain entities;
+- financial business rules merely to avoid an API call.
+
+The generated API client accepts injected base URL, fetch implementation,
+headers, and token acquisition. Web and mobile wrap it with different session
+and runtime adapters. Generated code is disposable and never manually edited.
+
+## 5. Mobile product responsibility
 
 Mobile leads:
 
@@ -126,89 +133,138 @@ Web leads:
 - reconciliation, detailed reporting, and audit exploration;
 - bulk operations.
 
-First-class mobile means reliable daily workflows, not immediate one-for-one
+First-class mobile means dependable daily workflows, not immediate one-for-one
 parity with every web administration screen.
 
-## 5. Flutter application architecture
+## 6. Application architecture
 
-Use feature-first layering influenced by Flutter's recommended UI/data
-separation. Do not copy the backend's full DDD model into the mobile app; NestJS
-owns financial business rules.
+Use feature-first organization with thin Expo Router files:
 
 ```text
-mobile/lib/
-  app/
-    app.dart
-    bootstrap.dart
-    router.dart
-    theme/
-  core/
-    api/
-      generated/          # dart-dio client; never hand-edit
-      api_client.dart     # auth/request/error adapter
-    auth/
-    database/
-    sync/
-    secure_storage/
-    notifications/
-    observability/
-  features/
-    workspace/
-      data/               # remote/local data sources, DTO mappers, repository impl
-      domain/             # UI-facing models and repository contract
-      presentation/       # screens/widgets/controllers/providers
-    accounts/
-    transactions/
-    budgets/
-    group_treasury/
-    imports/
-  shared/
-    widgets/
-    formatting/
-    accessibility/
+mobile/
+  app/                        # routes/layouts only
+    _layout.tsx
+    (auth)/
+    (app)/
+      _layout.tsx
+      overview/
+      transactions/
+      budgets/
+      inbox/
+    transaction/
+      new.tsx
+  src/
+    app/
+      bootstrap/
+      config/
+      providers/
+      theme/
+    core/
+      api/
+      auth/
+      database/
+        migrations/
+      notifications/
+      observability/
+      security/
+      sync/
+    features/
+      workspace/
+        api/
+        model/
+        repository/
+        hooks/
+        ui/
+      accounts/
+      transactions/
+      budgets/
+      group-treasury/
+      bank-inbox/
+    shared/
+      formatting/
+      testing/
+      ui/
+      validation/
 ```
 
-Dependency direction inside a feature:
+Data flows in one direction:
 
 ```text
-presentation -> domain contracts <- data implementations
-                                  <- API/SQLite/platform adapters
+Route -> feature screen -> feature hook/controller -> repository
+                                                   -> Nest API and/or SQLite
+                                                   -> query/immutable UI state
+                                                   -> rendered screen
 ```
 
 Rules:
 
-1. Widgets do not call HTTP, SQLite, Supabase, or platform plugins directly.
-2. API DTOs and local database rows are mapped into feature models.
-3. Repositories coordinate remote and local sources and are the mobile source
-   of truth for cached/offline state.
-4. Mobile performs boundary/form validation for UX; Nest repeats all important
-   validation and owns final authorization/invariants.
-5. Financial calculations shown by mobile come from backend projections or
-   exact integer/decimal representations, never Dart `double` arithmetic.
+1. Route files read route params and compose screens; they do not call HTTP or
+   contain financial logic.
+2. Presentational components do not call HTTP, SQLite, Supabase, or native APIs.
+3. Feature repositories coordinate generated API operations and local storage.
+4. API DTOs and SQLite rows are mapped explicitly to UI-facing models.
+5. Mobile validation improves UX; Nest repeats important validation and owns
+   authorization and financial invariants.
+6. Do not reproduce the backend's full DDD model in the app. Mobile models exist
+   to render and edit user workflows.
+7. Money crosses JSON as a minor-unit string or structured Money DTO and is
+   never calculated using JavaScript floating-point `number`.
 
-## 6. Baseline Flutter packages
+## 7. Baseline libraries
 
-Exact compatible versions are pinned during scaffold creation. Baseline roles:
+Pin exact compatible versions during scaffold creation using the selected Expo
+SDK's supported versions.
 
-| Concern | Baseline choice | Reason |
+| Concern | Baseline choice | Boundary |
 | --- | --- | --- |
-| Routing/deep links | `go_router` | Declarative navigation, redirects, nested routes, deep links |
-| State and dependency wiring | Riverpod | Testable async state/DI without global mutable singleton business state |
-| HTTP | Dio through generated `dart-dio` OpenAPI client | Interceptors, cancellation, upload/progress, typed generated transport |
-| JSON/models | `json_serializable`; immutable model generator only where it reduces real boilerplate | Explicit mapping and compile-time generated serialization |
-| Local relational data | Drift over SQLite | Typed queries, migrations, transactions, observable cache/outbox |
-| Auth | `supabase_flutter` if Supabase Auth is approved | Shared identity provider and mobile deep-link/session support |
-| Small secrets | `flutter_secure_storage` or audited Supabase secure storage adapter | Android Keystore/iOS Keychain-backed credentials |
-| Connectivity signal | `connectivity_plus` | UX hint only; a network type does not prove API reachability |
-| Biometrics | `local_auth` | Local app unlock, never server authentication |
-| Push | `firebase_messaging` with APNs/FCM configuration | Standard remote push path for iOS/Android |
-| Crash reporting | Selected PII-scrubbed provider | Mobile crash and release diagnostics |
+| Routing/deep links | Expo Router with typed routes | Route files remain thin |
+| Server state | TanStack Query | Remote cache, invalidation, request lifecycle |
+| Forms | React Hook Form plus Zod | Form UX only; backend validates again |
+| HTTP | Generated TypeScript OpenAPI client | Thin runtime/auth adapter |
+| Local relational data | `expo-sqlite` | Cache, migrations, drafts, outbox |
+| Auth | `@supabase/supabase-js` if Supabase Auth is approved | Identity only |
+| Secrets/session | `expo-secure-store` adapter | Tokens/small secrets, not app data |
+| Biometrics | `expo-local-authentication` | Local app lock only |
+| Camera/receipts | Expo camera/image-picker packages | App-private staging before upload |
+| Push/local notification | `expo-notifications` | Delivery is best-effort |
+| Connectivity | NetInfo or an equivalent maintained signal | UX hint, not proof API is reachable |
+| Crash reporting | Selected PII-scrubbed provider | No financial notes/tokens in events |
 
-Avoid adding a second state-management framework, a second HTTP client, or a
-generic service locator. Package health, license, platform support, and stable
-Flutter compatibility must be reviewed before pinning.
+Do not add Redux, Zustand, or a second server-state framework at foundation
+time. Add a global client store only when a demonstrated cross-screen state
+problem cannot be expressed with TanStack Query, a small context, or local
+React state.
 
-## 7. Navigation
+## 8. State ownership
+
+| State | Owner |
+| --- | --- |
+| Accounts, transactions, budgets, permissions | TanStack Query backed by Nest |
+| Auth bootstrap/session lifecycle | One auth provider and secure adapter |
+| Current workspace selection | Small app context plus persisted preference |
+| Form input and modal state | Local React state / React Hook Form |
+| Cached reads | SQLite repository with freshness metadata |
+| Offline financial commands | Explicit SQLite outbox |
+| Confirmed balance and ledger truth | NestJS/PostgreSQL only |
+
+Do not use a persisted TanStack Query mutation cache as the financial outbox.
+The outbox needs explicit schema, migrations, idempotency keys, retry classes,
+and user-action states.
+
+When switching workspace:
+
+1. cancel in-flight workspace-scoped requests;
+2. change the active scope;
+3. clear or invalidate the previous workspace's query data;
+4. open the correctly partitioned local cache;
+5. reload membership, permissions, and visible accounts;
+6. never render the previous workspace's data during the transition.
+
+Every data-driven screen handles loading, cached/stale loading, empty, retryable
+error, business error, offline, permission denied, partial visibility, and
+expired-session states.
+
+## 9. Navigation
 
 Primary navigation:
 
@@ -217,11 +273,11 @@ Primary navigation:
 3. Budgets
 4. Inbox
 
-Use a prominent quick-add action rather than treating “Add” as an information
-tab. Accounts, reports, profile, and settings are secondary routes. Workspace
-switching is globally reachable.
+Use a prominent quick-add action rather than an `Add` information tab. Accounts,
+reports, profile, and settings are secondary routes. Workspace switching is
+globally reachable.
 
-Route groups/guards represent:
+Route groups represent:
 
 ```text
 bootstrap/splash
@@ -232,53 +288,53 @@ permission-aware feature routes
 modal flows: quick transaction, filters, receipt capture
 ```
 
-Navigation guards improve UX only. NestJS rechecks authentication, workspace
-membership, permission, resource scope, and business state on every request.
+Navigation guards improve UX only. NestJS rechecks authentication, membership,
+permission, account visibility, resource scope, and business state on every
+request. A deep link or notification reloads the referenced object through Nest
+and handles missing, hidden, unauthorized, expired, and offline states.
 
-Deep links cover authentication callbacks and safe application routes. Opening
-a deep link or notification reloads the object through Nest and handles deleted,
-hidden, unauthorized, and offline states.
+## 10. API and authentication
 
-## 8. API and authentication
+The Nest OpenAPI document is canonical. CI generates one platform-neutral
+TypeScript client usable by Next.js and React Native. Each runtime adapter
+supplies:
 
-The Nest OpenAPI document is canonical. CI generates:
-
-- `typescript-fetch` client for Next.js;
-- `dart-dio` client for Flutter.
-
-Generated code is never manually edited. A thin Flutter adapter supplies:
-
-- API base URL/flavor;
+- API base URL and environment;
 - access token;
 - request/correlation ID;
-- idempotency key on retriable commands;
+- idempotency key for retriable commands;
 - typed error mapping;
+- cancellation and timeout behavior;
 - refresh/logout behavior;
-- safe logging with secret/PII redaction.
+- safe logging with secret and PII redaction.
 
 With Supabase Auth:
 
-1. Flutter authenticates through `supabase_flutter`.
-2. Auth returns/refreshes the identity session.
-3. Flutter attaches the access token to Nest requests.
-4. Nest validates token signature, issuer, audience, expiry, and subject.
-5. Nest maps `sub` to internal User and evaluates Finwise workspace permissions.
-6. Flutter never uses Supabase Data API to read/write financial tables.
+1. React Native authenticates through `@supabase/supabase-js`.
+2. A mobile storage adapter persists session material using the approved secure
+   storage design.
+3. Mobile attaches the access token only to Nest business requests.
+4. Nest validates signature, issuer, audience, expiry, and subject.
+5. Nest maps `sub` to internal `UserId` and evaluates Finwise permissions.
+6. Mobile never uses the Supabase Data API for financial reads or writes.
 
-Environment-specific publishable identifiers are compiled using approved flavor
-configuration or `--dart-define-from-file`. A publishable key is not a server
-secret, but service-role keys, bank credentials, signing keys, and private
-encryption keys must never be included in the app binary.
+The proposed first login method, session state machine, Nest bootstrap contract,
+logout behavior, and account-deletion flow are specified in
+[`AUTH-SESSION-ARCHITECTURE.md`](AUTH-SESSION-ARCHITECTURE.md).
 
-## 9. Offline scope
+Public URL and publishable identifiers may be compiled into the app. Service
+role keys, bank credentials, signing keys, and private encryption keys must
+never be present in the mobile bundle.
 
-MVP uses controlled offline support:
+## 11. Controlled offline support
 
-- cached read access with a visible freshness/stale state;
-- create new manual income/expense drafts offline;
-- synchronize queued drafts after connectivity returns;
+MVP offline scope is:
+
+- cached reads with visible freshness/stale state;
+- create manual income/expense drafts offline;
+- synchronize queued drafts when the app can reach Nest;
 - server alone confirms transaction, balance, budget, audit, and permissions;
-- posted edit/reversal, transfer, approval, import, and reconciliation initially
+- posted correction, transfer, approval, import, and reconciliation initially
   require an online server response.
 
 This is not a second ledger on the phone.
@@ -286,196 +342,184 @@ This is not a second ledger on the phone.
 ### Draft/outbox state machine
 
 ```text
-LOCAL_DRAFT
-  -> QUEUED
-  -> SYNCING
-  -> SYNCED
-
-SYNCING -> RETRYABLE_FAILURE -> QUEUED
-SYNCING -> NEEDS_USER_ACTION
+LOCAL_DRAFT -> QUEUED -> SYNCING -> SYNCED
+                           |
+                           +-> RETRYABLE_FAILURE -> QUEUED
+                           +-> NEEDS_USER_ACTION
 ```
 
-Each draft has:
+Each draft contains:
 
 - local ID and immutable `clientCommandId`;
-- workspace/account/category snapshots and exact minor-unit amount;
-- created/edited time and local timezone context;
-- retry count/last error classification;
+- user and workspace partition keys;
+- account/category identifiers and safe display snapshots;
+- exact minor-unit amount as a string;
+- accounting date, created/edited time, and timezone context;
+- retry count and typed last-error classification;
 - optional receipt local path/upload state;
 - eventual server transaction ID.
 
 Synchronization:
 
-1. local repository commits the draft/outbox row atomically;
-2. sync worker sends the same `Idempotency-Key` on every retry;
-3. Nest revalidates all IDs, permission, account visibility, period, and amount;
-4. success links local draft to the server ID and refreshes affected queries;
-5. archived resource/permission rejection becomes `NEEDS_USER_ACTION`; never
-   silently switch account/category;
-6. server conflict/error messages remain typed and safe.
+1. SQLite commits the draft and outbox row atomically.
+2. Every retry sends the same idempotency key.
+3. Nest revalidates IDs, membership, permissions, visibility, date, and amount.
+4. Success links the draft to the server ID and refreshes affected queries.
+5. Removed access or archived resources become `NEEDS_USER_ACTION`; the client
+   never silently substitutes another account/category.
+6. Queued drafts do not change confirmed balance. UI may show a separate pending
+   total.
 
-Never optimistically include queued drafts in confirmed balance. UI may show a
-separate “pending sync” total.
+Sync runs on foreground/resume, explicit retry, relevant network recovery, and
+after successful online mutations. Background execution is an optimization
+only because iOS and Android control when work runs and may stop it after the
+user terminates the app.
 
-## 10. Local persistence and security
+## 12. Local persistence and security
 
 | Data | Storage |
 | --- | --- |
-| Access/refresh session material | Keychain/Keystore through secure storage adapter |
-| Cached accounts/transactions/budgets | Drift/SQLite |
-| Offline command outbox | Drift/SQLite transactionally |
-| Receipt waiting for upload | App-private filesystem plus SQLite metadata |
-| Non-sensitive preferences | Shared preferences or settings table |
+| Session material and small secrets | SecureStore-backed adapter |
+| Cached accounts/transactions/budgets | SQLite |
+| Offline command outbox | SQLite transactionally |
+| Receipt awaiting upload | App-private filesystem plus SQLite metadata |
+| Non-sensitive preferences | Settings store or SQLite |
 
 Security rules:
 
-- clear/partition caches by authenticated user and workspace;
-- encrypted backup/restore behavior must be tested per platform;
-- logout revokes/clears session and sensitive cache;
-- if unsynced drafts exist, present an explicit sync/export/discard decision;
-- biometric changes can invalidate local secure keys, so server recovery login
-  remains available;
-- rooted/jailbroken device detection may inform risk UX but is not a perfect
-  security boundary;
-- local database encryption is a separate threat-model decision; do not claim
-  SQLite is encrypted merely because the app sandbox is private.
+- partition caches by authenticated user and workspace;
+- clear sensitive cached data on confirmed logout;
+- if unsynced drafts exist, require an explicit sync/export/discard decision;
+- biometric changes can invalidate protected keys, so recovery login remains
+  available;
+- biometric unlock protects local app access and never authenticates a Nest
+  request by itself;
+- rooted/jailbroken detection may inform risk UX but is not a security boundary;
+- plain SQLite is not described as encrypted merely because it is in an app
+  sandbox;
+- SQLCipher is a separate threat-model decision and requires a development build
+  and Prebuild configuration;
+- use prepared/bound SQLite statements for all user-controlled values.
 
-## 11. State and unidirectional data flow
+## 13. Notifications, receipts, and background behavior
 
-Use Riverpod providers/controllers as presentation state and dependency wiring,
-while repositories own data access/synchronization.
+Remote push is registered per installation, user, app version, platform, and
+environment. Nest owns device-token lifecycle and authorization.
 
-```text
-Widget event
-  -> feature controller/view model
-  -> repository
-  -> remote service and/or local Drift database
-  -> immutable state/result
-  -> widget renders loading/data/empty/error/offline/denied
-```
+- ask notification permission in context;
+- rotate or disable tokens on refresh/logout;
+- omit sensitive amounts and descriptions from lock-screen payloads by default;
+- include only a safe route/resource identifier;
+- reload and authorize the referenced resource after opening;
+- push delivery never changes business state;
+- receipt uploads use short-lived backend-authorized URLs and retain local state
+  until the server confirms completion.
 
-Do not store an authoritative workspace balance or permission matrix in a
-global mutable provider. Cache server results with scope/version/freshness and
-invalidate on workspace switch or mutations.
+## 14. Environments and releases
 
-Every data screen handles:
-
-- initial loading;
-- cached/stale loading;
-- empty;
-- retryable error;
-- validation/business error;
-- offline;
-- permission denied;
-- partial account visibility;
-- session expired.
-
-## 12. Notifications and background behavior
-
-Remote push uses FCM for Android and APNs integration for iOS, commonly through
-Firebase Messaging. Local notifications support device reminders.
-
-- ask notification permission in context, not blindly at first launch;
-- device installations/tokens are registered with Nest per user/environment;
-- rotate/disable tokens on refresh/logout;
-- lock-screen payload omits sensitive amounts/descriptions by default;
-- payload contains a safe route/resource ID; app reloads and authorizes it;
-- push delivery is best-effort and never changes business state;
-- background execution is OS-controlled and cannot be assumed to run exactly on
-  schedule;
-- offline financial commands sync when the app can run and reach Nest, with an
-  explicit user-visible queue.
-
-## 13. Flavors and configuration
-
-Create three flavors:
-
-| Flavor | API/Auth/Storage | Application identity | Distribution |
-| --- | --- | --- | --- |
-| dev | Local/dev services | dev bundle/application ID | Developer devices/emulators |
-| staging | Isolated staging resources | staging ID | Internal Android/TestFlight |
-| production | Production resources | production ID | Play Store/App Store |
-
-Each flavor has distinct deep-link scheme, app name/icon marker, Firebase/APNs
-configuration, and crash-report environment. Never let a staging build silently
+Use dev, staging, and production profiles with distinct API/Auth/Storage
+resources, bundle/application identifiers, deep-link domains, push
+configuration, and crash-report environment. A staging build must never silently
 connect to production.
 
-## 14. Build, signing, and release pipeline
-
-### Pull request
+### Pull request checks
 
 ```text
-dart format --set-exit-if-changed
-flutter analyze
-flutter test
+format check
+ESLint
+TypeScript typecheck
+unit/component tests
 OpenAPI generated-client freshness check
+Expo configuration/prebuild validation
 ```
 
-### Android release candidate
+### Release candidates
 
-- build signed AAB on Linux/Windows/macOS CI;
-- store upload key in protected CI secrets;
-- upload to Play internal testing;
-- run smoke/integration tests on representative devices.
-
-### iOS release candidate
-
-- build on macOS runner with selected Xcode/Flutter version;
-- install dependencies and signing profiles in an ephemeral keychain;
-- run `flutter build ipa`;
-- upload to TestFlight;
-- test on physical iPhone before App Store submission.
-
-Use one version in `pubspec.yaml` and CI-controlled monotonically increasing
-build numbers. Maintain release notes, symbol files, rollback policy, privacy
-manifest, store declarations, and crash mapping artifacts.
+- Android builds may run locally or in Linux/macOS/Windows-compatible CI.
+- iOS compilation/signing requires macOS/Xcode locally or a macOS cloud runner.
+- Use development/internal distribution builds before store builds.
+- Test secure storage, biometrics, camera, notifications, backgrounding, deep
+  links, process death, and weak networks on physical devices.
+- OTA updates, if enabled, must follow a runtime-version and rollback policy;
+  they must not bypass required native review or incompatible database/API
+  migrations.
 
 ## 15. Testing strategy
 
 | Test type | Scope |
 | --- | --- |
-| Unit | Money parsing/formatting, DTO mapping, draft state machine, retry classification |
-| Repository | Remote/local source priority, cache partition, outbox idempotency, migrations |
-| Widget | Loading/empty/error/offline/denied forms and platform layouts |
-| Golden/accessibility | Critical screens, text scaling, contrast, semantics |
-| Integration | Auth/deep link, workspace switch, create transaction, offline->online sync, logout |
-| Contract | Generated Dart client against Nest OpenAPI and typed errors |
-| Real device | Biometrics, keychain/keystore, camera, keyboard, backgrounding, process death, weak network |
+| Unit | Money parsing/formatting, mappers, retry classification, state machine |
+| Repository | Cache partition, migrations, remote/local priority, outbox idempotency |
+| Component | Loading, empty, error, offline, denied, forms, accessibility |
+| Contract | Generated TypeScript client against Nest OpenAPI and typed errors |
+| Integration | Auth/deep link, workspace switch, create transaction, logout |
+| Offline integration | Offline draft -> process death -> retry -> server confirmation |
+| Real device | Secure storage, biometrics, camera, notifications, backgrounding |
 
-Use Flutter's `integration_test` baseline. Add third-party device automation only
-when it solves a demonstrated CI/device-lab requirement.
+Use Jest and React Native Testing Library at foundation. Add Maestro, Detox, or
+another device automation tool only when a concrete end-to-end CI requirement
+justifies its maintenance cost.
 
-## 16. Source migration from Expo
+## 16. Migration from the superseded Flutter direction
 
-The architecture decision does not silently delete source. Perform a dedicated
-task:
+The architecture decision does not authorize silent deletion. Perform a
+dedicated migration task:
 
-1. verify the current Expo starter contains no user work to preserve;
-2. archive/recover through Git history, then replace `mobile/` with
-   `flutter create` output using approved organization/bundle IDs;
-3. remove Expo/Node lockfiles and dependencies under `mobile`;
-4. add Flutter-specific `AGENTS.md`, analysis options, flavors, and root scripts;
-5. generate the Dart API client from a minimal Nest OpenAPI spec;
-6. run Android debug build and iOS CI smoke build;
-7. review diff before committing the migration separately.
+1. inspect Git status/history and verify whether any Flutter source or user work
+   still exists;
+2. preserve recoverability through Git and do not overwrite unrelated changes;
+3. replace only the approved mobile target with a clean Expo TypeScript scaffold;
+4. replace Flutter/Dart root scripts with pnpm/Expo scripts;
+5. establish the root pnpm workspace and shared generated API client;
+6. add a React Native-specific `mobile/AGENTS.md`;
+7. validate Android development build and an iOS/macOS CI smoke build;
+8. review the migration diff separately from the first product feature.
 
-## 17. Confirmed and remaining decisions
+Historical Flutter findings remain in `progress.md`, `findings.md`, and Git
+history. They are evidence of prior work, not active implementation guidance.
+
+## 17. First delivery slice
+
+Build one usable online vertical path before offline infrastructure:
+
+```text
+sign in -> bootstrap session -> load/create workspace -> list accounts
+-> create manual income/expense -> refresh recent transactions and balances
+```
+
+Then add, in order:
+
+1. SQLite cached reads;
+2. offline transaction draft;
+3. idempotent outbox synchronization;
+4. biometric local app lock;
+5. receipt and push capabilities when approved for MVP.
+
+## 18. Confirmed, recommended, and remaining decisions
 
 Confirmed:
 
-1. Flutter is the mobile framework.
-2. One Flutter codebase targets iOS and Android.
+1. React Native and TypeScript are the mobile framework/language.
+2. One mobile codebase targets iOS and Android.
 3. Next.js remains the web client.
-4. Web, iOS, and Android use the same NestJS backend and business rules.
+4. All clients use the same NestJS API and financial rules.
 5. Clients do not directly own financial truth.
+
+Recommended pending explicit confirmation:
+
+1. Expo with development builds and Prebuild/CNG is the implementation baseline.
+2. Mobile uses feature-first organization and a generated OpenAPI client.
+3. All TypeScript projects use one pnpm workspace and lockfile.
 
 Remaining product/operations choices:
 
-1. Is Android released first, or are Android/iOS released together?
-2. Which login methods ship first?
-3. Must offline drafts survive logout/user switching, or must users sync/export
-   before logout?
-4. Is encrypted local SQLite required for the pilot threat model?
-5. Are receipt camera/upload and remote push in MVP?
-6. Does the team have a Mac, or should iOS builds use a managed macOS CI service?
-
+1. Confirm Expo/CNG as binding rather than recommended, or select bare React
+   Native with an explicit native-maintenance reason.
+2. Confirm the proposed email OTP-only pilot login method and production custom
+   SMTP requirement.
+3. Decide whether offline drafts survive logout/user switching or require
+   sync/export/discard.
+4. Decide whether SQLCipher is required for the pilot threat model.
+5. Confirm whether receipt capture and remote push ship in MVP.
+6. Choose Android-first or simultaneous Android/iOS release.
+7. Choose local macOS, managed macOS CI, or EAS for iOS builds/signing.

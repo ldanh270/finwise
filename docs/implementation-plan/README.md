@@ -21,7 +21,8 @@ extend the existing Prisma schema merely because a table already exists.
 | Document | Purpose |
 | --- | --- |
 | [`TECHNICAL-ARCHITECTURE.md`](TECHNICAL-ARCHITECTURE.md) | Proposed web/API/data/monorepo/deployment architecture and vertical delivery slices |
-| [`MOBILE-ARCHITECTURE.md`](MOBILE-ARCHITECTURE.md) | Confirmed Flutter iOS/Android architecture, build requirements, offline model, navigation, sync, and release plan |
+| [`MOBILE-ARCHITECTURE.md`](MOBILE-ARCHITECTURE.md) | Confirmed React Native iOS/Android architecture, Expo workflow, offline model, navigation, sync, and release plan |
+| [`AUTH-SESSION-ARCHITECTURE.md`](AUTH-SESSION-ARCHITECTURE.md) | Proposed identity provider, login methods, session lifecycle, Nest bootstrap, logout, and account-deletion architecture |
 
 ## Planning phases
 

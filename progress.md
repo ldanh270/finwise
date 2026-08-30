@@ -1,6 +1,103 @@
 # Progress log
 
+## 2026-08-30
+
+- Continued React Native architecture discovery with the authentication/session
+  boundary rather than starting the mobile scaffold.
+- Added a dedicated proposal for Supabase identity, email OTP pilot login,
+  concurrency-safe Nest session bootstrap, secure mobile token handling,
+  single-flight refresh, deep links, logout with offline drafts, account
+  deletion, typed errors, verification cases, and delivery order.
+- Recorded email OTP, external identity mapping, and logout/draft handling as
+  proposals rather than confirmed product decisions.
+
+## 2026-08-29
+
+- Product owner selected React Native and TypeScript for the shared iOS/Android
+  client, superseding the Flutter direction.
+- Rewrote the mobile architecture around Expo development builds, Prebuild/CNG,
+  Expo Router, a feature-first application boundary, TanStack Query, SQLite
+  cache/outbox, secure session storage, and controlled offline synchronization.
+- Added append-only superseding decisions while preserving the earlier Flutter
+  decisions and investigation as historical evidence.
+- Updated the technical architecture and planning index with the proposed pnpm
+  TypeScript monorepo and shared generated OpenAPI client with runtime-specific
+  adapters.
+- Kept source/scaffold replacement and root Flutter-script cleanup outside this
+  documentation-only change; they require a dedicated migration task.
+
+## 2026-08-28
+
+- Used an offline Gradle build to identify the two missing Kotlin artifacts
+  after the first remote build produced no useful progress output.
+- Verified both artifact endpoints and resumed an online verbose Gradle build;
+  it cached the initial dependencies and advanced to the Kotlin compiler graph.
+- Stopped a duplicate direct download after confirming it did not improve the
+  constrained Maven throughput; the primary Gradle build remains active.
+- Updated the mobile architecture with the implemented foundation scope and
+  the vertical-slice capabilities intentionally deferred.
+
 ## 2026-08-27
+
+- Started phase 7 to replace the superseded Expo starter with a buildable
+  Flutter iOS/Android scaffold.
+- Recorded the affected architecture rules, initial API data flow, scope
+  exclusions, and verification cases before implementation.
+- Initial toolchain audit found no `flutter` command in PATH and no files from
+  the first `mobile/` tracked-file scan; investigation continues without source
+  replacement yet.
+- Confirmed that `mobile/` is empty both on disk and in the current Git tree, so
+  scaffold creation will not overwrite tracked Expo or user feature source.
+- Confirmed through Git history that React Native was intentionally uninstalled;
+  inspected root scripts and ignore rules for Flutter integration needs.
+- Found JDK 21 but no Flutter/Dart/FVM/ADB tooling in PATH.
+- Verified the current official Flutter creation/install direction and selected
+  an explicit provisional reverse-domain organization for the scaffold.
+- Installed the official Flutter stable SDK outside the repository and completed
+  its Dart/CLI dependency bootstrap; retrying a stalled version check without
+  remote version checking.
+- Diagnosed the repeated CLI stall as Git `safe.directory` protection for the
+  host-owned SDK path and stopped the stalled process safely.
+- Added Git trust for only the installed Flutter SDK path and confirmed direct
+  SDK Git operations now work; the CLI is currently in snapshot generation.
+- Stopped the third bounded wrapper attempt because no snapshot was produced;
+  moving to direct Dart snapshot diagnostics with visible output.
+- Direct process-tree inspection proved the initial snapshot is waiting for an
+  automatic `git fetch --tags` caused by the shallow SDK clone; allowing that
+  one-time fetch/index operation to complete.
+- The tag fetch failed to make reliable progress and left large temporary pack
+  files; changing installation strategy to the official prebuilt SDK archive.
+- Resolved the exact current stable Windows archive and official SHA-256 from
+  Flutter's release manifest; stopped the clone-based bootstrap.
+- Downloaded the official 3.47.1 Windows SDK archive, verified its SHA-256,
+  preserved the failed clone as a temporary backup, extracted the archive, and
+  confirmed the Flutter/Dart CLI versions.
+- Generated the `finwise_mobile` Flutter project for Android and iOS only using
+  Kotlin and Swift; dependency resolution completed successfully.
+- Began inspecting generated configuration before applying the Finwise
+  feature-first foundation and tests.
+- Verified generated Android/iOS identifiers, nested ignore rules, and that the
+  repository diff contains only planning updates plus the new `mobile/` tree.
+- Added the app bootstrap, Riverpod/GoRouter shell, Material 3 theme, validated
+  environment configuration, feature-first primary screens, exact VND
+  formatter, and empty-state components.
+- Audited native display names and Android network permission before API-ready
+  platform configuration.
+- Added mobile tests, Android production network permission, consistent Finwise
+  display names, root Flutter scripts, pinned toolchain documentation, and
+  mobile-scoped agent rules.
+- Ran Dart formatter, `flutter analyze` with no issues, and `flutter test` with
+  all five cases passing.
+- Ran `flutter doctor -v`; located the Android SDK and determined platform 36
+  plus accepted relevant licenses are the remaining Android build prerequisites.
+- Installed Android platform 36 and build-tools 36.0.0 into the existing SDK and
+  verified both directories before stopping a lingering silent manager process.
+- Started the debug APK build; diagnosed its initial silent period as the
+  one-time Gradle 9.3.1 distribution download rather than source compilation.
+- Verified the Gradle distribution download/extraction completed and the active
+  daemon moved into dependency resolution/compilation.
+- Captured a read-only Gradle thread dump; confirmed the build is waiting on
+  remote dependency network I/O rather than stuck in Finwise source compilation.
 
 - Selected Flutter/Dart as the mobile implementation for a shared iOS and
   Android codebase; removed Expo from the target architecture.
