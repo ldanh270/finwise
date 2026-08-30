@@ -278,4 +278,101 @@ describe('CoreService', () => {
       service.createAccount(actor, workspaceId, { name: 'Cash', kind: 'cash' }),
     ).toThrow('Archived workspaces cannot accept financial writes.');
   });
+
+  it('replaces a posted transaction with reversal plus replacement and rebuilds balances', () => {
+    const service = createService();
+    const workspaceId = service.bootstrap(actor).suggestedWorkspaceId;
+    const account = service.createAccount(actor, workspaceId, {
+      name: 'Cash',
+      kind: 'cash',
+    });
+    const posted = service.createTransaction(
+      actor,
+      workspaceId,
+      {
+        type: 'income',
+        accountId: account.id,
+        amountMinorUnits: '1000000',
+        effectiveDate: '2026-08-30',
+      },
+      'replace-source',
+    );
+
+    const result = service.replaceTransaction(
+      actor,
+      workspaceId,
+      posted.id,
+      {
+        type: 'expense',
+        accountId: account.id,
+        amountMinorUnits: '200000',
+        effectiveDate: '2026-08-30',
+        reason: 'Wrong transaction type',
+      },
+      'replace-command',
+    );
+    expect(result.original.status).toBe('voided');
+    expect(result.reversal.reversalOfId).toBe(posted.id);
+    expect(result.replacement.kind).toBe('expense');
+    expect(
+      service.getAccount(actor, workspaceId, account.id).balanceMinorUnits,
+    ).toBe('-200000');
+    expect(
+      service
+        .rebuildBalances(actor, workspaceId)
+        .find((projection) => projection.accountId === account.id)
+        ?.balanceMinorUnits,
+    ).toBe('-200000');
+
+    const replay = service.replaceTransaction(
+      actor,
+      workspaceId,
+      posted.id,
+      {
+        type: 'expense',
+        accountId: account.id,
+        amountMinorUnits: '200000',
+        effectiveDate: '2026-08-30',
+        reason: 'Wrong transaction type',
+      },
+      'replace-command',
+    );
+    expect(replay.replacement.id).toBe(result.replacement.id);
+  });
+
+  it('archives an account without deleting its journal history', () => {
+    const service = createService();
+    const workspaceId = service.bootstrap(actor).suggestedWorkspaceId;
+    const account = service.createAccount(actor, workspaceId, {
+      name: 'Legacy cash',
+      kind: 'cash',
+    });
+    service.createTransaction(
+      actor,
+      workspaceId,
+      {
+        type: 'income',
+        accountId: account.id,
+        amountMinorUnits: '5000',
+        effectiveDate: '2026-08-30',
+      },
+      'archive-history',
+    );
+    const archived = service.archiveAccount(actor, workspaceId, account.id);
+    expect(archived.status).toBe('archived');
+    expect(service.listTransactions(actor, workspaceId)).toHaveLength(1);
+    expect(() =>
+      service.createTransaction(
+        actor,
+        workspaceId,
+        {
+          type: 'expense',
+          accountId: account.id,
+          amountMinorUnits: '1000',
+          effectiveDate: '2026-08-30',
+        },
+        'archive-write',
+      ),
+    ).toThrow('Archived accounts cannot receive postings.');
+  });
 });

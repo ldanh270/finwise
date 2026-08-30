@@ -32,6 +32,12 @@ export interface AccountResponse {
   readonly currency: typeof MVP_CURRENCY;
   readonly balanceMinorUnits: string;
   readonly visibilityMode: AccountVisibilityMode;
+  readonly status: string;
+}
+
+export interface BalanceProjectionResponse {
+  readonly accountId: string;
+  readonly balanceMinorUnits: string;
 }
 
 export interface TransactionResponse {
@@ -496,6 +502,26 @@ export class CoreService {
     );
   }
 
+  archiveAccount(
+    actor: AuthenticatedActor,
+    workspaceId: string,
+    accountId: string,
+  ): AccountResponse {
+    return this.accountResponse(
+      this.store.archiveAccount(workspaceId, accountId, actor),
+    );
+  }
+
+  rebuildBalances(
+    actor: AuthenticatedActor,
+    workspaceId: string,
+  ): readonly BalanceProjectionResponse[] {
+    return this.store.rebuildBalances(workspaceId, actor).map((projection) => ({
+      accountId: projection.accountId,
+      balanceMinorUnits: projection.balanceMinorUnits.toString(),
+    }));
+  }
+
   postOpeningBalance(
     actor: AuthenticatedActor,
     workspaceId: string,
@@ -693,6 +719,93 @@ export class CoreService {
     return response;
   }
 
+  replaceTransaction(
+    actor: AuthenticatedActor,
+    workspaceId: string,
+    transactionId: string,
+    body: unknown,
+    idempotencyKey: string | undefined,
+  ): {
+    readonly original: TransactionResponse;
+    readonly reversal: TransactionResponse;
+    readonly replacement: TransactionResponse;
+  } {
+    const key = requiredIdempotencyKey(idempotencyKey);
+    const input = bodyRecord(body);
+    const reason = requiredString(input, 'reason', 1, 500);
+    const type = transactionType(input.type);
+    const money = parseMoney(input);
+    const effectiveDate = parseDate(input.effectiveDate);
+    const sourceAccountId = readAccountId(
+      input,
+      'accountId',
+      'sourceAccountId',
+    );
+    const destinationAccountId = readOptionalAccountId(
+      input,
+      'destinationAccountId',
+    );
+    const description = readOptionalString(input, 'description', 500);
+    const requestHash = this.store.hashRequest(
+      JSON.stringify({
+        transactionId,
+        reason,
+        type,
+        amount: money.toMinorUnitsString(),
+        effectiveDate,
+        sourceAccountId,
+        destinationAccountId,
+        description,
+      }),
+    );
+    const previous = this.store.getIdempotency<{
+      readonly original: TransactionResponse;
+      readonly reversal: TransactionResponse;
+      readonly replacement: TransactionResponse;
+    }>(workspaceId, key, 'transaction.replace', requestHash);
+    if (previous !== undefined) {
+      return previous;
+    }
+    const source = this.store.getAccount(workspaceId, sourceAccountId, actor);
+    const memberId = this.store.memberIdFor(workspaceId, actor.userId);
+    const result = this.store.replaceTransaction(
+      workspaceId,
+      transactionId,
+      actor,
+      {
+        workspaceId,
+        kind: type,
+        amountMinorUnits: money.minorUnits,
+        effectiveDate,
+        description,
+        createdByMemberId: memberId,
+        entries: this.entriesFor(
+          workspaceId,
+          actor,
+          type,
+          source.id,
+          destinationAccountId,
+          money,
+        ),
+      },
+      reason,
+      effectiveDate,
+    );
+    const response = {
+      original: this.transactionResponse(result.original),
+      reversal: this.transactionResponse(result.reversal),
+      replacement: this.transactionResponse(result.replacement),
+    };
+    this.store.saveIdempotency(
+      workspaceId,
+      key,
+      'transaction.replace',
+      requestHash,
+      response,
+    );
+    return response;
+  }
+
   audits(
     actor: AuthenticatedActor,
     workspaceId: string,
@@ -793,6 +906,7 @@ export class CoreService {
       currency: account.currency,
       balanceMinorUnits: account.balanceMinorUnits.toString(),
       visibilityMode: account.visibilityMode,
+      status: account.status,
     };
   }
 

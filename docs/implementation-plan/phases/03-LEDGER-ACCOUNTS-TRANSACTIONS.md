@@ -119,7 +119,8 @@ cutover. Never infer an opening balance by silently overwriting current totals.
 
 `backend/src/core` now supports VND string amounts, opening balances, manual
 income/expense/transfer journals, idempotency replay, transaction listing,
-audit history, and void-by-reversal through an in-memory adapter. PostgreSQL
-repositories, account archive/edit endpoints, split/category lines, cleared vs
-reconciled projections, and reversal/replacement commands remain before this
-phase can exit.
+audit history, void-by-reversal, account archive, reversal/replacement
+correction, and journal-based balance rebuild through an in-memory adapter.
+PostgreSQL repositories, split/category lines, cleared vs reconciled
+projections and durable source links remain before this phase can exit. See the
+[ledger correction walkthrough](../../reviews/2026-08-30-ledger-correction-projection-walkthrough.md).

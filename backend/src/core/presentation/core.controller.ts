@@ -214,6 +214,23 @@ export class CoreController {
     return this.coreService.getAccount(actor, workspaceId, accountId);
   }
 
+  @Post('workspaces/:workspaceId/accounts/:accountId/archive')
+  archiveAccount(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('workspaceId') workspaceId: string,
+    @Param('accountId') accountId: string,
+  ) {
+    return this.coreService.archiveAccount(actor, workspaceId, accountId);
+  }
+
+  @Get('workspaces/:workspaceId/balances/rebuild')
+  rebuildBalances(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('workspaceId') workspaceId: string,
+  ) {
+    return this.coreService.rebuildBalances(actor, workspaceId);
+  }
+
   @Post('workspaces/:workspaceId/accounts/:accountId/access')
   updateAccountAccess(
     @CurrentActor() actor: AuthenticatedActor,
@@ -287,6 +304,23 @@ export class CoreController {
     @Headers('idempotency-key') idempotencyKey: string | undefined,
   ) {
     return this.coreService.voidTransaction(
+      actor,
+      workspaceId,
+      transactionId,
+      body,
+      idempotencyKey,
+    );
+  }
+
+  @Post('workspaces/:workspaceId/transactions/:transactionId/replace')
+  replaceTransaction(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('workspaceId') workspaceId: string,
+    @Param('transactionId') transactionId: string,
+    @Body() body: unknown,
+    @Headers('idempotency-key') idempotencyKey: string | undefined,
+  ) {
+    return this.coreService.replaceTransaction(
       actor,
       workspaceId,
       transactionId,

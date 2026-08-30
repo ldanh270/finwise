@@ -705,6 +705,24 @@ export class InMemoryFinwiseStore implements CoreStorePort {
     return account;
   }
 
+  archiveAccount(
+    workspaceId: string,
+    accountId: string,
+    actor: AuthenticatedActor,
+  ): AccountRecord {
+    const member = this.requireMemberByUser(workspaceId, actor.userId, false);
+    this.requirePermission(member, PERMISSIONS.accountUpdate);
+    const account = this.requireAccount(workspaceId, accountId);
+    if (account.isSystem) {
+      throw FinwiseError.conflict('System accounts cannot be archived.');
+    }
+    if (account.status === 'archived') {
+      throw FinwiseError.businessState('Account is already archived.');
+    }
+    account.status = 'archived';
+    return account;
+  }
+
   systemAccount(workspaceId: string, purpose: string): AccountRecord {
     const existing = [...this.accounts.values()].find(
       (account) =>
@@ -880,6 +898,89 @@ export class InMemoryFinwiseStore implements CoreStorePort {
     return { original, reversal };
   }
 
+  replaceTransaction(
+    workspaceId: string,
+    transactionId: string,
+    actor: AuthenticatedActor,
+    replacement: JournalDraft,
+    reason: string,
+    effectiveDate: string,
+  ): {
+    readonly original: JournalTransactionRecord;
+    readonly reversal: JournalTransactionRecord;
+    readonly replacement: JournalTransactionRecord;
+  } {
+    const member = this.requireMemberByUser(workspaceId, actor.userId, false);
+    this.requirePermission(member, PERMISSIONS.transactionVoid);
+    const original = this.getTransaction(workspaceId, transactionId, actor);
+    if (original.status !== 'posted') {
+      throw FinwiseError.businessState(
+        'Only posted transactions can be replaced.',
+      );
+    }
+    this.validateJournalDraft(replacement);
+    const reversal = this.postJournal({
+      workspaceId,
+      kind: 'adjustment',
+      amountMinorUnits: original.amountMinorUnits,
+      effectiveDate,
+      description: `Reverse ${original.id}: ${reason}`,
+      createdByMemberId: member.id,
+      reversalOfId: original.id,
+      entries: original.entries.map((entry) => ({
+        accountId: entry.accountId,
+        amountMinorUnits: entry.amountMinorUnits,
+        direction: entry.direction === 'increase' ? 'decrease' : 'increase',
+      })),
+    });
+    original.status = 'voided';
+    this.addAudit(workspaceId, original.id, member.id, 'replaced', {
+      reversalId: reversal.id,
+      reason,
+    });
+    const replacementTransaction = this.postJournal(replacement);
+    return {
+      original,
+      reversal,
+      replacement: replacementTransaction,
+    };
+  }
+
+  rebuildBalances(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+  ): readonly {
+    readonly accountId: string;
+    readonly balanceMinorUnits: bigint;
+  }[] {
+    const member = this.requireMemberByUser(workspaceId, actor.userId, false);
+    this.requirePermission(member, PERMISSIONS.accountRead);
+    const balances = new Map<string, bigint>();
+    for (const account of this.accounts.values()) {
+      if (account.workspaceId === workspaceId) {
+        balances.set(account.id, 0n);
+      }
+    }
+    for (const transaction of this.transactions.values()) {
+      if (transaction.workspaceId !== workspaceId) {
+        continue;
+      }
+      for (const entry of transaction.entries) {
+        const current = balances.get(entry.accountId);
+        if (current === undefined) continue;
+        const delta =
+          entry.direction === 'increase'
+            ? entry.amountMinorUnits
+            : -entry.amountMinorUnits;
+        balances.set(entry.accountId, current + delta);
+      }
+    }
+    return [...balances.entries()].map(([accountId, balanceMinorUnits]) => ({
+      accountId,
+      balanceMinorUnits,
+    }));
+  }
+
   getIdempotency<T extends object>(
     workspaceId: string,
     key: string,
@@ -964,6 +1065,50 @@ export class InMemoryFinwiseStore implements CoreStorePort {
       throw FinwiseError.notFound('Role');
     }
     return role;
+  }
+
+  private validateJournalDraft(draft: JournalDraft): void {
+    this.requireWritableWorkspace(draft.workspaceId);
+    const member = this.members.get(draft.createdByMemberId);
+    if (
+      !member ||
+      member.workspaceId !== draft.workspaceId ||
+      member.status !== 'active'
+    ) {
+      throw FinwiseError.membership();
+    }
+    this.requirePermission(member, PERMISSIONS.transactionCreate);
+    if (draft.entries.length < 2) {
+      throw FinwiseError.validation('A journal needs at least two entries.');
+    }
+    if (draft.amountMinorUnits <= 0n) {
+      throw FinwiseError.validation('Journal amount must be positive.');
+    }
+    let increases = 0n;
+    let decreases = 0n;
+    for (const entry of draft.entries) {
+      if (entry.amountMinorUnits <= 0n) {
+        throw FinwiseError.validation(
+          'Journal entry amounts must be positive.',
+        );
+      }
+      const account = this.requireAccount(draft.workspaceId, entry.accountId);
+      if (account.status !== 'active') {
+        throw FinwiseError.businessState(
+          'Archived accounts cannot receive postings.',
+        );
+      }
+      if (entry.direction === 'increase') {
+        increases += entry.amountMinorUnits;
+      } else {
+        decreases += entry.amountMinorUnits;
+      }
+    }
+    if (increases !== decreases || increases !== draft.amountMinorUnits) {
+      throw FinwiseError.validation(
+        'Journal entries must balance to the transaction amount.',
+      );
+    }
   }
 
   private refreshInvitationStatus(

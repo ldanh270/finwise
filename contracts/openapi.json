@@ -549,6 +549,58 @@
           "403": { "$ref": "#/components/responses/Forbidden" },
           "404": { "$ref": "#/components/responses/NotFound" }
         }
+      },
+      "post": {
+        "operationId": "archiveAccount",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceId" },
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Account archived",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Account" }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/balances/rebuild": {
+      "get": {
+        "operationId": "rebuildBalances",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "responses": {
+          "200": {
+            "description": "Rebuilt balance projection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["accountId", "balanceMinorUnits"],
+                    "properties": {
+                      "accountId": { "type": "string", "format": "uuid" },
+                      "balanceMinorUnits": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
       }
     },
     "/workspaces/{workspaceId}/accounts/{accountId}/access": {
@@ -664,6 +716,61 @@
           },
           "403": { "$ref": "#/components/responses/Forbidden" },
           "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    }
+    ,
+    "/workspaces/{workspaceId}/transactions/{transactionId}/replace": {
+      "post": {
+        "operationId": "replaceTransaction",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceId" },
+          { "$ref": "#/components/parameters/IdempotencyKey" },
+          {
+            "name": "transactionId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  { "$ref": "#/components/schemas/PostTransactionRequest" },
+                  {
+                    "type": "object",
+                    "required": ["reason"],
+                    "properties": { "reason": { "type": "string", "maxLength": 500 } }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Original reversed and replacement posted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["original", "reversal", "replacement"],
+                  "properties": {
+                    "original": { "$ref": "#/components/schemas/Transaction" },
+                    "reversal": { "$ref": "#/components/schemas/Transaction" },
+                    "replacement": { "$ref": "#/components/schemas/Transaction" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
         }
       }
     }
@@ -944,7 +1051,8 @@
           "kind",
           "currency",
           "balanceMinorUnits",
-          "visibilityMode"
+          "visibilityMode",
+          "status"
         ],
         "properties": {
           "id": { "type": "string" },
@@ -953,7 +1061,8 @@
           "kind": { "type": "string" },
           "currency": { "type": "string", "const": "VND" },
           "balanceMinorUnits": { "type": "string" },
-          "visibilityMode": { "type": "string" }
+          "visibilityMode": { "type": "string" },
+          "status": { "type": "string", "enum": ["active", "archived"] }
         }
       },
       "PostTransactionRequest": {

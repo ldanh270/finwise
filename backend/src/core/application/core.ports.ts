@@ -149,6 +149,11 @@ export interface CoreStorePort extends CoreMembershipPort {
     accountId: string,
     actor: AuthenticatedActor,
   ): AccountRecord;
+  archiveAccount(
+    workspaceId: string,
+    accountId: string,
+    actor: AuthenticatedActor,
+  ): AccountRecord;
   memberIdFor(workspaceId: string, userId: string): string;
   systemAccount(workspaceId: string, purpose: string): AccountRecord;
   postJournal(draft: JournalDraft): JournalTransactionRecord;
@@ -171,6 +176,25 @@ export interface CoreStorePort extends CoreMembershipPort {
     readonly original: JournalTransactionRecord;
     readonly reversal: JournalTransactionRecord;
   };
+  replaceTransaction(
+    workspaceId: string,
+    transactionId: string,
+    actor: AuthenticatedActor,
+    replacement: JournalDraft,
+    reason: string,
+    effectiveDate: string,
+  ): {
+    readonly original: JournalTransactionRecord;
+    readonly reversal: JournalTransactionRecord;
+    readonly replacement: JournalTransactionRecord;
+  };
+  rebuildBalances(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+  ): readonly {
+    readonly accountId: string;
+    readonly balanceMinorUnits: bigint;
+  }[];
   getIdempotency<T extends object>(
     workspaceId: string,
     key: string,
