@@ -151,4 +151,56 @@ describe('CoreService', () => {
       ),
     ).toThrow('valid calendar date');
   });
+
+  it('protects the owner role while allowing custom role lifecycle', () => {
+    const service = createService();
+    const workspaceId = service.bootstrap(actor).suggestedWorkspaceId;
+
+    const ownerRole = service
+      .listRoles(actor, workspaceId)
+      .find((role) => role.protected);
+    expect(ownerRole).toBeDefined();
+    expect(ownerRole?.permissions).toContain('role.manage');
+
+    const reviewer = service.createRole(actor, workspaceId, {
+      name: 'Reviewer',
+      permissions: ['workspace.read', 'transaction.read'],
+    });
+    expect(reviewer.protected).toBe(false);
+    expect(reviewer.permissions).toEqual([
+      'transaction.read',
+      'workspace.read',
+    ]);
+
+    expect(() =>
+      service.updateRole(actor, workspaceId, ownerRole?.id ?? '', {
+        name: 'Owner 2',
+        permissions: [],
+      }),
+    ).toThrow('protected owner role');
+    expect(() =>
+      service.deleteRole(actor, workspaceId, ownerRole?.id ?? ''),
+    ).toThrow('protected owner role');
+    expect(() =>
+      service.createRole(actor, workspaceId, {
+        name: 'reviewer',
+        permissions: ['workspace.read'],
+      }),
+    ).toThrow('already exists');
+  });
+
+  it('keeps owner visibility even when an account is owner-only', () => {
+    const service = createService();
+    const workspaceId = service.bootstrap(actor).suggestedWorkspaceId;
+    const account = service.createAccount(actor, workspaceId, {
+      name: 'Private cash',
+      kind: 'cash',
+    });
+
+    service.updateAccountAccess(actor, workspaceId, account.id, {
+      visibilityMode: 'owner_only',
+    });
+
+    expect(service.listAccounts(actor, workspaceId)).toHaveLength(1);
+  });
 });

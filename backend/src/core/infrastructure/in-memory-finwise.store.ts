@@ -31,6 +31,17 @@ interface AccountAccessOverride {
   allowed: boolean;
 }
 
+function normalizeRoleName(value: string): string {
+  const name = value.trim();
+  if (name.length < 1 || name.length > 100) {
+    throw FinwiseError.validation(
+      'Role name must be between 1 and 100 characters.',
+      { field: 'name' },
+    );
+  }
+  return name;
+}
+
 export class InMemoryFinwiseStore implements CoreStorePort {
   private readonly users = new Map<string, UserRecord>();
   private readonly identities = new Map<string, ExternalIdentityRecord>();
@@ -89,7 +100,10 @@ export class InMemoryFinwiseStore implements CoreStorePort {
         user.id,
         true,
       );
-      this.assignRole(ownerMember.id, this.requireOwnerRole(workspace.id).id);
+      this.assignRoleInternal(
+        ownerMember.id,
+        this.requireOwnerRole(workspace.id).id,
+      );
       personalWorkspaceId = workspace.id;
       this.personalWorkspaceByUser.set(user.id, workspace.id);
     }
@@ -126,7 +140,10 @@ export class InMemoryFinwiseStore implements CoreStorePort {
       actor.userId,
       true,
     );
-    this.assignRole(ownerMember.id, this.requireOwnerRole(workspace.id).id);
+    this.assignRoleInternal(
+      ownerMember.id,
+      this.requireOwnerRole(workspace.id).id,
+    );
     return workspace;
   }
 
@@ -143,6 +160,172 @@ export class InMemoryFinwiseStore implements CoreStorePort {
       throw FinwiseError.permission();
     }
     return workspace;
+  }
+
+  listMembers(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+  ): readonly WorkspaceMemberRecord[] {
+    const member = this.requireMemberByUser(workspaceId, actor.userId, false);
+    this.requirePermission(member, PERMISSIONS.membershipRead);
+    return [...this.members.values()].filter(
+      (candidate) =>
+        candidate.workspaceId === workspaceId && candidate.status === 'active',
+    );
+  }
+
+  listRoles(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+  ): readonly RoleRecord[] {
+    const member = this.requireMemberByUser(workspaceId, actor.userId, false);
+    this.requirePermission(member, PERMISSIONS.roleRead);
+    return [...this.roles.values()].filter(
+      (role) => role.workspaceId === workspaceId,
+    );
+  }
+
+  createRole(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    name: string,
+    permissions: readonly string[],
+  ): RoleRecord {
+    const member = this.requireMemberByUser(workspaceId, actor.userId, false);
+    this.requirePermission(member, PERMISSIONS.roleManage);
+    const normalizedName = normalizeRoleName(name);
+    this.ensureRoleNameAvailable(workspaceId, normalizedName);
+    const role: RoleRecord = {
+      id: randomUUID(),
+      workspaceId,
+      name: normalizedName,
+      protected: false,
+      permissions: new Set(this.validatePermissions(permissions)),
+    };
+    this.roles.set(role.id, role);
+    return role;
+  }
+
+  updateRole(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    roleId: string,
+    name: string,
+    permissions: readonly string[],
+  ): RoleRecord {
+    const member = this.requireMemberByUser(workspaceId, actor.userId, false);
+    this.requirePermission(member, PERMISSIONS.roleManage);
+    const role = this.requireRole(workspaceId, roleId);
+    if (role.protected) {
+      throw FinwiseError.conflict(
+        'The protected owner role cannot be changed.',
+      );
+    }
+    const normalizedName = normalizeRoleName(name);
+    this.ensureRoleNameAvailable(workspaceId, normalizedName, roleId);
+    const updatedRole: RoleRecord = {
+      ...role,
+      name: normalizedName,
+      permissions: new Set(this.validatePermissions(permissions)),
+    };
+    this.roles.set(role.id, updatedRole);
+    return updatedRole;
+  }
+
+  deleteRole(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    roleId: string,
+  ): void {
+    const member = this.requireMemberByUser(workspaceId, actor.userId, false);
+    this.requirePermission(member, PERMISSIONS.roleManage);
+    const role = this.requireRole(workspaceId, roleId);
+    if (role.protected) {
+      throw FinwiseError.conflict(
+        'The protected owner role cannot be deleted.',
+      );
+    }
+    if (
+      [...this.members.values()].some(
+        (candidate) =>
+          candidate.workspaceId === workspaceId &&
+          candidate.roleIds.includes(roleId),
+      )
+    ) {
+      throw FinwiseError.conflict(
+        'Remove role assignments before deleting the role.',
+      );
+    }
+    this.roles.delete(roleId);
+  }
+
+  assignRole(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    memberId: string,
+    roleId: string,
+  ): WorkspaceMemberRecord {
+    const actorMember = this.requireMemberByUser(
+      workspaceId,
+      actor.userId,
+      false,
+    );
+    this.requirePermission(actorMember, PERMISSIONS.roleManage);
+    const targetMember = this.members.get(memberId);
+    if (
+      !targetMember ||
+      targetMember.workspaceId !== workspaceId ||
+      targetMember.status !== 'active'
+    ) {
+      throw FinwiseError.notFound('Workspace member');
+    }
+    this.requireRole(workspaceId, roleId);
+    if (!targetMember.roleIds.includes(roleId)) {
+      (targetMember.roleIds as string[]).push(roleId);
+    }
+    return targetMember;
+  }
+
+  updateAccountAccess(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    accountId: string,
+    visibilityMode: AccountVisibilityMode,
+    memberId?: string,
+    allowed?: boolean,
+  ): AccountRecord {
+    const actorMember = this.requireMemberByUser(
+      workspaceId,
+      actor.userId,
+      false,
+    );
+    this.requirePermission(actorMember, PERMISSIONS.accountAccessManage);
+    const account = this.requireAccount(workspaceId, accountId);
+    if (memberId === undefined) {
+      account.visibilityMode = visibilityMode;
+      return account;
+    }
+    const targetMember = this.members.get(memberId);
+    if (!targetMember || targetMember.workspaceId !== workspaceId) {
+      throw FinwiseError.notFound('Workspace member');
+    }
+    if (targetMember.isOwner && allowed === false) {
+      throw FinwiseError.conflict('The workspace owner cannot be hidden.');
+    }
+    if (allowed === undefined) {
+      throw FinwiseError.validation(
+        'allowed is required for a member override.',
+        {
+          field: 'allowed',
+        },
+      );
+    }
+    this.accountAccess.set(`${account.id}:${targetMember.id}`, {
+      accountId: account.id,
+      memberId: targetMember.id,
+      allowed,
+    });
+    return account;
   }
 
   memberIdFor(workspaceId: string, userId: string): string {
@@ -462,6 +645,50 @@ export class InMemoryFinwiseStore implements CoreStorePort {
     return workspace;
   }
 
+  private requireRole(workspaceId: string, roleId: string): RoleRecord {
+    const role = this.roles.get(roleId);
+    if (!role || role.workspaceId !== workspaceId) {
+      throw FinwiseError.notFound('Role');
+    }
+    return role;
+  }
+
+  private ensureRoleNameAvailable(
+    workspaceId: string,
+    name: string,
+    ignoredRoleId?: string,
+  ): void {
+    const duplicate = [...this.roles.values()].some(
+      (role) =>
+        role.workspaceId === workspaceId &&
+        role.id !== ignoredRoleId &&
+        role.name.toLocaleLowerCase() === name.toLocaleLowerCase(),
+    );
+    if (duplicate) {
+      throw FinwiseError.conflict('A role with this name already exists.');
+    }
+  }
+
+  private validatePermissions(
+    permissions: readonly string[],
+  ): readonly Permission[] {
+    const supportedPermissions = new Set<string>(Object.values(PERMISSIONS));
+    const uniquePermissions = [...new Set(permissions)];
+    if (
+      uniquePermissions.some(
+        (permission) => !supportedPermissions.has(permission),
+      )
+    ) {
+      throw FinwiseError.validation(
+        'Role contains an unsupported permission.',
+        {
+          field: 'permissions',
+        },
+      );
+    }
+    return uniquePermissions as Permission[];
+  }
+
   private createMemberInternal(
     workspaceId: string,
     userId: string,
@@ -502,7 +729,7 @@ export class InMemoryFinwiseStore implements CoreStorePort {
     return role;
   }
 
-  private assignRole(memberId: string, roleId: string): void {
+  private assignRoleInternal(memberId: string, roleId: string): void {
     const member = this.members.get(memberId);
     if (!member) {
       throw FinwiseError.membership();

@@ -3,12 +3,14 @@ import {
   AccountKind,
   AccountRecord,
   AccountVisibilityMode,
+  RoleRecord,
   UserRecord,
   JournalKind,
   JournalTransactionRecord,
   TransactionAuditRecord,
   WorkspaceKind,
   WorkspaceRecord,
+  WorkspaceMemberRecord,
 } from '../domain/ledger.types';
 
 export interface BootstrapResult {
@@ -40,6 +42,46 @@ export interface CoreStorePort {
     kind: WorkspaceKind,
   ): WorkspaceRecord;
   getWorkspace(workspaceId: string, actor: AuthenticatedActor): WorkspaceRecord;
+  listMembers(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+  ): readonly WorkspaceMemberRecord[];
+  listRoles(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+  ): readonly RoleRecord[];
+  createRole(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    name: string,
+    permissions: readonly string[],
+  ): RoleRecord;
+  updateRole(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    roleId: string,
+    name: string,
+    permissions: readonly string[],
+  ): RoleRecord;
+  deleteRole(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    roleId: string,
+  ): void;
+  assignRole(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    memberId: string,
+    roleId: string,
+  ): WorkspaceMemberRecord;
+  updateAccountAccess(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    accountId: string,
+    visibilityMode: AccountVisibilityMode,
+    memberId?: string,
+    allowed?: boolean,
+  ): AccountRecord;
   listAccounts(
     workspaceId: string,
     actor: AuthenticatedActor,

@@ -18,11 +18,18 @@ try {
   process.exit(1);
 }
 
+const requiredPaths = [
+  "/session/bootstrap",
+  "/workspaces/{workspaceId}/overview",
+  "/workspaces/{workspaceId}/roles",
+  "/workspaces/{workspaceId}/members",
+  "/workspaces/{workspaceId}/transactions",
+];
+
 if (
   contract?.openapi !== "3.1.0" ||
   typeof contract?.paths !== "object" ||
-  !contract.paths["/session/bootstrap"] ||
-  !contract.paths["/workspaces/{workspaceId}/transactions"]
+  requiredPaths.some((requiredPath) => !contract.paths[requiredPath])
 ) {
   console.error("OpenAPI contract is missing required first-slice paths.");
   process.exit(1);

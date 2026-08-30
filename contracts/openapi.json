@@ -103,6 +103,160 @@
         }
       }
     },
+    "/workspaces/{workspaceId}/members": {
+      "get": {
+        "operationId": "listWorkspaceMembers",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "responses": {
+          "200": {
+            "description": "Active workspace members",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Member" }
+                }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/roles": {
+      "get": {
+        "operationId": "listRoles",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "responses": {
+          "200": {
+            "description": "Workspace roles",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Role" }
+                }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "operationId": "createRole",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RoleCommand" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Role created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Role" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/roles/{roleId}": {
+      "patch": {
+        "operationId": "updateRole",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceId" },
+          {
+            "name": "roleId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RoleCommand" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Role updated",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Role" }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      },
+      "delete": {
+        "operationId": "deleteRole",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceId" },
+          {
+            "name": "roleId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Role deleted" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/members/{memberId}/roles": {
+      "post": {
+        "operationId": "assignRole",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceId" },
+          {
+            "name": "memberId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["roleId"],
+                "properties": { "roleId": { "type": "string" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Role assigned",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Member" }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
     "/workspaces/{workspaceId}/accounts": {
       "get": {
         "operationId": "listAccounts",
@@ -170,6 +324,47 @@
           },
           "403": { "$ref": "#/components/responses/Forbidden" },
           "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/accounts/{accountId}/access": {
+      "post": {
+        "operationId": "updateAccountAccess",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceId" },
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "visibilityMode": { "type": "string" },
+                  "memberId": { "type": "string" },
+                  "allowed": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Account access policy updated",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Account" }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "$ref": "#/components/responses/Conflict" }
         }
       }
     },
@@ -362,6 +557,48 @@
           "intent": { "type": "string", "enum": ["PERSONAL", "SHARED"] },
           "currency": { "type": "string", "const": "VND" },
           "status": { "type": "string" }
+        }
+      },
+      "Role": {
+        "type": "object",
+        "required": ["id", "workspaceId", "name", "protected", "permissions"],
+        "properties": {
+          "id": { "type": "string" },
+          "workspaceId": { "type": "string" },
+          "name": { "type": "string" },
+          "protected": { "type": "boolean" },
+          "permissions": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "Member": {
+        "type": "object",
+        "required": [
+          "id",
+          "workspaceId",
+          "userId",
+          "status",
+          "isOwner",
+          "roleIds"
+        ],
+        "properties": {
+          "id": { "type": "string" },
+          "workspaceId": { "type": "string" },
+          "userId": { "type": "string" },
+          "status": { "type": "string" },
+          "isOwner": { "type": "boolean" },
+          "roleIds": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "RoleCommand": {
+        "type": "object",
+        "required": ["name", "permissions"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "permissions": {
+            "type": "array",
+            "items": { "type": "string" },
+            "maxItems": 50
+          }
         }
       },
       "BootstrapResponse": {

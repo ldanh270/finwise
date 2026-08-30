@@ -29,6 +29,7 @@ Prisma schema merely because a table already exists.
 ## Change reviews
 
 - [Foundation and ledger vertical slice walkthrough](../reviews/2026-08-30-foundation-ledger-vertical-slice-walkthrough.md)
+- [Identity, RBAC, and account-scope walkthrough](../reviews/2026-08-30-identity-rbac-account-scope-walkthrough.md)
 
 ## Approved implementation phases
 

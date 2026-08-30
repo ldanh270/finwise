@@ -100,6 +100,8 @@ for malformed legacy memberships, never a request-time silent fix.
 
 `backend/src/auth` now provides a development token boundary and
 `GET /v1/session/bootstrap` provisions one internal user plus one personal
-workspace through an in-memory adapter. Production Supabase JWKS validation,
-OTP UI, invitations, custom role CRUD, and owner transfer are intentionally
-left for the remainder of this phase.
+workspace through an in-memory adapter. The core slice also provides custom
+role CRUD, role assignment, account visibility policy, and access preview. OTP
+UI, production Supabase JWKS validation, invitations, membership removal, and
+owner transfer are intentionally left for the remainder of this phase. See the
+[identity/RBAC walkthrough](../../reviews/2026-08-30-identity-rbac-account-scope-walkthrough.md).

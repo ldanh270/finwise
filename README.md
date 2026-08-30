@@ -12,8 +12,9 @@ truth.
 The current implementation slice covers development-auth bootstrap, personal
 and shared-workspace boundaries, VND exact-money accounts, opening balances,
 income/expense/transfer journals, idempotent commands, void-by-reversal, audit
-history, and a responsive web dashboard shell. The remaining MVP contexts
-(production Supabase OTP/JWKS, PostgreSQL repositories/migrations, budgets,
+history, custom RBAC/account scope, and a responsive web dashboard shell. The
+remaining MVP contexts (production Supabase OTP/JWKS,
+PostgreSQL repositories/migrations, budgets,
 Group Treasury, CSV reconciliation, and the pilot hardening gate) remain
 tracked in [`docs/implementation-plan/README.md`](docs/implementation-plan/README.md).
 

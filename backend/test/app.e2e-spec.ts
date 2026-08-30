@@ -62,5 +62,58 @@ describe('Finwise API (e2e)', () => {
         expect(overview.accounts).toHaveLength(0);
         expect(overview.recentTransactions).toHaveLength(0);
       });
+
+    const roleResponse = await request(app.getHttpServer())
+      .post(`/v1/workspaces/${body.suggestedWorkspaceId}/roles`)
+      .set('x-finwise-user-id', 'e2e-user')
+      .send({ name: 'Reviewer', permissions: ['workspace.read'] })
+      .expect(201);
+    expect((roleResponse.body as { readonly name: string }).name).toBe(
+      'Reviewer',
+    );
+
+    const rolesResponse = await request(app.getHttpServer())
+      .get(`/v1/workspaces/${body.suggestedWorkspaceId}/roles`)
+      .set('x-finwise-user-id', 'e2e-user')
+      .expect(200);
+    expect(rolesResponse.body as readonly unknown[]).toHaveLength(2);
+
+    const membersResponse = await request(app.getHttpServer())
+      .get(`/v1/workspaces/${body.suggestedWorkspaceId}/members`)
+      .set('x-finwise-user-id', 'e2e-user')
+      .expect(200);
+    const members = membersResponse.body as readonly {
+      readonly id: string;
+      readonly isOwner: boolean;
+    }[];
+    expect(members).toHaveLength(1);
+    expect(members[0]?.isOwner).toBe(true);
+
+    const accountResponse = await request(app.getHttpServer())
+      .post(`/v1/workspaces/${body.suggestedWorkspaceId}/accounts`)
+      .set('x-finwise-user-id', 'e2e-user')
+      .send({ name: 'Cash', kind: 'cash' })
+      .expect(201);
+    const account = accountResponse.body as { readonly id: string };
+    await request(app.getHttpServer())
+      .post(
+        `/v1/workspaces/${body.suggestedWorkspaceId}/accounts/${account.id}/access`,
+      )
+      .set('x-finwise-user-id', 'e2e-user')
+      .send({ visibilityMode: 'owner_only' })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .get(
+        `/v1/workspaces/${body.suggestedWorkspaceId}/members/${members[0]?.id}/access-preview`,
+      )
+      .set('x-finwise-user-id', 'e2e-user')
+      .expect(200)
+      .expect((previewResponse) => {
+        const preview = previewResponse.body as {
+          readonly accounts: readonly unknown[];
+        };
+        expect(preview.accounts).toHaveLength(1);
+      });
   });
 });

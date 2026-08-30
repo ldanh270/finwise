@@ -7,6 +7,8 @@ import {
   AccountVisibilityMode,
   JournalTransactionRecord,
   JournalKind,
+  RoleRecord,
+  WorkspaceMemberRecord,
   WorkspaceKind,
 } from '../domain/ledger.types';
 import { BootstrapResult, CoreStorePort, JournalDraft } from './core.ports';
@@ -108,6 +110,23 @@ export interface OverviewResponse {
   readonly hasPartialAccess: boolean;
 }
 
+export interface RoleResponse {
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly name: string;
+  readonly protected: boolean;
+  readonly permissions: readonly string[];
+}
+
+export interface MemberResponse {
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly userId: string;
+  readonly status: string;
+  readonly isOwner: boolean;
+  readonly roleIds: readonly string[];
+}
+
 export class CoreService {
   constructor(private readonly store: CoreStorePort) {}
 
@@ -202,6 +221,127 @@ export class CoreService {
     workspaceId: string,
   ): WorkspaceResponse {
     return this.workspaceResponse(this.store.getWorkspace(workspaceId, actor));
+  }
+
+  listMembers(
+    actor: AuthenticatedActor,
+    workspaceId: string,
+  ): readonly MemberResponse[] {
+    return this.store
+      .listMembers(workspaceId, actor)
+      .map((member) => this.memberResponse(member));
+  }
+
+  listRoles(
+    actor: AuthenticatedActor,
+    workspaceId: string,
+  ): readonly RoleResponse[] {
+    return this.store
+      .listRoles(workspaceId, actor)
+      .map((role) => this.roleResponse(role));
+  }
+
+  createRole(
+    actor: AuthenticatedActor,
+    workspaceId: string,
+    body: unknown,
+  ): RoleResponse {
+    const input = bodyRecord(body);
+    const role = this.store.createRole(
+      workspaceId,
+      actor,
+      requiredString(input, 'name', 1, 100),
+      requiredStringArray(input, 'permissions'),
+    );
+    return this.roleResponse(role);
+  }
+
+  updateRole(
+    actor: AuthenticatedActor,
+    workspaceId: string,
+    roleId: string,
+    body: unknown,
+  ): RoleResponse {
+    const input = bodyRecord(body);
+    const role = this.store.updateRole(
+      workspaceId,
+      actor,
+      roleId,
+      requiredString(input, 'name', 1, 100),
+      requiredStringArray(input, 'permissions'),
+    );
+    return this.roleResponse(role);
+  }
+
+  deleteRole(
+    actor: AuthenticatedActor,
+    workspaceId: string,
+    roleId: string,
+  ): { readonly deleted: true } {
+    this.store.deleteRole(workspaceId, actor, roleId);
+    return { deleted: true };
+  }
+
+  assignRole(
+    actor: AuthenticatedActor,
+    workspaceId: string,
+    memberId: string,
+    body: unknown,
+  ): MemberResponse {
+    const input = bodyRecord(body);
+    const roleId = requiredString(input, 'roleId', 1, 100);
+    return this.memberResponse(
+      this.store.assignRole(workspaceId, actor, memberId, roleId),
+    );
+  }
+
+  updateAccountAccess(
+    actor: AuthenticatedActor,
+    workspaceId: string,
+    accountId: string,
+    body: unknown,
+  ): AccountResponse {
+    const input = bodyRecord(body);
+    const memberId = optionalString(input, 'memberId', 100);
+    const allowed = input.allowed;
+    if (allowed !== undefined && typeof allowed !== 'boolean') {
+      throw FinwiseError.validation('allowed must be a boolean.', {
+        field: 'allowed',
+      });
+    }
+    const account = this.store.updateAccountAccess(
+      workspaceId,
+      actor,
+      accountId,
+      visibilityMode(input.visibilityMode),
+      memberId,
+      allowed,
+    );
+    return this.accountResponse(account);
+  }
+
+  accessPreview(
+    actor: AuthenticatedActor,
+    workspaceId: string,
+    memberId: string,
+  ): {
+    readonly member: MemberResponse;
+    readonly accounts: readonly AccountResponse[];
+  } {
+    const member = this.store
+      .listMembers(workspaceId, actor)
+      .find((candidate) => candidate.id === memberId);
+    if (!member) {
+      throw FinwiseError.notFound('Workspace member');
+    }
+    const accounts = this.store
+      .listAccounts(workspaceId, {
+        userId: member.userId,
+        providerIssuer: actor.providerIssuer,
+        providerSubject: member.userId,
+      })
+      .map((account) => this.accountResponse(account));
+    return { member: this.memberResponse(member), accounts };
   }
 
   listAccounts(
@@ -539,6 +679,27 @@ export class CoreService {
     };
   }
 
+  private roleResponse(role: RoleRecord): RoleResponse {
+    return {
+      id: role.id,
+      workspaceId: role.workspaceId,
+      name: role.name,
+      protected: role.protected,
+      permissions: [...role.permissions].sort(),
+    };
+  }
+
+  private memberResponse(member: WorkspaceMemberRecord): MemberResponse {
+    return {
+      id: member.id,
+      workspaceId: member.workspaceId,
+      userId: member.userId,
+      status: member.status,
+      isOwner: member.isOwner,
+      roleIds: [...member.roleIds],
+    };
+  }
+
   private transactionResponse(
     transaction: JournalTransactionRecord,
   ): TransactionResponse {
@@ -608,6 +769,45 @@ function readOptionalString(
     );
   }
   return value.trim() || undefined;
+}
+
+function optionalString(
+  input: Record<string, unknown>,
+  field: string,
+  max: number,
+): string | undefined {
+  const value = input[field];
+  if (value === undefined) return undefined;
+  if (
+    typeof value !== 'string' ||
+    value.trim().length === 0 ||
+    value.trim().length > max
+  ) {
+    throw FinwiseError.validation(`${field} must be a non-empty string.`, {
+      field,
+    });
+  }
+  return value.trim();
+}
+
+function requiredStringArray(
+  input: Record<string, unknown>,
+  field: string,
+): readonly string[] {
+  const value = input[field];
+  if (
+    !Array.isArray(value) ||
+    value.length > 50 ||
+    value.some((item) => typeof item !== 'string' || item.trim().length === 0)
+  ) {
+    throw FinwiseError.validation(
+      `${field} must be an array of permission strings.`,
+      {
+        field,
+      },
+    );
+  }
+  return value.map((item) => (item as string).trim());
 }
 
 function parseMoney(input: Record<string, unknown>): Money {
