@@ -123,6 +123,230 @@
         }
       }
     },
+    "/workspaces/{workspaceId}/invitations": {
+      "get": {
+        "operationId": "listWorkspaceInvitations",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "responses": {
+          "200": {
+            "description": "Workspace invitations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Invitation" }
+                }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "operationId": "createWorkspaceInvitation",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateInvitationRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Invitation created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Invitation" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/invitations/{token}/accept": {
+      "post": {
+        "operationId": "acceptInvitation",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Invitation accepted",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Member" }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/invitations/{invitationId}/revoke": {
+      "post": {
+        "operationId": "revokeWorkspaceInvitation",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceId" },
+          {
+            "name": "invitationId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Invitation revoked",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Invitation" }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/members/{memberId}": {
+      "delete": {
+        "operationId": "removeWorkspaceMember",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceId" },
+          {
+            "name": "memberId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Member removed",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Member" }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/owner-transfers": {
+      "post": {
+        "operationId": "initiateOwnerTransfer",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/OwnerTransferRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Owner transfer initiated",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/OwnerTransfer" }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/owner-transfers/{transferId}/accept": {
+      "post": {
+        "operationId": "acceptOwnerTransfer",
+        "parameters": [
+          {
+            "name": "transferId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Owner transfer accepted",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/OwnerTransfer" }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/owner-transfers/{transferId}/cancel": {
+      "post": {
+        "operationId": "cancelOwnerTransfer",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceId" },
+          {
+            "name": "transferId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Owner transfer cancelled",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/OwnerTransfer" }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/archive": {
+      "post": {
+        "operationId": "archiveWorkspace",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "responses": {
+          "200": {
+            "description": "Workspace archived",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Workspace" }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
     "/workspaces/{workspaceId}/roles": {
       "get": {
         "operationId": "listRoles",
@@ -587,6 +811,74 @@
           "status": { "type": "string" },
           "isOwner": { "type": "boolean" },
           "roleIds": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "Invitation": {
+        "type": "object",
+        "required": [
+          "id",
+          "token",
+          "workspaceId",
+          "invitedUserId",
+          "invitedByMemberId",
+          "status",
+          "createdAt",
+          "expiresAt"
+        ],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "token": { "type": "string" },
+          "workspaceId": { "type": "string", "format": "uuid" },
+          "invitedUserId": { "type": "string" },
+          "invitedByMemberId": { "type": "string", "format": "uuid" },
+          "roleId": { "type": "string", "format": "uuid" },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "accepted", "revoked", "expired"]
+          },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "expiresAt": { "type": "string", "format": "date-time" },
+          "acceptedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CreateInvitationRequest": {
+        "type": "object",
+        "required": ["invitedUserId"],
+        "properties": {
+          "invitedUserId": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "roleId": { "type": "string", "format": "uuid" }
+        }
+      },
+      "OwnerTransfer": {
+        "type": "object",
+        "required": [
+          "id",
+          "workspaceId",
+          "fromMemberId",
+          "targetMemberId",
+          "status",
+          "createdAt",
+          "expiresAt"
+        ],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "workspaceId": { "type": "string", "format": "uuid" },
+          "fromMemberId": { "type": "string", "format": "uuid" },
+          "targetMemberId": { "type": "string", "format": "uuid" },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "accepted", "cancelled", "expired"]
+          },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "expiresAt": { "type": "string", "format": "date-time" },
+          "acceptedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "OwnerTransferRequest": {
+        "type": "object",
+        "required": ["targetMemberId"],
+        "properties": {
+          "targetMemberId": { "type": "string", "format": "uuid" }
         }
       },
       "RoleCommand": {

@@ -8,12 +8,14 @@ import {
   ExternalIdentityRecord,
   IdempotencyRecord,
   JournalTransactionRecord,
+  OwnerTransferRecord,
   PERMISSIONS,
   Permission,
   RoleRecord,
   TransactionAuditAction,
   TransactionAuditRecord,
   UserRecord,
+  WorkspaceInvitationRecord,
   WorkspaceKind,
   WorkspaceMemberRecord,
   WorkspaceRecord,
@@ -55,6 +57,12 @@ export class InMemoryFinwiseStore implements CoreStorePort {
   private readonly idempotencies = new Map<string, IdempotencyRecord>();
   private readonly accountAccess = new Map<string, AccountAccessOverride>();
   private readonly personalWorkspaceByUser = new Map<string, string>();
+  private readonly invitations = new Map<string, WorkspaceInvitationRecord>();
+  private readonly invitationsByToken = new Map<
+    string,
+    WorkspaceInvitationRecord
+  >();
+  private readonly ownerTransfers = new Map<string, OwnerTransferRecord>();
 
   bootstrap(actor: AuthenticatedActor): BootstrapResult {
     const identityKey = `${actor.providerIssuer}:${actor.providerSubject}`;
@@ -134,10 +142,11 @@ export class InMemoryFinwiseStore implements CoreStorePort {
     if (!this.hasPermission(member, PERMISSIONS.workspaceCreate)) {
       throw FinwiseError.permission();
     }
+    const internalUserId = this.resolveInternalUserId(actor.userId);
     const workspace = this.createWorkspaceInternal(name, kind);
     const ownerMember = this.createMemberInternal(
       workspace.id,
-      actor.userId,
+      internalUserId,
       true,
     );
     this.assignRoleInternal(
@@ -172,6 +181,310 @@ export class InMemoryFinwiseStore implements CoreStorePort {
       (candidate) =>
         candidate.workspaceId === workspaceId && candidate.status === 'active',
     );
+  }
+
+  createInvitation(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    invitedUserId: string,
+    roleId?: string,
+  ): WorkspaceInvitationRecord {
+    const actorMember = this.requireMemberByUser(
+      workspaceId,
+      actor.userId,
+      false,
+    );
+    this.requirePermission(actorMember, PERMISSIONS.membershipManage);
+    this.requireWritableWorkspace(workspaceId);
+    const internalInvitedUserId = this.resolveInternalUserId(invitedUserId);
+    const existingMember = this.membersByWorkspaceUser.get(
+      `${workspaceId}:${internalInvitedUserId}`,
+    );
+    if (existingMember) {
+      const member = this.members.get(existingMember);
+      if (member?.status === 'active') {
+        throw FinwiseError.conflict('The user is already an active member.');
+      }
+    }
+    const hasPending = [...this.invitations.values()].some(
+      (invitation) =>
+        invitation.workspaceId === workspaceId &&
+        invitation.invitedUserId === internalInvitedUserId &&
+        this.refreshInvitationStatus(invitation) === 'pending',
+    );
+    if (hasPending) {
+      throw FinwiseError.conflict('A pending invitation already exists.');
+    }
+    if (roleId !== undefined) {
+      this.requireRole(workspaceId, roleId);
+    }
+    const createdAt = new Date();
+    const invitation: WorkspaceInvitationRecord = {
+      id: randomUUID(),
+      token: randomUUID(),
+      workspaceId,
+      invitedUserId: internalInvitedUserId,
+      invitedByMemberId: actorMember.id,
+      roleId,
+      status: 'pending',
+      createdAt,
+      expiresAt: new Date(createdAt.getTime() + 7 * 24 * 60 * 60 * 1000),
+    };
+    this.invitations.set(invitation.id, invitation);
+    this.invitationsByToken.set(invitation.token, invitation);
+    return invitation;
+  }
+
+  listInvitations(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+  ): readonly WorkspaceInvitationRecord[] {
+    const member = this.requireMemberByUser(workspaceId, actor.userId, false);
+    this.requirePermission(member, PERMISSIONS.membershipRead);
+    return [...this.invitations.values()]
+      .filter((invitation) => invitation.workspaceId === workspaceId)
+      .map((invitation) => {
+        this.refreshInvitationStatus(invitation);
+        return invitation;
+      })
+      .sort(
+        (left, right) => right.createdAt.getTime() - left.createdAt.getTime(),
+      );
+  }
+
+  acceptInvitation(
+    token: string,
+    actor: AuthenticatedActor,
+  ): WorkspaceMemberRecord {
+    const invitation = this.invitationsByToken.get(token);
+    if (!invitation) {
+      throw FinwiseError.notFound('Invitation');
+    }
+    if (this.refreshInvitationStatus(invitation) !== 'pending') {
+      throw FinwiseError.businessState(
+        'Only pending invitations can be accepted.',
+      );
+    }
+    const workspace = this.workspaces.get(invitation.workspaceId);
+    if (!workspace || workspace.status !== 'active') {
+      throw FinwiseError.businessState(
+        'Archived workspaces cannot accept invitations.',
+      );
+    }
+    const internalUserId = this.resolveInternalUserId(actor.userId);
+    if (internalUserId !== invitation.invitedUserId) {
+      throw FinwiseError.permission(
+        'Only the invited user can accept this invitation.',
+      );
+    }
+    const existingMemberId = this.membersByWorkspaceUser.get(
+      `${invitation.workspaceId}:${internalUserId}`,
+    );
+    const existingMember = existingMemberId
+      ? this.members.get(existingMemberId)
+      : undefined;
+    if (existingMember?.status === 'active') {
+      throw FinwiseError.conflict('The user is already an active member.');
+    }
+    const member = this.createMemberInternal(
+      invitation.workspaceId,
+      internalUserId,
+      false,
+    );
+    if (invitation.roleId) {
+      this.assignRoleInternal(member.id, invitation.roleId);
+    }
+    invitation.status = 'accepted';
+    invitation.acceptedAt = new Date();
+    return member;
+  }
+
+  revokeInvitation(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    invitationId: string,
+  ): WorkspaceInvitationRecord {
+    const member = this.requireMemberByUser(workspaceId, actor.userId, false);
+    this.requirePermission(member, PERMISSIONS.membershipManage);
+    const invitation = this.invitations.get(invitationId);
+    if (!invitation || invitation.workspaceId !== workspaceId) {
+      throw FinwiseError.notFound('Invitation');
+    }
+    if (this.refreshInvitationStatus(invitation) !== 'pending') {
+      throw FinwiseError.businessState(
+        'Only pending invitations can be revoked.',
+      );
+    }
+    invitation.status = 'revoked';
+    return invitation;
+  }
+
+  removeMember(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    memberId: string,
+  ): WorkspaceMemberRecord {
+    const actorMember = this.requireMemberByUser(
+      workspaceId,
+      actor.userId,
+      false,
+    );
+    this.requirePermission(actorMember, PERMISSIONS.membershipManage);
+    const target = this.members.get(memberId);
+    if (
+      !target ||
+      target.workspaceId !== workspaceId ||
+      target.status !== 'active'
+    ) {
+      throw FinwiseError.notFound('Workspace member');
+    }
+    if (target.isOwner) {
+      throw FinwiseError.conflict(
+        'Transfer ownership before removing the workspace owner.',
+      );
+    }
+    target.status = 'removed';
+    const membershipKey = `${workspaceId}:${target.userId}`;
+    if (this.membersByWorkspaceUser.get(membershipKey) === target.id) {
+      this.membersByWorkspaceUser.delete(membershipKey);
+    }
+    return target;
+  }
+
+  initiateOwnerTransfer(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    targetMemberId: string,
+  ): OwnerTransferRecord {
+    const sourceMember = this.requireMemberByUser(
+      workspaceId,
+      actor.userId,
+      false,
+    );
+    if (!sourceMember.isOwner) {
+      throw FinwiseError.permission(
+        'Only the current owner can transfer ownership.',
+      );
+    }
+    this.requireWritableWorkspace(workspaceId);
+    const targetMember = this.members.get(targetMemberId);
+    if (
+      !targetMember ||
+      targetMember.workspaceId !== workspaceId ||
+      targetMember.status !== 'active'
+    ) {
+      throw FinwiseError.notFound('Workspace member');
+    }
+    if (targetMember.isOwner) {
+      throw FinwiseError.conflict('The target member is already the owner.');
+    }
+    const pending = [...this.ownerTransfers.values()].find(
+      (transfer) =>
+        transfer.workspaceId === workspaceId &&
+        this.refreshOwnerTransferStatus(transfer) === 'pending',
+    );
+    if (pending) {
+      throw FinwiseError.conflict('An owner transfer is already pending.');
+    }
+    const createdAt = new Date();
+    const transfer: OwnerTransferRecord = {
+      id: randomUUID(),
+      workspaceId,
+      fromMemberId: sourceMember.id,
+      targetMemberId,
+      status: 'pending',
+      createdAt,
+      expiresAt: new Date(createdAt.getTime() + 7 * 24 * 60 * 60 * 1000),
+    };
+    this.ownerTransfers.set(transfer.id, transfer);
+    return transfer;
+  }
+
+  acceptOwnerTransfer(
+    transferId: string,
+    actor: AuthenticatedActor,
+  ): OwnerTransferRecord {
+    const transfer = this.ownerTransfers.get(transferId);
+    if (!transfer) {
+      throw FinwiseError.notFound('Owner transfer');
+    }
+    if (this.refreshOwnerTransferStatus(transfer) !== 'pending') {
+      throw FinwiseError.businessState(
+        'Only pending owner transfers can be accepted.',
+      );
+    }
+    const target = this.members.get(transfer.targetMemberId);
+    const source = this.members.get(transfer.fromMemberId);
+    if (
+      !target ||
+      !source ||
+      target.status !== 'active' ||
+      source.status !== 'active' ||
+      !source.isOwner
+    ) {
+      throw FinwiseError.businessState(
+        'The owner transfer target or source is no longer active.',
+      );
+    }
+    const internalUserId = this.resolveInternalUserId(actor.userId);
+    if (target.userId !== internalUserId) {
+      throw FinwiseError.permission(
+        'Only the transfer target can accept ownership.',
+      );
+    }
+    const ownerRole = this.requireOwnerRole(transfer.workspaceId);
+    source.isOwner = false;
+    target.isOwner = true;
+    removeRoleId(source, ownerRole.id);
+    if (!target.roleIds.includes(ownerRole.id)) {
+      (target.roleIds as string[]).push(ownerRole.id);
+    }
+    transfer.status = 'accepted';
+    transfer.acceptedAt = new Date();
+    return transfer;
+  }
+
+  cancelOwnerTransfer(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    transferId: string,
+  ): OwnerTransferRecord {
+    const member = this.requireMemberByUser(workspaceId, actor.userId, false);
+    if (!member.isOwner) {
+      throw FinwiseError.permission(
+        'Only the current owner can cancel an owner transfer.',
+      );
+    }
+    const transfer = this.ownerTransfers.get(transferId);
+    if (!transfer || transfer.workspaceId !== workspaceId) {
+      throw FinwiseError.notFound('Owner transfer');
+    }
+    if (this.refreshOwnerTransferStatus(transfer) !== 'pending') {
+      throw FinwiseError.businessState(
+        'Only pending owner transfers can be cancelled.',
+      );
+    }
+    transfer.status = 'cancelled';
+    return transfer;
+  }
+
+  archiveWorkspace(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+  ): WorkspaceRecord {
+    const member = this.requireMemberByUser(workspaceId, actor.userId, false);
+    if (!member.isOwner) {
+      throw FinwiseError.permission('Only the workspace owner can archive it.');
+    }
+    const workspace = this.workspaces.get(workspaceId);
+    if (!workspace) {
+      throw FinwiseError.notFound('Workspace');
+    }
+    if (workspace.status === 'archived') {
+      throw FinwiseError.businessState('Workspace is already archived.');
+    }
+    workspace.status = 'archived';
+    return workspace;
   }
 
   listRoles(
@@ -653,6 +966,30 @@ export class InMemoryFinwiseStore implements CoreStorePort {
     return role;
   }
 
+  private refreshInvitationStatus(
+    invitation: WorkspaceInvitationRecord,
+  ): WorkspaceInvitationRecord['status'] {
+    if (
+      invitation.status === 'pending' &&
+      invitation.expiresAt.getTime() <= Date.now()
+    ) {
+      invitation.status = 'expired';
+    }
+    return invitation.status;
+  }
+
+  private refreshOwnerTransferStatus(
+    transfer: OwnerTransferRecord,
+  ): OwnerTransferRecord['status'] {
+    if (
+      transfer.status === 'pending' &&
+      transfer.expiresAt.getTime() <= Date.now()
+    ) {
+      transfer.status = 'expired';
+    }
+    return transfer.status;
+  }
+
   private ensureRoleNameAvailable(
     workspaceId: string,
     name: string,
@@ -871,5 +1208,13 @@ export class InMemoryFinwiseStore implements CoreStorePort {
       createdAt: new Date(),
     };
     this.audits.set(audit.id, audit);
+  }
+}
+
+function removeRoleId(member: WorkspaceMemberRecord, roleId: string): void {
+  const roleIds = member.roleIds as string[];
+  const index = roleIds.indexOf(roleId);
+  if (index >= 0) {
+    roleIds.splice(index, 1);
   }
 }

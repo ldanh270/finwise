@@ -3,6 +3,9 @@ import { MVP_CURRENCY } from '../../shared/domain/money';
 export type WorkspaceKind = 'personal' | 'family' | 'class_fund' | 'other';
 export type WorkspaceStatus = 'active' | 'archived';
 export type MembershipStatus = 'invited' | 'active' | 'removed';
+export type InvitationStatus = 'pending' | 'accepted' | 'revoked' | 'expired';
+export type OwnerTransferStatus =
+  'pending' | 'accepted' | 'cancelled' | 'expired';
 export type AccountKind =
   | 'cash'
   | 'bank'
@@ -78,6 +81,30 @@ export interface WorkspaceRecord {
   readonly defaultCurrency: typeof MVP_CURRENCY;
   status: WorkspaceStatus;
   readonly createdAt: Date;
+}
+
+export interface WorkspaceInvitationRecord {
+  readonly id: string;
+  readonly token: string;
+  readonly workspaceId: string;
+  readonly invitedUserId: string;
+  readonly invitedByMemberId: string;
+  readonly roleId?: string;
+  status: InvitationStatus;
+  readonly createdAt: Date;
+  readonly expiresAt: Date;
+  acceptedAt?: Date;
+}
+
+export interface OwnerTransferRecord {
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly fromMemberId: string;
+  readonly targetMemberId: string;
+  status: OwnerTransferStatus;
+  readonly createdAt: Date;
+  readonly expiresAt: Date;
+  acceptedAt?: Date;
 }
 
 export interface AccountRecord {

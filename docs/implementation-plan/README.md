@@ -30,6 +30,7 @@ Prisma schema merely because a table already exists.
 
 - [Foundation and ledger vertical slice walkthrough](../reviews/2026-08-30-foundation-ledger-vertical-slice-walkthrough.md)
 - [Identity, RBAC, and account-scope walkthrough](../reviews/2026-08-30-identity-rbac-account-scope-walkthrough.md)
+- [Membership lifecycle walkthrough](../reviews/2026-08-30-membership-lifecycle-walkthrough.md)
 
 ## Approved implementation phases
 
@@ -41,7 +42,7 @@ behavior, test matrix, migration notes, and exit criteria.
 | --- | --- | --- |
 | [00. Roadmap and decisions](phases/00-ROADMAP-AND-DECISIONS.md) | Ready | Decisions, release boundary, preflight, and traceability are frozen |
 | [01. Platform foundation](phases/01-PLATFORM-FOUNDATION.md) | In progress | Monorepo, `/v1`, generated OpenAPI client, exact-money/error ports, and CI gates work |
-| [02. Identity/workspace/access](phases/02-IDENTITY-WORKSPACE-ACCESS.md) | In progress | Bootstrap and workspace isolation slice works; Supabase/RBAC/member workflows remain |
+| [02. Identity/workspace/access](phases/02-IDENTITY-WORKSPACE-ACCESS.md) | In progress | Bootstrap, RBAC, invitations, membership lifecycle, owner transfer and archive work; Supabase/OTP persistence remains |
 | [03. Ledger/accounts/transactions](phases/03-LEDGER-ACCOUNTS-TRANSACTIONS.md) | In progress | In-memory opening/income/expense/transfer/reversal slice works; Prisma adapter and full CRUD remain |
 | [04. Classification/budgets/reporting](phases/04-CLASSIFICATION-BUDGETING-REPORTING.md) | Blocked by 03 | Split lines, nested budgets, rollover, goals, and filtered reports pass |
 | [05. Group Treasury](phases/05-GROUP-TREASURY.md) | Blocked by 02–04 | Collections, submissions, sponsorship, claims, payables, and reimbursement pass |

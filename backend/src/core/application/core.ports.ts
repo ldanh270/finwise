@@ -11,12 +11,63 @@ import {
   WorkspaceKind,
   WorkspaceRecord,
   WorkspaceMemberRecord,
+  WorkspaceInvitationRecord,
+  OwnerTransferRecord,
 } from '../domain/ledger.types';
 
 export interface BootstrapResult {
   readonly user: UserRecord;
   readonly workspaces: readonly WorkspaceRecord[];
   readonly suggestedWorkspaceId: string;
+}
+
+export interface InvitationCommandResult {
+  readonly invitation: WorkspaceInvitationRecord;
+}
+
+export interface CoreMembershipPort {
+  createInvitation(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    invitedUserId: string,
+    roleId?: string,
+  ): WorkspaceInvitationRecord;
+  listInvitations(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+  ): readonly WorkspaceInvitationRecord[];
+  acceptInvitation(
+    token: string,
+    actor: AuthenticatedActor,
+  ): WorkspaceMemberRecord;
+  revokeInvitation(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    invitationId: string,
+  ): WorkspaceInvitationRecord;
+  removeMember(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    memberId: string,
+  ): WorkspaceMemberRecord;
+  initiateOwnerTransfer(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    targetMemberId: string,
+  ): OwnerTransferRecord;
+  acceptOwnerTransfer(
+    transferId: string,
+    actor: AuthenticatedActor,
+  ): OwnerTransferRecord;
+  cancelOwnerTransfer(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    transferId: string,
+  ): OwnerTransferRecord;
+  archiveWorkspace(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+  ): WorkspaceRecord;
 }
 
 export interface JournalDraft {
@@ -34,7 +85,7 @@ export interface JournalDraft {
   readonly reversalOfId?: string;
 }
 
-export interface CoreStorePort {
+export interface CoreStorePort extends CoreMembershipPort {
   bootstrap(actor: AuthenticatedActor): BootstrapResult;
   createWorkspace(
     actor: AuthenticatedActor,

@@ -10,6 +10,8 @@ import {
   RoleRecord,
   WorkspaceMemberRecord,
   WorkspaceKind,
+  WorkspaceInvitationRecord,
+  OwnerTransferRecord,
 } from '../domain/ledger.types';
 import { BootstrapResult, CoreStorePort, JournalDraft } from './core.ports';
 
@@ -127,6 +129,30 @@ export interface MemberResponse {
   readonly roleIds: readonly string[];
 }
 
+export interface InvitationResponse {
+  readonly id: string;
+  readonly token: string;
+  readonly workspaceId: string;
+  readonly invitedUserId: string;
+  readonly invitedByMemberId: string;
+  readonly roleId?: string;
+  readonly status: string;
+  readonly createdAt: string;
+  readonly expiresAt: string;
+  readonly acceptedAt?: string;
+}
+
+export interface OwnerTransferResponse {
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly fromMemberId: string;
+  readonly targetMemberId: string;
+  readonly status: string;
+  readonly createdAt: string;
+  readonly expiresAt: string;
+  readonly acceptedAt?: string;
+}
+
 export class CoreService {
   constructor(private readonly store: CoreStorePort) {}
 
@@ -230,6 +256,97 @@ export class CoreService {
     return this.store
       .listMembers(workspaceId, actor)
       .map((member) => this.memberResponse(member));
+  }
+
+  createInvitation(
+    actor: AuthenticatedActor,
+    workspaceId: string,
+    body: unknown,
+  ): InvitationResponse {
+    const input = bodyRecord(body);
+    const invitation = this.store.createInvitation(
+      workspaceId,
+      actor,
+      requiredString(input, 'invitedUserId', 1, 200),
+      optionalString(input, 'roleId', 100),
+    );
+    return this.invitationResponse(invitation);
+  }
+
+  listInvitations(
+    actor: AuthenticatedActor,
+    workspaceId: string,
+  ): readonly InvitationResponse[] {
+    return this.store
+      .listInvitations(workspaceId, actor)
+      .map((invitation) => this.invitationResponse(invitation));
+  }
+
+  acceptInvitation(actor: AuthenticatedActor, token: string): MemberResponse {
+    return this.memberResponse(this.store.acceptInvitation(token, actor));
+  }
+
+  revokeInvitation(
+    actor: AuthenticatedActor,
+    workspaceId: string,
+    invitationId: string,
+  ): InvitationResponse {
+    return this.invitationResponse(
+      this.store.revokeInvitation(workspaceId, actor, invitationId),
+    );
+  }
+
+  removeMember(
+    actor: AuthenticatedActor,
+    workspaceId: string,
+    memberId: string,
+  ): MemberResponse {
+    return this.memberResponse(
+      this.store.removeMember(workspaceId, actor, memberId),
+    );
+  }
+
+  initiateOwnerTransfer(
+    actor: AuthenticatedActor,
+    workspaceId: string,
+    body: unknown,
+  ): OwnerTransferResponse {
+    const input = bodyRecord(body);
+    return this.ownerTransferResponse(
+      this.store.initiateOwnerTransfer(
+        workspaceId,
+        actor,
+        requiredString(input, 'targetMemberId', 1, 100),
+      ),
+    );
+  }
+
+  acceptOwnerTransfer(
+    actor: AuthenticatedActor,
+    transferId: string,
+  ): OwnerTransferResponse {
+    return this.ownerTransferResponse(
+      this.store.acceptOwnerTransfer(transferId, actor),
+    );
+  }
+
+  cancelOwnerTransfer(
+    actor: AuthenticatedActor,
+    workspaceId: string,
+    transferId: string,
+  ): OwnerTransferResponse {
+    return this.ownerTransferResponse(
+      this.store.cancelOwnerTransfer(workspaceId, actor, transferId),
+    );
+  }
+
+  archiveWorkspace(
+    actor: AuthenticatedActor,
+    workspaceId: string,
+  ): WorkspaceResponse {
+    return this.workspaceResponse(
+      this.store.archiveWorkspace(workspaceId, actor),
+    );
   }
 
   listRoles(
@@ -697,6 +814,38 @@ export class CoreService {
       status: member.status,
       isOwner: member.isOwner,
       roleIds: [...member.roleIds],
+    };
+  }
+
+  private invitationResponse(
+    invitation: WorkspaceInvitationRecord,
+  ): InvitationResponse {
+    return {
+      id: invitation.id,
+      token: invitation.token,
+      workspaceId: invitation.workspaceId,
+      invitedUserId: invitation.invitedUserId,
+      invitedByMemberId: invitation.invitedByMemberId,
+      roleId: invitation.roleId,
+      status: invitation.status,
+      createdAt: invitation.createdAt.toISOString(),
+      expiresAt: invitation.expiresAt.toISOString(),
+      acceptedAt: invitation.acceptedAt?.toISOString(),
+    };
+  }
+
+  private ownerTransferResponse(
+    transfer: OwnerTransferRecord,
+  ): OwnerTransferResponse {
+    return {
+      id: transfer.id,
+      workspaceId: transfer.workspaceId,
+      fromMemberId: transfer.fromMemberId,
+      targetMemberId: transfer.targetMemberId,
+      status: transfer.status,
+      createdAt: transfer.createdAt.toISOString(),
+      expiresAt: transfer.expiresAt.toISOString(),
+      acceptedAt: transfer.acceptedAt?.toISOString(),
     };
   }
 

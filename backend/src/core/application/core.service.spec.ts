@@ -203,4 +203,79 @@ describe('CoreService', () => {
 
     expect(service.listAccounts(actor, workspaceId)).toHaveLength(1);
   });
+
+  it('accepts and removes a workspace invitation with an optional role', () => {
+    const service = createService();
+    const workspaceId = service.bootstrap(actor).suggestedWorkspaceId;
+    const invitedActor = {
+      userId: 'invited-user',
+      providerIssuer: 'https://local.finwise.dev',
+      providerSubject: 'invited-user',
+    };
+    const invited = service.bootstrap(invitedActor);
+    const role = service.createRole(actor, workspaceId, {
+      name: 'Viewer',
+      permissions: ['workspace.read'],
+    });
+
+    const invitation = service.createInvitation(actor, workspaceId, {
+      invitedUserId: invited.user.id,
+      roleId: role.id,
+    });
+    expect(invitation.status).toBe('pending');
+    expect(service.listInvitations(actor, workspaceId)).toHaveLength(1);
+
+    const member = service.acceptInvitation(invitedActor, invitation.token);
+    expect(member.status).toBe('active');
+    expect(member.roleIds).toContain(role.id);
+    expect(service.listMembers(actor, workspaceId)).toHaveLength(2);
+
+    expect(() =>
+      service.removeMember(actor, workspaceId, member.id),
+    ).not.toThrow();
+    expect(service.listMembers(actor, workspaceId)).toHaveLength(1);
+  });
+
+  it('requires target acceptance and atomically transfers ownership', () => {
+    const service = createService();
+    const workspaceId = service.bootstrap(actor).suggestedWorkspaceId;
+    const targetActor = {
+      userId: 'owner-target',
+      providerIssuer: 'https://local.finwise.dev',
+      providerSubject: 'owner-target',
+    };
+    const target = service.bootstrap(targetActor);
+    const invitation = service.createInvitation(actor, workspaceId, {
+      invitedUserId: target.user.id,
+    });
+    const targetMember = service.acceptInvitation(
+      targetActor,
+      invitation.token,
+    );
+
+    const transfer = service.initiateOwnerTransfer(actor, workspaceId, {
+      targetMemberId: targetMember.id,
+    });
+    expect(transfer.status).toBe('pending');
+    expect(() => service.acceptOwnerTransfer(actor, transfer.id)).toThrow(
+      'transfer target',
+    );
+    const accepted = service.acceptOwnerTransfer(targetActor, transfer.id);
+    expect(accepted.status).toBe('accepted');
+    expect(
+      service
+        .listMembers(targetActor, workspaceId)
+        .find((member) => member.userId === target.user.id)?.isOwner,
+    ).toBe(true);
+  });
+
+  it('archives a workspace only through the current owner', () => {
+    const service = createService();
+    const workspaceId = service.bootstrap(actor).suggestedWorkspaceId;
+    const archived = service.archiveWorkspace(actor, workspaceId);
+    expect(archived.status).toBe('archived');
+    expect(() =>
+      service.createAccount(actor, workspaceId, { name: 'Cash', kind: 'cash' }),
+    ).toThrow('Archived workspaces cannot accept financial writes.');
+  });
 });

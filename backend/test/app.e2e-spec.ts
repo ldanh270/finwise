@@ -115,5 +115,50 @@ describe('Finwise API (e2e)', () => {
         };
         expect(preview.accounts).toHaveLength(1);
       });
+
+    const invitedBootstrap = await request(app.getHttpServer())
+      .get('/v1/session/bootstrap')
+      .set('x-finwise-user-id', 'e2e-invited-user')
+      .expect(200);
+    const invitedUserId = (invitedBootstrap.body as { user: { id: string } })
+      .user.id;
+    const invitationResponse = await request(app.getHttpServer())
+      .post(`/v1/workspaces/${body.suggestedWorkspaceId}/invitations`)
+      .set('x-finwise-user-id', 'e2e-user')
+      .send({ invitedUserId })
+      .expect(201);
+    const invitation = invitationResponse.body as {
+      readonly token: string;
+    };
+
+    await request(app.getHttpServer())
+      .post(`/v1/invitations/${invitation.token}/accept`)
+      .set('x-finwise-user-id', 'e2e-invited-user')
+      .expect(201);
+
+    const membersAfterInvite = await request(app.getHttpServer())
+      .get(`/v1/workspaces/${body.suggestedWorkspaceId}/members`)
+      .set('x-finwise-user-id', 'e2e-user')
+      .expect(200);
+    const invitedMember = (
+      membersAfterInvite.body as readonly { id: string; userId: string }[]
+    ).find((member) => member.userId === invitedUserId);
+    expect(invitedMember).toBeDefined();
+
+    const transferResponse = await request(app.getHttpServer())
+      .post(`/v1/workspaces/${body.suggestedWorkspaceId}/owner-transfers`)
+      .set('x-finwise-user-id', 'e2e-user')
+      .send({ targetMemberId: invitedMember?.id })
+      .expect(201);
+    const transfer = transferResponse.body as { readonly id: string };
+    await request(app.getHttpServer())
+      .post(`/v1/owner-transfers/${transfer.id}/accept`)
+      .set('x-finwise-user-id', 'e2e-invited-user')
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post(`/v1/workspaces/${body.suggestedWorkspaceId}/archive`)
+      .set('x-finwise-user-id', 'e2e-invited-user')
+      .expect(201);
   });
 });

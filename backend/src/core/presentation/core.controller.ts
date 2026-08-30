@@ -40,6 +40,83 @@ export class CoreController {
     return this.coreService.listMembers(actor, workspaceId);
   }
 
+  @Post('workspaces/:workspaceId/invitations')
+  createInvitation(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('workspaceId') workspaceId: string,
+    @Body() body: unknown,
+  ) {
+    return this.coreService.createInvitation(actor, workspaceId, body);
+  }
+
+  @Get('workspaces/:workspaceId/invitations')
+  listInvitations(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('workspaceId') workspaceId: string,
+  ) {
+    return this.coreService.listInvitations(actor, workspaceId);
+  }
+
+  @Post('invitations/:token/accept')
+  acceptInvitation(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('token') token: string,
+  ) {
+    return this.coreService.acceptInvitation(actor, token);
+  }
+
+  @Post('workspaces/:workspaceId/invitations/:invitationId/revoke')
+  revokeInvitation(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('workspaceId') workspaceId: string,
+    @Param('invitationId') invitationId: string,
+  ) {
+    return this.coreService.revokeInvitation(actor, workspaceId, invitationId);
+  }
+
+  @Delete('workspaces/:workspaceId/members/:memberId')
+  removeMember(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('workspaceId') workspaceId: string,
+    @Param('memberId') memberId: string,
+  ) {
+    return this.coreService.removeMember(actor, workspaceId, memberId);
+  }
+
+  @Post('workspaces/:workspaceId/owner-transfers')
+  initiateOwnerTransfer(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('workspaceId') workspaceId: string,
+    @Body() body: unknown,
+  ) {
+    return this.coreService.initiateOwnerTransfer(actor, workspaceId, body);
+  }
+
+  @Post('owner-transfers/:transferId/accept')
+  acceptOwnerTransfer(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('transferId') transferId: string,
+  ) {
+    return this.coreService.acceptOwnerTransfer(actor, transferId);
+  }
+
+  @Post('workspaces/:workspaceId/owner-transfers/:transferId/cancel')
+  cancelOwnerTransfer(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('workspaceId') workspaceId: string,
+    @Param('transferId') transferId: string,
+  ) {
+    return this.coreService.cancelOwnerTransfer(actor, workspaceId, transferId);
+  }
+
+  @Post('workspaces/:workspaceId/archive')
+  archiveWorkspace(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('workspaceId') workspaceId: string,
+  ) {
+    return this.coreService.archiveWorkspace(actor, workspaceId);
+  }
+
   @Get('workspaces/:workspaceId/roles')
   listRoles(
     @CurrentActor() actor: AuthenticatedActor,

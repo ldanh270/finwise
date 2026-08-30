@@ -1,6 +1,6 @@
 # Phase 2 — Identity, workspace, and access
 
-Status: In progress — development bootstrap/isolation slice landed; production auth/RBAC workflows pending  
+Status: In progress — development bootstrap/RBAC/membership slices landed; production auth pending
 Depends on: [Phase 1](01-PLATFORM-FOUNDATION.md), [auth/session architecture](../AUTH-SESSION-ARCHITECTURE.md)  
 Unblocks: all workspace-owned features
 
@@ -39,6 +39,11 @@ Supabase token -> Nest verifier -> ExternalIdentity/User lookup or provision
 Every repository method requires a trusted `workspaceId` and actor policy
 context. Hidden accounts are filtered before aggregation, export, notification,
 search, or chart calculation.
+
+The development membership boundary accepts an already bootstrapped internal
+`invitedUserId` and returns a one-time opaque invitation token. Email delivery,
+provider identity lookup and durable authorization audit remain production
+follow-up work.
 
 ## Schema and API surface
 
@@ -100,8 +105,9 @@ for malformed legacy memberships, never a request-time silent fix.
 
 `backend/src/auth` now provides a development token boundary and
 `GET /v1/session/bootstrap` provisions one internal user plus one personal
-workspace through an in-memory adapter. The core slice also provides custom
-role CRUD, role assignment, account visibility policy, and access preview. OTP
-UI, production Supabase JWKS validation, invitations, membership removal, and
-owner transfer are intentionally left for the remainder of this phase. See the
-[identity/RBAC walkthrough](../../reviews/2026-08-30-identity-rbac-account-scope-walkthrough.md).
+workspace through an in-memory adapter. The core slices also provide custom
+role CRUD, role assignment, account visibility policy/access preview,
+invitation lifecycle, member removal, owner transfer and owner-only archive.
+OTP UI, production Supabase JWKS validation, email delivery and durable
+authorization audit remain. See the [identity/RBAC walkthrough](../../reviews/2026-08-30-identity-rbac-account-scope-walkthrough.md)
+and [membership lifecycle walkthrough](../../reviews/2026-08-30-membership-lifecycle-walkthrough.md).
