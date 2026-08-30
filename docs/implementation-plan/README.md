@@ -1,11 +1,12 @@
 # Finwise implementation planning index
 
-Status: Requirements discovery in progress  
-Last updated: 2026-08-27
+Status: Implementation roadmap approved; Phase 0 preflight ready
+Last updated: 2026-08-30
 
-The previous database schema is not an approved source of domain truth. It will
-be redesigned after the requirements and ledger decisions are confirmed. Do not
-extend the existing Prisma schema merely because a table already exists.
+The previous database schema is not an approved source of domain truth. Phase 0
+preflight determines whether Phase 1+ can establish a fresh baseline or must
+preserve existing data through an explicit migration. Do not extend the old
+Prisma schema merely because a table already exists.
 
 ## Required reading
 
@@ -23,22 +24,36 @@ extend the existing Prisma schema merely because a table already exists.
 | [`TECHNICAL-ARCHITECTURE.md`](TECHNICAL-ARCHITECTURE.md) | Proposed web/API/data/monorepo/deployment architecture and vertical delivery slices |
 | [`MOBILE-ARCHITECTURE.md`](MOBILE-ARCHITECTURE.md) | Confirmed React Native iOS/Android architecture, Expo workflow, offline model, navigation, sync, and release plan |
 | [`AUTH-SESSION-ARCHITECTURE.md`](AUTH-SESSION-ARCHITECTURE.md) | Proposed identity provider, login methods, session lifecycle, Nest bootstrap, logout, and account-deletion architecture |
+| [`REQUIREMENTS-TRACEABILITY.md`](REQUIREMENTS-TRACEABILITY.md) | SRS requirement IDs mapped to phases, API surfaces, and tests |
 
-## Planning phases
+## Change reviews
+
+- [Foundation and ledger vertical slice walkthrough](../reviews/2026-08-30-foundation-ledger-vertical-slice-walkthrough.md)
+
+## Approved implementation phases
+
+The phase documents below are the executable plan. Each one records its
+dependencies, business rules, data flow, schema/API surface, web/mobile
+behavior, test matrix, migration notes, and exit criteria.
 
 | Phase | Status | Exit condition |
 | --- | --- | --- |
-| 0. Product and domain discovery | In progress | Core open questions for workspace, permissions, budget, ledger, groups, loans, and investments are answered |
-| 1. MVP use-case inventory | Pending | User journeys and use cases have acceptance criteria and required permissions |
-| 2. Domain and ledger design | Pending | Aggregates, invariants, transaction semantics, and error codes are approved |
-| 3. Persistence redesign | Pending | New schema, constraints, migrations, and repository ports trace to approved rules |
-| 4. API and sync design | Pending | Contracts, authorization, idempotency, and inbox state machine are specified |
-| 5. Web and mobile experience | Pending | Navigation and critical screens cover loading/error/empty/permission states |
-| 6. Delivery slices | Pending | Vertical slices have tests, dependencies, and measurable completion criteria |
+| [00. Roadmap and decisions](phases/00-ROADMAP-AND-DECISIONS.md) | Ready | Decisions, release boundary, preflight, and traceability are frozen |
+| [01. Platform foundation](phases/01-PLATFORM-FOUNDATION.md) | In progress | Monorepo, `/v1`, generated OpenAPI client, exact-money/error ports, and CI gates work |
+| [02. Identity/workspace/access](phases/02-IDENTITY-WORKSPACE-ACCESS.md) | In progress | Bootstrap and workspace isolation slice works; Supabase/RBAC/member workflows remain |
+| [03. Ledger/accounts/transactions](phases/03-LEDGER-ACCOUNTS-TRANSACTIONS.md) | In progress | In-memory opening/income/expense/transfer/reversal slice works; Prisma adapter and full CRUD remain |
+| [04. Classification/budgets/reporting](phases/04-CLASSIFICATION-BUDGETING-REPORTING.md) | Blocked by 03 | Split lines, nested budgets, rollover, goals, and filtered reports pass |
+| [05. Group Treasury](phases/05-GROUP-TREASURY.md) | Blocked by 02–04 | Collections, submissions, sponsorship, claims, payables, and reimbursement pass |
+| [06. Ingestion/reconciliation](phases/06-INGESTION-RECONCILIATION.md) | Blocked by 02–03 | CSV inbox, dedup/match/confirm, retention, and checkpoints pass |
+| [07. Web MVP release](phases/07-WEB-MVP-RELEASE.md) | Blocked by 02–06 | Web MVP, accessibility, operations, release drills, and pilot gate pass |
+| [08. React Native mobile](phases/08-REACT-NATIVE-MOBILE.md) | After web MVP | Online mobile path and controlled offline outbox pass on iOS/Android |
+| [09. Wealth/bank beta](phases/09-WEALTH-AND-BANK-BETA.md) | Expansion | Wealth semantics and provider sync/retry/security gates pass |
+| [10. QA/security/operations](phases/10-QA-SECURITY-OPERATIONS.md) | Continuous gate | Test, security, recovery, observability, and release evidence is complete |
 
 ## Current instruction to implementing agents
 
-Do not implement or migrate the new financial model yet. Continue requirements
-discovery and resolve the open questions in the RDS. The existing schema may be
-discarded later, but deletion and migration strategy require an explicit
-implementation task after the replacement model is approved.
+Implement phases in dependency order. Start with Phase 0 database preflight and
+requirements traceability, then Phase 1 platform work. Do not extend the old
+Prisma draft as a shortcut. If preflight finds real user data, stop baseline
+replacement and write a preserving migration map. Keep financial truth in the
+NestJS/PostgreSQL boundary; clients consume the generated contract only.

@@ -219,3 +219,19 @@ Before considering a change complete:
 - [ ] Authorization is enforced server-side.
 - [ ] Tests cover the happy path and important failure paths.
 - [ ] Lint, typecheck, tests, and build pass for the affected app.
+
+## Change walkthrough and commit message
+
+Every completed implementation slice must leave a reviewable walkthrough under
+`docs/reviews/`. Use a dated, feature-scoped Markdown filename such as
+`YYYY-MM-DD-<scope>-walkthrough.md`. The walkthrough must state the scope and
+non-goals, affected files/modules, business rules, data flow, public API and UI
+behavior, migration/security implications, verification commands/results, known
+gaps, and concrete follow-up work. Do not describe planned work as shipped.
+
+Every completed slice must also include a Conventional Commits message in the
+handoff response. The message should explain the intent in an imperative
+subject and include a short body when the change affects security, migrations,
+API compatibility, or other non-obvious behavior. Writing the message does not
+authorize staging, committing, or pushing; those actions require an explicit
+request. Review the walkthrough and commit message together with the diff.

@@ -1,5 +1,22 @@
 # Finwise
 
+Finwise is a VND-first, multi-workspace money-management application. The
+Next.js web client and future React Native client use the NestJS `/v1` API;
+financial truth and authorization never live in the clients.
+
+The repository is organized as a pnpm workspace. `backend/` owns the modular
+NestJS API, `frontend/` owns the Next.js web experience, `packages/` contains
+transport-only shared packages, and `docs/` is the product/domain source of
+truth.
+
+The current implementation slice covers development-auth bootstrap, personal
+and shared-workspace boundaries, VND exact-money accounts, opening balances,
+income/expense/transfer journals, idempotent commands, void-by-reversal, audit
+history, and a responsive web dashboard shell. The remaining MVP contexts
+(production Supabase OTP/JWKS, PostgreSQL repositories/migrations, budgets,
+Group Treasury, CSV reconciliation, and the pilot hardening gate) remain
+tracked in [`docs/implementation-plan/README.md`](docs/implementation-plan/README.md).
+
 ## Setup
 
 Copy the backend environment template, fill in the Supabase connection values,
@@ -10,8 +27,8 @@ Copy-Item backend/.env.example backend/.env
 pnpm setup
 ```
 
-`pnpm setup` installs both applications with their lockfiles and runs
-`pnpm db:generate`. It does not create or modify environment files.
+`pnpm setup` installs all workspace packages and runs `pnpm db:generate`. It
+does not create or modify environment files.
 
 ## Development
 
@@ -52,4 +69,5 @@ pnpm typecheck
 pnpm test
 pnpm test:e2e
 pnpm build
+pnpm contracts:check
 ```

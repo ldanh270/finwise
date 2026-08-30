@@ -22,12 +22,12 @@ let isShuttingDown = false;
 const applications = [
   {
     name: 'backend',
-    args: ['--dir', 'backend', isDevelopment ? 'start:dev' : 'start:prod'],
+    args: ['--filter', 'backend', isDevelopment ? 'start:dev' : 'start:prod'],
     env: { PORT: process.env.BACKEND_PORT ?? '3001' },
   },
   {
     name: 'frontend',
-    args: ['--dir', 'frontend', isDevelopment ? 'dev' : 'start'],
+    args: ['--filter', 'frontend', isDevelopment ? 'dev' : 'start'],
     env: { PORT: process.env.FRONTEND_PORT ?? '3000' },
   },
 ];

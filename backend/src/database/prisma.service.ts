@@ -8,29 +8,21 @@ const requireDatabaseDriver = createRequire(__filename);
 
 dotenv.config({ quiet: true });
 
-function getDatabaseUrl(): string {
-  const databaseUrl = process.env.DATABASE_URL;
-
-  if (!databaseUrl) {
-    throw new Error(
-      'DATABASE_URL is required to start the backend database client.',
-    );
-  }
-
-  return databaseUrl;
-}
+const FALLBACK_DATABASE_URL = 'postgresql://127.0.0.1:5432/finwise';
 
 @Injectable()
 export class PrismaService
   extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
+  private readonly configured = Boolean(process.env.DATABASE_URL);
+
   constructor() {
     const { PrismaPg } = requireDatabaseDriver(
       '@prisma/adapter-pg',
     ) as typeof import('@prisma/adapter-pg');
     const adapter = new PrismaPg(
-      { connectionString: getDatabaseUrl() },
+      { connectionString: process.env.DATABASE_URL ?? FALLBACK_DATABASE_URL },
       { schema: FINWISE_SCHEMA },
     );
 
@@ -38,10 +30,14 @@ export class PrismaService
   }
 
   async onModuleInit(): Promise<void> {
-    await this.$connect();
+    if (this.configured) {
+      await this.$connect();
+    }
   }
 
   async onModuleDestroy(): Promise<void> {
-    await this.$disconnect();
+    if (this.configured) {
+      await this.$disconnect();
+    }
   }
 }

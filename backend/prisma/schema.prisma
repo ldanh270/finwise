@@ -9,16 +9,23 @@ datasource db {
   schemas  = ["finwise"]
 }
 
-enum WorkspaceMemberRole {
-  owner
-  admin
-  member
-  viewer
+enum WorkspaceKind {
+  personal
+  family
+  class_fund
+  other
 
   @@schema("finwise")
 }
 
-enum WorkspaceMemberStatus {
+enum WorkspaceStatus {
+  active
+  archived
+
+  @@schema("finwise")
+}
+
+enum MembershipStatus {
   invited
   active
   removed
@@ -26,14 +33,36 @@ enum WorkspaceMemberStatus {
   @@schema("finwise")
 }
 
-enum CategoryType {
-  income
-  expense
+enum AccountKind {
+  cash
+  bank
+  savings
+  investment_cash
+  loan_receivable
+  liability
+  system
 
   @@schema("finwise")
 }
 
-enum TransactionType {
+enum AccountStatus {
+  active
+  archived
+
+  @@schema("finwise")
+}
+
+enum AccountVisibilityMode {
+  workspace_default
+  exclude_selected
+  include_only
+  owner_only
+
+  @@schema("finwise")
+}
+
+enum JournalKind {
+  opening_balance
   income
   expense
   transfer
@@ -42,314 +71,258 @@ enum TransactionType {
   @@schema("finwise")
 }
 
-enum AdjustmentType {
-  opening_balance
-
-  @@schema("finwise")
-}
-
-enum TransactionStatus {
+enum JournalStatus {
   posted
   voided
 
   @@schema("finwise")
 }
 
+enum EntryDirection {
+  increase
+  decrease
+
+  @@schema("finwise")
+}
+
 enum TransactionAuditAction {
   created
-  updated
   voided
-  restored
-
-  @@schema("finwise")
-}
-
-enum BankConnectionStatus {
-  active
-  disconnected
-  error
-
-  @@schema("finwise")
-}
-
-enum BankSyncRunStatus {
-  queued
-  running
-  succeeded
-  failed
+  replaced
 
   @@schema("finwise")
 }
 
 model User {
-  id                   String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  externalAuthUserId   String            @unique @map("external_auth_user_id") @db.Uuid
-  email                String            @unique @db.Text
-  displayName          String?           @map("display_name") @db.Text
-  createdAt            DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt            DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
-  workspaceMemberships WorkspaceMember[] @relation("MemberUser")
-  invitedMemberships   WorkspaceMember[] @relation("InviterUser")
+  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  displayName        String?            @map("display_name") @db.Text
+  emailSnapshot      String?            @map("email_snapshot") @db.Text
+  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  externalIdentities ExternalIdentity[]
+  memberships        WorkspaceMember[]
 
   @@map("users")
   @@schema("finwise")
 }
 
+model ExternalIdentity {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  providerIssuer  String   @map("provider_issuer") @db.Text
+  providerSubject String   @map("provider_subject") @db.Text
+  emailSnapshot   String?  @map("email_snapshot") @db.Text
+  lastSeenAt      DateTime @default(now()) @map("last_seen_at") @db.Timestamptz(6)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  user            User     @relation(fields: [userId], references: [id])
+
+  @@unique([providerIssuer, providerSubject])
+  @@index([userId])
+  @@map("external_identities")
+  @@schema("finwise")
+}
+
 model Workspace {
-  id                String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name              String             @db.Text
-  archivedAt        DateTime?          @map("archived_at") @db.Timestamptz(6)
-  createdAt         DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
-  members           WorkspaceMember[]
-  funds             Fund[]
-  categories        Category[]
-  transactions      Transaction[]
-  transactionAudits TransactionAudit[]
-  bankConnections   BankConnection[]
-  bankAccounts      BankAccount[]
-  bankTransactions  BankTransaction[]
+  id                   String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                 String             @db.Text
+  kind                 WorkspaceKind      @default(personal)
+  defaultCurrency      String             @default("VND") @map("default_currency") @db.Char(3)
+  timezone             String             @default("Asia/Ho_Chi_Minh") @db.Text
+  status               WorkspaceStatus    @default(active)
+  archivedAt           DateTime?          @map("archived_at") @db.Timestamptz(6)
+  ownerMembershipId    String?            @unique @map("owner_membership_id") @db.Uuid
+  createdAt            DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  memberships          WorkspaceMember[]
+  ownerMembership      WorkspaceMember?   @relation("WorkspaceOwner", fields: [ownerMembershipId], references: [id])
+  roles                Role[]
+  accounts             FinancialAccount[]
+  journalTransactions  JournalTransaction[]
+  idempotencyKeys      IdempotencyKey[]
+  transactionAudits    TransactionAudit[]
 
   @@map("workspaces")
   @@schema("finwise")
 }
 
 model WorkspaceMember {
-  id                  String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workspaceId         String                @map("workspace_id") @db.Uuid
-  userId              String                @map("user_id") @db.Uuid
-  role                WorkspaceMemberRole
-  status              WorkspaceMemberStatus
-  invitedByUserId     String?               @map("invited_by") @db.Uuid
-  invitedAt           DateTime?             @map("invited_at") @db.Timestamptz(6)
-  joinedAt            DateTime?             @map("joined_at") @db.Timestamptz(6)
-  removedAt           DateTime?             @map("removed_at") @db.Timestamptz(6)
-  createdAt           DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt           DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
-  workspace           Workspace             @relation(fields: [workspaceId], references: [id])
-  user                User                  @relation("MemberUser", fields: [userId], references: [id])
-  invitedBy           User?                 @relation("InviterUser", fields: [invitedByUserId], references: [id])
-  createdFunds        Fund[]                @relation("FundCreator")
-  createdCategories   Category[]            @relation("CategoryCreator")
-  createdTransactions Transaction[]         @relation("TransactionCreator")
-  updatedTransactions Transaction[]         @relation("TransactionUpdater")
-  changedAudits       TransactionAudit[]    @relation("AuditChanger")
-  createdConnections  BankConnection[]      @relation("BankConnectionCreator")
+  id                String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId       String                @map("workspace_id") @db.Uuid
+  userId            String                @map("user_id") @db.Uuid
+  status            MembershipStatus      @default(active)
+  isOwner           Boolean               @default(false) @map("is_owner")
+  joinedAt          DateTime?             @map("joined_at") @db.Timestamptz(6)
+  removedAt         DateTime?             @map("removed_at") @db.Timestamptz(6)
+  createdAt         DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+  workspace         Workspace             @relation(fields: [workspaceId], references: [id])
+  user              User                  @relation(fields: [userId], references: [id])
+  ownerOf           Workspace?            @relation("WorkspaceOwner")
+  roleAssignments   RoleAssignment[]
+  accountAccess     AccountMemberAccess[]
+  createdAccounts   FinancialAccount[]    @relation("AccountCreator")
+  createdJournals   JournalTransaction[]  @relation("JournalCreator")
+  changedAudits     TransactionAudit[]    @relation("AuditActor")
 
   @@unique([workspaceId, userId])
-  @@unique([workspaceId, id])
-  @@index([userId])
+  @@index([userId, status])
   @@map("workspace_members")
   @@schema("finwise")
 }
 
-model Fund {
-  id                      String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workspaceId             String          @map("workspace_id") @db.Uuid
-  name                    String          @db.Text
-  currencyCode            String          @map("currency_code") @db.Char(3)
-  createdByUserId         String          @map("created_by") @db.Uuid
-  archivedAt              DateTime?       @map("archived_at") @db.Timestamptz(6)
-  createdAt               DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt               DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
-  workspace               Workspace       @relation(fields: [workspaceId], references: [id])
-  createdByMember         WorkspaceMember @relation("FundCreator", fields: [workspaceId, createdByUserId], references: [workspaceId, userId])
-  sourceTransactions      Transaction[]   @relation("SourceFund")
-  destinationTransactions Transaction[]   @relation("DestinationFund")
-  balance                 FundBalance?
-  bankAccount             BankAccount?
+model Role {
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId String           @map("workspace_id") @db.Uuid
+  name        String           @db.Text
+  protected   Boolean          @default(false)
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id])
+  assignments RoleAssignment[]
+  permissions RolePermission[]
 
-  @@unique([workspaceId, id])
-  @@index([workspaceId, archivedAt])
-  @@map("funds")
+  @@unique([workspaceId, name])
+  @@map("roles")
   @@schema("finwise")
 }
 
-model Category {
-  id               String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workspaceId      String          @map("workspace_id") @db.Uuid
-  parentCategoryId String?         @map("parent_category_id") @db.Uuid
-  name             String          @db.Text
-  type             CategoryType
-  createdByUserId  String          @map("created_by") @db.Uuid
-  archivedAt       DateTime?       @map("archived_at") @db.Timestamptz(6)
-  createdAt        DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
-  workspace        Workspace       @relation(fields: [workspaceId], references: [id])
-  parent           Category?       @relation("CategoryTree", fields: [workspaceId, parentCategoryId], references: [workspaceId, id])
-  children         Category[]      @relation("CategoryTree")
-  createdByMember  WorkspaceMember @relation("CategoryCreator", fields: [workspaceId, createdByUserId], references: [workspaceId, userId])
-  transactions     Transaction[]   @relation("TransactionCategory")
+model RoleAssignment {
+  id         String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  memberId   String          @map("member_id") @db.Uuid
+  roleId     String          @map("role_id") @db.Uuid
+  assignedAt DateTime        @default(now()) @map("assigned_at") @db.Timestamptz(6)
+  member     WorkspaceMember @relation(fields: [memberId], references: [id])
+  role       Role            @relation(fields: [roleId], references: [id])
 
-  @@unique([workspaceId, id])
-  @@index([workspaceId, archivedAt])
-  @@map("categories")
+  @@unique([memberId, roleId])
+  @@map("role_assignments")
   @@schema("finwise")
 }
 
-model Transaction {
-  id                String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workspaceId       String             @map("workspace_id") @db.Uuid
-  fundId            String             @map("fund_id") @db.Uuid
-  destinationFundId String?            @map("destination_fund_id") @db.Uuid
-  categoryId        String?            @map("category_id") @db.Uuid
-  amount            Decimal            @db.Decimal(20, 4)
-  type              TransactionType
-  adjustmentType    AdjustmentType?    @map("adjustment_type")
-  currencyCode      String             @map("currency_code") @db.Char(3)
-  transactionDate   DateTime           @map("transaction_date") @db.Date
-  occurredAt        DateTime           @default(now()) @map("occurred_at") @db.Timestamptz(6)
-  note              String?            @db.Text
-  createdByUserId   String             @map("created_by") @db.Uuid
-  updatedByUserId   String?            @map("updated_by") @db.Uuid
-  status            TransactionStatus  @default(posted)
-  voidedByUserId    String?            @map("voided_by") @db.Uuid
-  voidedAt          DateTime?          @map("voided_at") @db.Timestamptz(6)
-  voidReason        String?            @map("void_reason") @db.Text
-  createdAt         DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
-  workspace         Workspace          @relation(fields: [workspaceId], references: [id])
-  sourceFund        Fund               @relation("SourceFund", fields: [workspaceId, fundId], references: [workspaceId, id])
-  destinationFund   Fund?              @relation("DestinationFund", fields: [workspaceId, destinationFundId], references: [workspaceId, id])
-  category          Category?          @relation("TransactionCategory", fields: [workspaceId, categoryId], references: [workspaceId, id])
-  createdByMember   WorkspaceMember    @relation("TransactionCreator", fields: [workspaceId, createdByUserId], references: [workspaceId, userId])
-  updatedByMember   WorkspaceMember?   @relation("TransactionUpdater", fields: [workspaceId, updatedByUserId], references: [workspaceId, userId])
-  audits            TransactionAudit[]
-  bankTransaction   BankTransaction?
+model RolePermission {
+  id         String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  roleId     String @map("role_id") @db.Uuid
+  permission String @db.Text
+  role       Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permission])
+  @@map("role_permissions")
+  @@schema("finwise")
+}
+
+model FinancialAccount {
+  id                String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId       String                @map("workspace_id") @db.Uuid
+  name              String                @db.Text
+  kind              AccountKind
+  currencyCode      String                @default("VND") @map("currency_code") @db.Char(3)
+  status            AccountStatus         @default(active)
+  visibilityMode    AccountVisibilityMode @default(workspace_default) @map("visibility_mode")
+  isSystem          Boolean               @default(false) @map("is_system")
+  balanceMinor      BigInt                @default(0) @map("balance_minor")
+  createdByMemberId String                @map("created_by_member_id") @db.Uuid
+  archivedAt        DateTime?             @map("archived_at") @db.Timestamptz(6)
+  createdAt         DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+  workspace         Workspace             @relation(fields: [workspaceId], references: [id])
+  createdByMember   WorkspaceMember       @relation("AccountCreator", fields: [createdByMemberId], references: [id])
+  entries           JournalEntry[]
+  memberAccess      AccountMemberAccess[]
 
   @@unique([workspaceId, id])
-  @@index([workspaceId, transactionDate(sort: Desc)])
-  @@index([fundId, transactionDate(sort: Desc)])
-  @@index([categoryId])
-  @@map("transactions")
+  @@index([workspaceId, status, isSystem])
+  @@map("financial_accounts")
+  @@schema("finwise")
+}
+
+model AccountMemberAccess {
+  id        String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId String           @map("account_id") @db.Uuid
+  memberId  String           @map("member_id") @db.Uuid
+  allowed   Boolean          @default(true)
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  account   FinancialAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  member    WorkspaceMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, memberId])
+  @@map("account_member_access")
+  @@schema("finwise")
+}
+
+model JournalTransaction {
+  id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId        String              @map("workspace_id") @db.Uuid
+  kind               JournalKind
+  status             JournalStatus       @default(posted)
+  amountMinor        BigInt              @map("amount_minor")
+  currencyCode       String              @default("VND") @map("currency_code") @db.Char(3)
+  effectiveDate      DateTime            @map("effective_date") @db.Date
+  recordedAt         DateTime            @default(now()) @map("recorded_at") @db.Timestamptz(6)
+  description        String?             @db.Text
+  createdByMemberId  String              @map("created_by_member_id") @db.Uuid
+  reversalOfId       String?             @map("reversal_of_id") @db.Uuid
+  createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  workspace          Workspace           @relation(fields: [workspaceId], references: [id])
+  createdByMember    WorkspaceMember     @relation("JournalCreator", fields: [createdByMemberId], references: [id])
+  entries            JournalEntry[]
+  reversalOf         JournalTransaction? @relation("ReversalChain", fields: [reversalOfId], references: [id])
+  reversals          JournalTransaction[] @relation("ReversalChain")
+  idempotencyKeys    IdempotencyKey[]
+  audits             TransactionAudit[]
+
+  @@unique([workspaceId, id])
+  @@index([workspaceId, effectiveDate(sort: Desc)])
+  @@index([workspaceId, status])
+  @@map("journal_transactions")
+  @@schema("finwise")
+}
+
+model JournalEntry {
+  id            String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  transactionId String             @map("transaction_id") @db.Uuid
+  accountId     String             @map("account_id") @db.Uuid
+  amountMinor   BigInt             @map("amount_minor")
+  direction     EntryDirection
+  createdAt     DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  transaction   JournalTransaction @relation(fields: [transactionId], references: [id])
+  account       FinancialAccount   @relation(fields: [accountId], references: [id])
+
+  @@unique([transactionId, accountId, direction])
+  @@index([accountId, createdAt])
+  @@map("journal_entries")
   @@schema("finwise")
 }
 
 model TransactionAudit {
-  id              String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  transactionId   String                 @map("transaction_id") @db.Uuid
-  workspaceId     String                 @map("workspace_id") @db.Uuid
-  action          TransactionAuditAction
-  changedByUserId String                 @map("changed_by") @db.Uuid
-  oldData         Json?                  @map("old_data")
-  newData         Json?                  @map("new_data")
-  createdAt       DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
-  transaction     Transaction            @relation(fields: [workspaceId, transactionId], references: [workspaceId, id])
-  changedByMember WorkspaceMember        @relation("AuditChanger", fields: [workspaceId, changedByUserId], references: [workspaceId, userId])
-  workspace       Workspace              @relation(fields: [workspaceId], references: [id])
+  id            String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId   String              @map("workspace_id") @db.Uuid
+  transactionId String              @map("transaction_id") @db.Uuid
+  actorMemberId String              @map("actor_member_id") @db.Uuid
+  action        TransactionAuditAction
+  details       Json?
+  createdAt     DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  workspace     Workspace           @relation(fields: [workspaceId], references: [id])
+  transaction   JournalTransaction  @relation(fields: [transactionId], references: [id])
+  actor         WorkspaceMember     @relation("AuditActor", fields: [actorMemberId], references: [id])
 
-  @@index([transactionId, createdAt])
+  @@index([workspaceId, transactionId, createdAt])
   @@map("transaction_audits")
   @@schema("finwise")
 }
 
-model FundBalance {
-  fundId       String   @id @map("fund_id") @db.Uuid
-  workspaceId  String   @map("workspace_id") @db.Uuid
-  balance      Decimal  @db.Decimal(20, 4)
-  calculatedAt DateTime @map("calculated_at") @db.Timestamptz(6)
-  fund         Fund     @relation(fields: [workspaceId, fundId], references: [workspaceId, id])
+model IdempotencyKey {
+  id            String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId   String              @map("workspace_id") @db.Uuid
+  key           String              @db.VarChar(255)
+  operation     String              @db.Text
+  requestHash   String              @map("request_hash") @db.Char(64)
+  response      Json
+  transactionId String?             @map("transaction_id") @db.Uuid
+  createdAt     DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  workspace     Workspace           @relation(fields: [workspaceId], references: [id])
+  transaction   JournalTransaction? @relation(fields: [transactionId], references: [id])
 
-  @@unique([workspaceId, fundId])
-  @@map("fund_balances")
-  @@schema("finwise")
-}
-
-model BankConnection {
-  id              String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workspaceId     String               @map("workspace_id") @db.Uuid
-  provider        String               @db.Text
-  displayName     String?              @map("display_name") @db.Text
-  status          BankConnectionStatus @default(active)
-  createdByUserId String               @map("created_by") @db.Uuid
-  disconnectedAt  DateTime?            @map("disconnected_at") @db.Timestamptz(6)
-  createdAt       DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
-  workspace       Workspace            @relation(fields: [workspaceId], references: [id])
-  createdByMember WorkspaceMember      @relation("BankConnectionCreator", fields: [workspaceId, createdByUserId], references: [workspaceId, userId])
-  credential      BankCredential?
-  accounts        BankAccount[]
-  syncRuns        BankSyncRun[]
-
-  @@unique([workspaceId, id])
-  @@map("bank_connections")
-  @@schema("finwise")
-}
-
-model BankCredential {
-  id                    String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  connectionId          String         @unique @map("bank_connection_id") @db.Uuid
-  encryptedAccessToken  String         @map("encrypted_access_token") @db.Text
-  encryptedRefreshToken String?        @map("encrypted_refresh_token") @db.Text
-  expiresAt             DateTime?      @map("expires_at") @db.Timestamptz(6)
-  createdAt             DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt             DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
-  connection            BankConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
-
-  @@map("bank_credentials")
-  @@schema("finwise")
-}
-
-model BankAccount {
-  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workspaceId       String            @map("workspace_id") @db.Uuid
-  connectionId      String            @map("bank_connection_id") @db.Uuid
-  externalAccountId String            @map("external_account_id") @db.Text
-  name              String            @db.Text
-  mask              String?           @db.VarChar(8)
-  currencyCode      String            @map("currency_code") @db.Char(3)
-  fundId            String?           @unique @map("fund_id") @db.Uuid
-  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
-  workspace         Workspace         @relation(fields: [workspaceId], references: [id])
-  connection        BankConnection    @relation(fields: [workspaceId, connectionId], references: [workspaceId, id])
-  fund              Fund?             @relation(fields: [workspaceId, fundId], references: [workspaceId, id])
-  transactions      BankTransaction[]
-
-  @@unique([workspaceId, id])
-  @@unique([workspaceId, connectionId, externalAccountId])
-  @@unique([workspaceId, fundId])
-  @@index([connectionId])
-  @@map("bank_accounts")
-  @@schema("finwise")
-}
-
-model BankSyncRun {
-  id            String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workspaceId   String            @map("workspace_id") @db.Uuid
-  connectionId  String            @map("bank_connection_id") @db.Uuid
-  status        BankSyncRunStatus
-  startedAt     DateTime?         @map("started_at") @db.Timestamptz(6)
-  finishedAt    DateTime?         @map("finished_at") @db.Timestamptz(6)
-  importedCount Int               @default(0) @map("imported_count")
-  skippedCount  Int               @default(0) @map("skipped_count")
-  errorMessage  String?           @map("error_message") @db.Text
-  createdAt     DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
-  connection    BankConnection    @relation(fields: [workspaceId, connectionId], references: [workspaceId, id])
-
-  @@index([connectionId, createdAt])
-  @@map("bank_sync_runs")
-  @@schema("finwise")
-}
-
-model BankTransaction {
-  id                    String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workspaceId           String       @map("workspace_id") @db.Uuid
-  bankAccountId         String       @map("bank_account_id") @db.Uuid
-  externalTransactionId String       @map("external_transaction_id") @db.Text
-  amount                Decimal      @db.Decimal(20, 4)
-  currencyCode          String       @map("currency_code") @db.Char(3)
-  transactionDate       DateTime     @map("transaction_date") @db.Date
-  description           String?      @db.Text
-  mappedTransactionId   String?      @unique @map("transaction_id") @db.Uuid
-  createdAt             DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt             DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
-  workspace             Workspace    @relation(fields: [workspaceId], references: [id])
-  bankAccount           BankAccount  @relation(fields: [workspaceId, bankAccountId], references: [workspaceId, id])
-  mappedTransaction     Transaction? @relation(fields: [mappedTransactionId], references: [id])
-
-  @@unique([workspaceId, bankAccountId, externalTransactionId])
-  @@index([bankAccountId])
-  @@map("bank_transactions")
+  @@unique([workspaceId, key])
+  @@map("idempotency_keys")
   @@schema("finwise")
 }
