@@ -31,6 +31,7 @@ import {
   isReconciliationSummary,
   isRecord,
 } from "./contracts";
+import { getSupabaseBrowserClient } from "../auth/supabase-browser";
 
 export type AccessTokenProvider = () => Promise<string | undefined>;
 
@@ -240,6 +241,17 @@ export function createHttpFinwiseApi(
     ? normalizeBaseUrl(configuredBaseUrl)
     : undefined;
 
+  const getRuntimeAccessToken: AccessTokenProvider =
+    options.getAccessToken ??
+    (async () => {
+      const supabase = getSupabaseBrowserClient();
+      if (!supabase) return undefined;
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      return session?.access_token;
+    });
+
   async function getJson<T>(
     path: string,
     isResponse: (value: unknown) => value is T,
@@ -255,9 +267,7 @@ export function createHttpFinwiseApi(
     }
 
     try {
-      const token = options.getAccessToken
-        ? await options.getAccessToken()
-        : undefined;
+      const token = await getRuntimeAccessToken();
       const response = await fetch(`${baseUrl}${path}`, {
         headers: {
           Accept: "application/json",
@@ -304,9 +314,7 @@ export function createHttpFinwiseApi(
     }
 
     try {
-      const token = options.getAccessToken
-        ? await options.getAccessToken()
-        : undefined;
+      const token = await getRuntimeAccessToken();
       const response = await fetch(`${baseUrl}${path}`, {
         headers: {
           Accept: "text/csv",
@@ -353,9 +361,7 @@ export function createHttpFinwiseApi(
       };
     }
     try {
-      const token = options.getAccessToken
-        ? await options.getAccessToken()
-        : undefined;
+      const token = await getRuntimeAccessToken();
       const response = await fetch(`${baseUrl}${path}`, {
         method: "POST",
         headers: {

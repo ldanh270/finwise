@@ -16,6 +16,22 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Finwise authentication
+
+Copy `.env.example` to `.env.local` and fill in the public Supabase project
+URL and anon key. The same email OTP flow handles sign-in and first-time
+registration; the NestJS API then bootstraps the internal user and personal
+workspace.
+
+```powershell
+Copy-Item .env.example .env.local
+pnpm dev
+```
+
+Never put a Supabase service-role key in this file or in browser code. The
+frontend uses Supabase only for identity/session handling; financial data still
+flows through the authorized NestJS `/v1` API.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.

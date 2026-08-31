@@ -113,3 +113,13 @@ OTP UI, production Supabase JWKS validation, email delivery and durable
 authorization audit remain. See the [identity/RBAC walkthrough](../../reviews/2026-08-30-identity-rbac-account-scope-walkthrough.md),
 [membership lifecycle walkthrough](../../reviews/2026-08-30-membership-lifecycle-walkthrough.md),
 and [JWT claims walkthrough](../../reviews/2026-08-31-auth-jwt-claims-walkthrough.md).
+
+## Delivered web session slice
+
+On 2026-08-31 the Next.js web boundary added the `/auth` email OTP request and
+verification screens, protected `/` routing, Supabase cookie refresh, browser
+sign-out, and bearer-token injection into the Nest API transport. This closes
+the web session boundary for local/staging integration but does not close the
+phase: production SMTP/rate limits, JWKS rotation, durable identity mapping,
+and browser E2E against a real Supabase project remain open. See the [web auth
+gate walkthrough](../../reviews/2026-08-31-web-auth-gate-walkthrough.md).

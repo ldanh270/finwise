@@ -19,6 +19,7 @@ import { IngestionPage } from "../ingestion/ingestion-page";
 import { BudgetPage } from "../budget/budget-page";
 import { LedgerActionPanel } from "../ledger/ledger-action-panel";
 import { voidTransaction } from "../ledger/ledger-service";
+import { SignOutButton } from "../../lib/auth/sign-out-button";
 
 type DashboardSection =
   | "overview"
@@ -416,13 +417,7 @@ export default function DashboardPage() {
               <strong>{bootstrap?.user.displayName ?? "Your account"}</strong>
               <span>{bootstrap ? "Workspace owner" : "Not signed in"}</span>
             </div>
-            <button
-              className="icon-button"
-              type="button"
-              aria-label="Open account menu"
-            >
-              <Icon name="more" width={18} height={18} />
-            </button>
+            <SignOutButton />
           </div>
         </div>
       </aside>
