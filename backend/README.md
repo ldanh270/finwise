@@ -31,14 +31,13 @@
 $ pnpm install
 ```
 
-### PostgreSQL and Prisma
+### PostgreSQL-compatible database and Prisma
 
 Copy `.env.example` to `.env` and replace the placeholders with connection
-strings from your PostgreSQL provider. `DATABASE_URL` is used by the NestJS
+strings from your PostgreSQL or CockroachDB provider. The checked-in schema is
+configured for CockroachDB because the current development database endpoint
+uses CockroachDB Cloud on port 26257. `DATABASE_URL` is used by the NestJS
 runtime; `DIRECT_URL` is used by Prisma CLI migrations.
-The sample uses a dedicated database role named `prisma`; create it and grant
-it access to schema `finwise`, or replace that username with the role you
-already use.
 
 ```bash
 pnpm db:generate
@@ -57,8 +56,16 @@ Do not expose either database URL to the frontend.
 Finwise signs short-lived RS256 access tokens and stores only hashed, rotated
 refresh tokens in `auth_refresh_sessions`. Generate local key material with
 `node scripts/generate-jwt-keys.mjs`; never commit the printed private key.
-Apply `20260831000000_custom_auth` after the database preflight and set the
-`FINWISE_JWT_*` variables from `.env.example` before using register/login.
+The current empty-database baseline is
+`20260831010000_cockroach_baseline`; set the `FINWISE_JWT_*` variables from
+`.env.example` before using register/login.
+
+CockroachDB Cloud requires TLS. Prisma 7's Windows schema engine can fail to
+open the cloud TLS connection even when the Node `pg` runtime connects; run
+Prisma migrations in a Linux CI/deployment environment with the CA certificate
+from CockroachDB Cloud. This development database was bootstrapped once with
+the reviewed baseline SQL through Node `pg`; do not disable TLS in shared or
+production environments.
 
 ## Compile and run the project
 

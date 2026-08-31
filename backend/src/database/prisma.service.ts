@@ -8,7 +8,7 @@ const requireDatabaseDriver = createRequire(__filename);
 
 dotenv.config({ quiet: true });
 
-const FALLBACK_DATABASE_URL = 'postgresql://127.0.0.1:5432/finwise';
+const FALLBACK_DATABASE_URL = 'postgresql://127.0.0.1:26257/finwise';
 
 @Injectable()
 export class PrismaService

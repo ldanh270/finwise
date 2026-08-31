@@ -5,7 +5,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "cockroachdb"
   schemas  = ["finwise"]
 }
 
@@ -111,10 +111,10 @@ enum AuthRefreshSessionStatus {
 
 model User {
   id                 String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  displayName        String?              @map("display_name") @db.Text
-  emailSnapshot      String?              @map("email_snapshot") @db.Text
-  normalizedEmail    String?              @unique @map("normalized_email") @db.Text
-  passwordHash       String?              @map("password_hash") @db.Text
+  displayName        String?              @map("display_name")
+  emailSnapshot      String?              @map("email_snapshot")
+  normalizedEmail    String?              @unique @map("normalized_email")
+  passwordHash       String?              @map("password_hash")
   status             UserStatus           @default(active)
   failedLoginCount   Int                  @default(0) @map("failed_login_count")
   lockedUntil        DateTime?            @map("locked_until") @db.Timestamptz(6)
@@ -141,7 +141,7 @@ model AuthRefreshSession {
   expiresAt    DateTime                 @map("expires_at") @db.Timestamptz(6)
   lastUsedAt   DateTime?                @map("last_used_at") @db.Timestamptz(6)
   revokedAt    DateTime?                @map("revoked_at") @db.Timestamptz(6)
-  userAgent    String?                  @map("user_agent") @db.Text
+  userAgent    String?                  @map("user_agent")
   ipHash       String?                  @map("ip_hash") @db.Char(64)
   user         User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -154,9 +154,9 @@ model AuthRefreshSession {
 model ExternalIdentity {
   id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId          String   @map("user_id") @db.Uuid
-  providerIssuer  String   @map("provider_issuer") @db.Text
-  providerSubject String   @map("provider_subject") @db.Text
-  emailSnapshot   String?  @map("email_snapshot") @db.Text
+  providerIssuer  String   @map("provider_issuer")
+  providerSubject String   @map("provider_subject")
+  emailSnapshot   String?  @map("email_snapshot")
   lastSeenAt      DateTime @default(now()) @map("last_seen_at") @db.Timestamptz(6)
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   user            User     @relation(fields: [userId], references: [id])
@@ -169,10 +169,10 @@ model ExternalIdentity {
 
 model Workspace {
   id                  String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name                String               @db.Text
+  name                String
   kind                WorkspaceKind        @default(personal)
   defaultCurrency     String               @default("VND") @map("default_currency") @db.Char(3)
-  timezone            String               @default("Asia/Ho_Chi_Minh") @db.Text
+  timezone            String               @default("Asia/Ho_Chi_Minh")
   status              WorkspaceStatus      @default(active)
   archivedAt          DateTime?            @map("archived_at") @db.Timestamptz(6)
   ownerMembershipId   String?              @unique @map("owner_membership_id") @db.Uuid
@@ -218,7 +218,7 @@ model WorkspaceMember {
 model Role {
   id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   workspaceId String           @map("workspace_id") @db.Uuid
-  name        String           @db.Text
+  name        String
   protected   Boolean          @default(false)
   createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -247,7 +247,7 @@ model RoleAssignment {
 model RolePermission {
   id         String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   roleId     String @map("role_id") @db.Uuid
-  permission String @db.Text
+  permission String
   role       Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@unique([roleId, permission])
@@ -258,7 +258,7 @@ model RolePermission {
 model FinancialAccount {
   id                String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   workspaceId       String                @map("workspace_id") @db.Uuid
-  name              String                @db.Text
+  name              String
   kind              AccountKind
   currencyCode      String                @default("VND") @map("currency_code") @db.Char(3)
   status            AccountStatus         @default(active)
@@ -303,7 +303,7 @@ model JournalTransaction {
   currencyCode      String               @default("VND") @map("currency_code") @db.Char(3)
   effectiveDate     DateTime             @map("effective_date") @db.Date
   recordedAt        DateTime             @default(now()) @map("recorded_at") @db.Timestamptz(6)
-  description       String?              @db.Text
+  description       String?
   createdByMemberId String               @map("created_by_member_id") @db.Uuid
   reversalOfId      String?              @map("reversal_of_id") @db.Uuid
   createdAt         DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -358,8 +358,8 @@ model TransactionAudit {
 model IdempotencyKey {
   id            String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   workspaceId   String              @map("workspace_id") @db.Uuid
-  key           String              @db.VarChar(255)
-  operation     String              @db.Text
+  key           String
+  operation     String
   requestHash   String              @map("request_hash") @db.Char(64)
   response      Json
   transactionId String?             @map("transaction_id") @db.Uuid

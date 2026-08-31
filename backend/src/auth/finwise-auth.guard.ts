@@ -1,4 +1,9 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  Inject,
+  Injectable,
+} from '@nestjs/common';
 import { Request } from 'express';
 import {
   AuthenticatedActor,
@@ -13,11 +18,16 @@ export interface AuthenticatedRequest extends Request {
   requestId?: string;
 }
 
+type AccessTokenVerifier = Pick<JwtTokenService, 'verifyAccessToken'>;
+
 export const AUTH_GUARD = Symbol('AUTH_GUARD');
 
 @Injectable()
 export class FinwiseTokenVerifier implements TokenVerifierPort {
-  constructor(private readonly jwtTokens = new JwtTokenService()) {}
+  constructor(
+    @Inject(JwtTokenService)
+    private readonly jwtTokens: AccessTokenVerifier = new JwtTokenService(),
+  ) {}
 
   verify(
     authorizationHeader: string | undefined,

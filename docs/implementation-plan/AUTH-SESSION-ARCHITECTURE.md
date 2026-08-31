@@ -82,13 +82,16 @@ rows are preserved for historical/provider-linked users. New
 `finwise.auth_refresh_sessions` stores family/parent/replacement links, token
 hash, status, expiry, timestamps, and redacted request metadata.
 
-Migration `20260831000000_custom_auth` is additive and forward-only. Before
-deployment, run Phase 0 database preflight. Do not apply it to an unknown old
-schema or delete the existing initial migration. Rollback is an application
-rollback (disable custom auth routes, revoke sessions, restore the previous
-image); columns and session rows remain for audit and safe re-deploy. A future
-cleanup migration may remove unused provider columns only after an explicit data
-retention review.
+The active empty-database baseline is
+`20260831010000_cockroach_baseline`, generated after the Phase 0 preflight
+confirmed the configured CockroachDB database had no tables or migration
+history. The earlier PostgreSQL draft migrations are preserved under
+`backend/prisma/migrations-legacy/`. Do not apply this baseline to an unknown
+old schema; a populated environment needs a separate preservation/mapping
+migration. Rollback is an application rollback (disable custom auth routes,
+revoke sessions, restore the previous image); columns and session rows remain
+for audit and safe re-deploy. A future cleanup migration may remove unused
+provider columns only after an explicit data-retention review.
 
 ## Security controls
 

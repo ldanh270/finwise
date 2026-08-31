@@ -14,13 +14,14 @@ and shared-workspace boundaries, VND exact-money accounts, opening balances,
 income/expense/transfer journals, idempotent commands, void-by-reversal, audit
 history, custom RBAC/account scope, and a responsive web dashboard shell. The
 remaining MVP contexts (workspace persistence, password recovery/MFA,
-PostgreSQL repositories/migrations, budgets,
+budgets,
 Group Treasury, CSV reconciliation, and the pilot hardening gate) remain
 tracked in [`docs/implementation-plan/README.md`](docs/implementation-plan/README.md).
 
 ## Setup
 
-Copy the backend environment template, fill in the PostgreSQL connection values,
+Copy the backend environment template, fill in the PostgreSQL-compatible
+connection values,
 then install dependencies and generate the Prisma client:
 
 ```powershell
@@ -66,8 +67,11 @@ pnpm db:reset                            # destructive; development only
 ```
 
 Use `DIRECT_URL` for Prisma CLI migrations and `DATABASE_URL` for the backend
-runtime connection. The demo seed refuses to run when `NODE_ENV=production`
-unless `ALLOW_DEMO_SEED=true` is explicitly set.
+runtime connection. The current provider is `cockroachdb` because the configured
+cloud endpoint is CockroachDB-compatible. Prisma 7's Windows CLI schema engine
+may require Linux CI plus the CockroachDB CA certificate for cloud migrations.
+The demo seed refuses to run when `NODE_ENV=production` unless
+`ALLOW_DEMO_SEED=true` is explicitly set.
 
 ## Quality checks
 
