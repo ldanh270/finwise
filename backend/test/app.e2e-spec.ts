@@ -32,6 +32,31 @@ describe('Finwise API (e2e)', () => {
       .expect({ status: 'ok', service: 'finwise-api' });
   });
 
+  it('exposes liveness and reports missing readiness dependencies safely', async () => {
+    await request(app.getHttpServer())
+      .get('/v1/health/live')
+      .expect(200)
+      .expect((healthResponse) => {
+        const body = healthResponse.body as {
+          readonly status: string;
+          readonly version: string;
+        };
+        expect(body.status).toBe('ok');
+        expect(body.version).toBeDefined();
+      });
+    await request(app.getHttpServer())
+      .get('/v1/health/ready')
+      .expect(503)
+      .expect((healthResponse) => {
+        const body = healthResponse.body as {
+          readonly status: string;
+          readonly checks: { readonly database: string };
+        };
+        expect(body.status).toBe('not_ready');
+        expect(body.checks.database).toBe('failed');
+      });
+  });
+
   it('bootstraps a dev identity and personal workspace', async () => {
     const response = await request(app.getHttpServer())
       .get('/v1/session/bootstrap')
