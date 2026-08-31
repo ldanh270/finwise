@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Icon, type IconName } from "../../components/ui/icons";
 import {
   type AccountSummary,
   type ApiError,
+  type BalanceViewSummary,
   type BootstrapResponse,
   type BudgetSummary,
   type OverviewResponse,
@@ -13,9 +14,20 @@ import {
 } from "../../lib/api/contracts";
 import { createHttpFinwiseApi, type FinwiseApi } from "../../lib/api/client";
 import { formatMoney, formatShortDate } from "../../lib/formatting/money";
+import { GroupTreasuryPage } from "../group/group-treasury-page";
+import { IngestionPage } from "../ingestion/ingestion-page";
+import { BudgetPage } from "../budget/budget-page";
+import { LedgerActionPanel } from "../ledger/ledger-action-panel";
+import { voidTransaction } from "../ledger/ledger-service";
 
 type DashboardSection =
-  "overview" | "accounts" | "transactions" | "budgets" | "reports";
+  | "overview"
+  | "accounts"
+  | "transactions"
+  | "budgets"
+  | "reports"
+  | "group"
+  | "ingestion";
 
 type LoadState<T> =
   | { status: "loading" }
@@ -23,6 +35,12 @@ type LoadState<T> =
   | { status: "empty" }
   | { status: "error"; error: ApiError }
   | { status: "forbidden"; error: ApiError };
+
+type ExportState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "success" }
+  | { status: "error"; error: ApiError };
 
 type NavItem = {
   id: DashboardSection;
@@ -46,6 +64,10 @@ function getInitials(displayName: string): string {
     .slice(0, 2)
     .map((word) => word[0]?.toUpperCase() ?? "")
     .join("");
+}
+
+function today(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
 function displayNameFor(bootstrap: BootstrapResponse | null): string {
@@ -112,10 +134,28 @@ export default function DashboardPage() {
   const [overviewState, setOverviewState] = useState<
     LoadState<OverviewResponse>
   >({ status: "loading" });
+  const [balanceViewsState, setBalanceViewsState] = useState<
+    LoadState<BalanceViewSummary[]>
+  >({ status: "loading" });
+  const [exportState, setExportState] = useState<ExportState>({
+    status: "idle",
+  });
 
   const loadOverview = useCallback(async (workspaceId: string) => {
     setOverviewState({ status: "loading" });
-    const result = await api.getOverview(workspaceId);
+    setBalanceViewsState({ status: "loading" });
+    const [result, balanceResult] = await Promise.all([
+      api.getOverview(workspaceId),
+      api.getBalanceViews(workspaceId),
+    ]);
+    if (balanceResult.ok) {
+      setBalanceViewsState({ status: "ready", value: balanceResult.value });
+    } else {
+      setBalanceViewsState({
+        status: isForbidden(balanceResult.error) ? "forbidden" : "error",
+        error: balanceResult.error,
+      });
+    }
     if (result.ok) {
       setOverviewState(
         result.value.accounts.length === 0 &&
@@ -140,6 +180,7 @@ export default function DashboardPage() {
         error: result.error,
       });
       setOverviewState({ status: "empty" });
+      setBalanceViewsState({ status: "empty" });
       return;
     }
 
@@ -152,6 +193,7 @@ export default function DashboardPage() {
       await loadOverview(result.value.suggestedWorkspaceId);
     } else {
       setOverviewState({ status: "empty" });
+      setBalanceViewsState({ status: "empty" });
     }
   }, [loadOverview]);
 
@@ -190,6 +232,26 @@ export default function DashboardPage() {
   const retry = () => {
     void loadWorkspace();
   };
+
+  const exportTransactions = useCallback(async () => {
+    if (!selectedWorkspace) return;
+    setExportState({ status: "loading" });
+    const result = await api.exportTransactions(selectedWorkspace.id);
+    if (!result.ok) {
+      setExportState({ status: "error", error: result.error });
+      return;
+    }
+
+    const downloadUrl = URL.createObjectURL(
+      new Blob([result.value], { type: "text/csv;charset=utf-8" }),
+    );
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = "finwise-transactions.csv";
+    link.click();
+    URL.revokeObjectURL(downloadUrl);
+    setExportState({ status: "success" });
+  }, [selectedWorkspace]);
 
   return (
     <div className="app-shell">
@@ -313,6 +375,24 @@ export default function DashboardPage() {
             <span>Reports</span>
             <span className="nav-soon">Soon</span>
           </button>
+          <button
+            className={`nav-item${activeSection === "group" ? " is-active" : ""}`}
+            type="button"
+            aria-current={activeSection === "group" ? "page" : undefined}
+            onClick={() => handleSectionChange("group")}
+          >
+            <Icon name="users" width={18} height={18} />
+            <span>Group Treasury</span>
+          </button>
+          <button
+            className={`nav-item${activeSection === "ingestion" ? " is-active" : ""}`}
+            type="button"
+            aria-current={activeSection === "ingestion" ? "page" : undefined}
+            onClick={() => handleSectionChange("ingestion")}
+          >
+            <Icon name="upload" width={18} height={18} />
+            <span>Imports & reconciliation</span>
+          </button>
           <button className="nav-item" type="button" onClick={() => undefined}>
             <Icon name="settings" width={18} height={18} />
             <span>Settings</span>
@@ -397,6 +477,7 @@ export default function DashboardPage() {
               overview={overview}
               bootstrapState={bootstrapState}
               overviewState={overviewState}
+              balanceViewsState={balanceViewsState}
               hasWorkspaceError={hasWorkspaceError}
               onRetry={retry}
               onSectionChange={handleSectionChange}
@@ -404,10 +485,13 @@ export default function DashboardPage() {
           ) : (
             <ResourceSection
               section={activeSection}
+              workspaceId={selectedWorkspace?.id ?? null}
               overview={overview}
               bootstrapState={bootstrapState}
               overviewState={overviewState}
+              exportState={exportState}
               onRetry={retry}
+              onExport={exportTransactions}
               onSectionChange={handleSectionChange}
             />
           )}
@@ -428,6 +512,7 @@ type OverviewSectionProps = {
   overview: OverviewResponse | null;
   bootstrapState: LoadState<BootstrapResponse>;
   overviewState: LoadState<OverviewResponse>;
+  balanceViewsState: LoadState<BalanceViewSummary[]>;
   hasWorkspaceError: boolean;
   onRetry: () => void;
   onSectionChange: (section: DashboardSection) => void;
@@ -438,6 +523,7 @@ function OverviewSection({
   overview,
   bootstrapState,
   overviewState,
+  balanceViewsState,
   hasWorkspaceError,
   onRetry,
   onSectionChange,
@@ -498,7 +584,13 @@ function OverviewSection({
         <WorkspaceEmptyState onSectionChange={onSectionChange} />
       ) : null}
       {overview ? (
-        <OverviewData overview={overview} onSectionChange={onSectionChange} />
+        <OverviewData
+          overview={overview}
+          balanceViews={
+            balanceViewsState.status === "ready" ? balanceViewsState.value : []
+          }
+          onSectionChange={onSectionChange}
+        />
       ) : null}
     </>
   );
@@ -612,9 +704,11 @@ function WorkspaceEmptyState({
 
 function OverviewData({
   overview,
+  balanceViews,
   onSectionChange,
 }: {
   overview: OverviewResponse;
+  balanceViews: BalanceViewSummary[];
   onSectionChange: (section: DashboardSection) => void;
 }) {
   return (
@@ -680,7 +774,13 @@ function OverviewData({
         </div>
         <div className="account-row">
           {overview.accounts.slice(0, 3).map((account) => (
-            <AccountCard account={account} key={account.id} />
+            <AccountCard
+              account={account}
+              balanceView={balanceViews.find(
+                (balance) => balance.accountId === account.id,
+              )}
+              key={account.id}
+            />
           ))}
           {overview.accounts.length > 3 ? (
             <button
@@ -848,11 +948,21 @@ function RecentTransactions({
   );
 }
 
-function TransactionRow({ transaction }: { transaction: TransactionSummary }) {
+function TransactionRow({
+  transaction,
+  workspaceId,
+  onSuccess,
+}: {
+  transaction: TransactionSummary;
+  workspaceId?: string | null;
+  onSuccess?: () => void;
+}) {
   const isIncome = transaction.type === "INCOME";
   const isTransfer = transaction.type === "TRANSFER";
   return (
-    <div className="transaction-row">
+    <div
+      className={`transaction-row${transaction.status === "voided" ? " is-voided" : ""}`}
+    >
       <span
         className={`transaction-icon ${isIncome ? "is-income" : isTransfer ? "is-transfer" : "is-expense"}`}
       >
@@ -884,11 +994,114 @@ function TransactionRow({ transaction }: { transaction: TransactionSummary }) {
         {isIncome ? "+" : isTransfer ? "↔ " : "− "}
         {formatMoney(transaction.amount)}
       </strong>
+      {workspaceId && onSuccess ? (
+        <VoidTransactionControl
+          workspaceId={workspaceId}
+          transaction={transaction}
+          onSuccess={onSuccess}
+        />
+      ) : null}
     </div>
   );
 }
 
-function AccountCard({ account }: { account: AccountSummary }) {
+function VoidTransactionControl({
+  workspaceId,
+  transaction,
+  onSuccess,
+}: {
+  workspaceId: string;
+  transaction: TransactionSummary;
+  onSuccess: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [state, setState] = useState<
+    | { status: "idle" | "saving" }
+    | { status: "success" }
+    | { status: "error"; error: ApiError }
+  >({ status: "idle" });
+
+  if (transaction.status === "voided") {
+    return <span className="transaction-status">Voided</span>;
+  }
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setState({ status: "saving" });
+    const result = await voidTransaction(workspaceId, transaction.id, {
+      reason,
+      effectiveDate: today(),
+    });
+    if (!result.ok) {
+      setState({ status: "error", error: result.error });
+      return;
+    }
+    setState({ status: "success" });
+    setOpen(false);
+    setReason("");
+    onSuccess();
+  }
+
+  return (
+    <div className="transaction-correction">
+      {state.status === "error" ? (
+        <span className="inline-feedback is-error" role="alert">
+          {state.error.message}
+        </span>
+      ) : null}
+      {open ? (
+        <form className="transaction-correction-form" onSubmit={submit}>
+          <label>
+            Void reason
+            <input
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              maxLength={500}
+              required
+              autoFocus
+            />
+          </label>
+          <div className="transaction-correction-actions">
+            <button
+              className="text-button"
+              type="button"
+              onClick={() => setOpen(false)}
+              disabled={state.status === "saving"}
+            >
+              Cancel
+            </button>
+            <button
+              className="primary-button compact"
+              type="submit"
+              disabled={state.status === "saving"}
+              aria-busy={state.status === "saving"}
+            >
+              {state.status === "saving" ? "Voiding…" : "Confirm void"}
+            </button>
+          </div>
+        </form>
+      ) : (
+        <button
+          className="text-button"
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-label={`Void ${transaction.description}`}
+        >
+          Void
+        </button>
+      )}
+    </div>
+  );
+}
+
+function AccountCard({
+  account,
+  balanceView,
+}: {
+  account: AccountSummary;
+  balanceView?: BalanceViewSummary;
+}) {
   const icon =
     account.type === "CASH"
       ? "wallet"
@@ -920,25 +1133,38 @@ function AccountCard({ account }: { account: AccountSummary }) {
       </div>
       <strong>{account.name}</strong>
       <span className="account-balance">{formatMoney(account.balance)}</span>
+      {balanceView ? (
+        <span className="account-balance-meta">
+          Ledger {formatMoney(balanceView.ledger)} · Cleared{" "}
+          {formatMoney(balanceView.cleared)} · Reconciled{" "}
+          {formatMoney(balanceView.reconciled)}
+        </span>
+      ) : null}
     </article>
   );
 }
 
 type ResourceSectionProps = {
   section: Exclude<DashboardSection, "overview">;
+  workspaceId: string | null;
   overview: OverviewResponse | null;
   bootstrapState: LoadState<BootstrapResponse>;
   overviewState: LoadState<OverviewResponse>;
+  exportState: ExportState;
   onRetry: () => void;
+  onExport: () => void;
   onSectionChange: (section: DashboardSection) => void;
 };
 
 function ResourceSection({
   section,
+  workspaceId,
   overview,
   bootstrapState,
   overviewState,
+  exportState,
   onRetry,
+  onExport,
   onSectionChange,
 }: ResourceSectionProps) {
   const titles: Record<
@@ -969,16 +1195,46 @@ function ResourceSection({
       description:
         "Permission-filtered reports will live here as your workspace grows.",
     },
+    group: {
+      kicker: "SHARED MONEY",
+      title: "Group Treasury",
+      description:
+        "Keep collections, treasury spending, and member support distinct.",
+    },
+    ingestion: {
+      kicker: "INBOX & CONTROL",
+      title: "Imports & reconciliation",
+      description:
+        "Review CSV evidence before it changes the immutable ledger.",
+    },
   };
+  if (section === "group") {
+    return (
+      <GroupTreasuryPage
+        workspaceId={workspaceId}
+        accounts={overview?.accounts ?? []}
+        onRetry={onRetry}
+      />
+    );
+  }
+  if (section === "ingestion") {
+    return (
+      <IngestionPage
+        workspaceId={workspaceId}
+        accounts={overview?.accounts ?? []}
+      />
+    );
+  }
+  if (section === "budgets") {
+    return <BudgetPage workspaceId={workspaceId} />;
+  }
   const copy = titles[section];
   const items =
     section === "accounts"
       ? (overview?.accounts ?? [])
       : section === "transactions"
         ? (overview?.recentTransactions ?? [])
-        : section === "budgets"
-          ? (overview?.budgets ?? [])
-          : [];
+        : [];
   const shouldShowError =
     bootstrapState.status === "error" ||
     bootstrapState.status === "forbidden" ||
@@ -1035,7 +1291,12 @@ function ResourceSection({
       {overview && !shouldShowError ? (
         <ResourceContent
           section={section}
+          workspaceId={workspaceId}
+          accounts={overview.accounts}
           items={items}
+          exportState={exportState}
+          onRefresh={onRetry}
+          onExport={onExport}
           onSectionChange={onSectionChange}
         />
       ) : null}
@@ -1092,53 +1353,102 @@ function ResourceEmpty({
 
 function ResourceContent({
   section,
+  workspaceId,
+  accounts,
   items,
+  exportState,
+  onRefresh,
+  onExport,
   onSectionChange,
 }: {
   section: DashboardSection;
+  workspaceId: string | null;
+  accounts: AccountSummary[];
   items: AccountSummary[] | TransactionSummary[] | BudgetSummary[];
+  exportState: ExportState;
+  onRefresh: () => void;
+  onExport: () => void;
   onSectionChange: (section: DashboardSection) => void;
 }) {
   if (section === "accounts")
     return (
-      <section className="resource-panel">
-        <div className="resource-toolbar">
-          <span>
-            {items.length} visible account{items.length === 1 ? "" : "s"}
-          </span>
-          <span className="resource-hint">
-            <Icon name="shield" width={15} height={15} />
-            Balances are workspace-scoped
-          </span>
-        </div>
-        <div className="resource-account-grid">
-          {(items as AccountSummary[]).map((account) => (
-            <AccountCard account={account} key={account.id} />
-          ))}
-        </div>
-      </section>
+      <>
+        <LedgerActionPanel
+          mode="account"
+          workspaceId={workspaceId}
+          accounts={accounts}
+          onSuccess={onRefresh}
+        />
+        <LedgerActionPanel
+          mode="opening"
+          workspaceId={workspaceId}
+          accounts={accounts}
+          onSuccess={onRefresh}
+        />
+        <section className="resource-panel">
+          <div className="resource-toolbar">
+            <span>
+              {items.length} visible account{items.length === 1 ? "" : "s"}
+            </span>
+            <span className="resource-hint">
+              <Icon name="shield" width={15} height={15} />
+              Balances are workspace-scoped
+            </span>
+          </div>
+          <div className="resource-account-grid">
+            {(items as AccountSummary[]).map((account) => (
+              <AccountCard account={account} key={account.id} />
+            ))}
+          </div>
+        </section>
+      </>
     );
   if (section === "transactions")
     return (
-      <section className="resource-panel">
-        <div className="resource-toolbar">
-          <span>
-            {items.length} recent transaction{items.length === 1 ? "" : "s"}
-          </span>
-          <button
-            className="text-button"
-            type="button"
-            onClick={() => onSectionChange("transactions")}
-          >
-            Export <Icon name="upload" width={14} height={14} />
-          </button>
-        </div>
-        <div className="transaction-list resource-list">
-          {(items as TransactionSummary[]).map((transaction) => (
-            <TransactionRow transaction={transaction} key={transaction.id} />
-          ))}
-        </div>
-      </section>
+      <>
+        <LedgerActionPanel
+          mode="transaction"
+          workspaceId={workspaceId}
+          accounts={accounts}
+          onSuccess={onRefresh}
+        />
+        <section className="resource-panel">
+          <div className="resource-toolbar">
+            <span>
+              {items.length} recent transaction{items.length === 1 ? "" : "s"}
+            </span>
+            <button
+              className="text-button"
+              type="button"
+              onClick={onExport}
+              disabled={exportState.status === "loading"}
+              aria-busy={exportState.status === "loading"}
+            >
+              {exportState.status === "loading" ? "Preparing…" : "Export"}{" "}
+              <Icon name="upload" width={14} height={14} />
+            </button>
+          </div>
+          {exportState.status === "error" ? (
+            <p className="inline-feedback is-error" role="alert">
+              Export failed. {friendlyApiError(exportState.error).description}
+            </p>
+          ) : exportState.status === "success" ? (
+            <p className="inline-feedback" role="status">
+              CSV export downloaded with the same account visibility rules.
+            </p>
+          ) : null}
+          <div className="transaction-list resource-list">
+            {(items as TransactionSummary[]).map((transaction) => (
+              <TransactionRow
+                transaction={transaction}
+                workspaceId={workspaceId}
+                onSuccess={onRefresh}
+                key={transaction.id}
+              />
+            ))}
+          </div>
+        </section>
+      </>
     );
   if (section === "budgets")
     return (

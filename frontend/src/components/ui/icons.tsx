@@ -23,7 +23,8 @@ export type IconName =
   | "upload"
   | "more"
   | "lock"
-  | "arrow-left";
+  | "arrow-left"
+  | "users";
 
 type IconProps = SVGProps<SVGSVGElement> & { name: IconName };
 
@@ -195,6 +196,14 @@ export function Icon({ name, ...props }: IconProps) {
       return (
         <svg {...common}>
           <path d="m15 18-6-6 6-6M9 12h10" />
+        </svg>
+      );
+    case "users":
+      return (
+        <svg {...common}>
+          <path d="M16 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 18.5V20" />
+          <circle cx="10" cy="8" r="3" />
+          <path d="M16 11a3 3 0 0 0 0-6M18 20v-1.5a3.5 3.5 0 0 0-2.5-3.35" />
         </svg>
       );
   }
