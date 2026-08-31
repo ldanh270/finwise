@@ -58,6 +58,10 @@ for (const application of applications) {
   const child = spawn(pnpmCommand, application.args, {
     cwd: rootDirectory,
     env: { ...process.env, ...application.env },
+    // Windows cannot spawn a .cmd shim directly with Node's default mode.
+    // The arguments here are fixed workspace scripts, so shell dispatch does
+    // not expose user-controlled command text.
+    shell: process.platform === 'win32',
     stdio: ['inherit', 'pipe', 'pipe'],
   });
 

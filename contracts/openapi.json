@@ -24,6 +24,46 @@
         }
       }
     },
+    "/health/live": {
+      "get": {
+        "operationId": "getHealthLive",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Process liveness",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HealthLiveResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "operationId": "getHealthReady",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Critical dependencies are ready",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HealthReadyResponse" }
+              }
+            }
+          },
+          "503": {
+            "description": "Critical dependency is unavailable",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HealthReadyResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
     "/session/bootstrap": {
       "get": {
         "operationId": "bootstrapSession",
@@ -164,6 +204,221 @@
           },
           "400": { "$ref": "#/components/responses/ValidationError" },
           "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/categories": {
+      "get": {
+        "operationId": "listCategories",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "responses": {
+          "200": {
+            "description": "Workspace category tree",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Category" }
+                }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "operationId": "createCategory",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateCategoryRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Category created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Category" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/categories/{categoryId}/archive": {
+      "post": {
+        "operationId": "archiveCategory",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceId" },
+          {
+            "name": "categoryId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Category archived",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Category" }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/tags": {
+      "get": {
+        "operationId": "listTags",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "responses": {
+          "200": {
+            "description": "Workspace tags",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Tag" }
+                }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "operationId": "createTag",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateTagRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tag created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Tag" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/budgets": {
+      "get": {
+        "operationId": "listBudgetPeriods",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "responses": {
+          "200": {
+            "description": "Budget periods",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/BudgetPeriod" }
+                }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "operationId": "createBudgetPeriod",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateBudgetRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Budget period created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BudgetPeriod" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/budgets/{month}": {
+      "get": {
+        "operationId": "getBudgetOverview",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceId" },
+          {
+            "name": "month",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "pattern": "^\\d{4}-(0[1-9]|1[0-2])$" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Budget versus actual overview",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BudgetOverview" }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/budgets/{month}/close": {
+      "post": {
+        "operationId": "closeBudgetPeriod",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceId" },
+          {
+            "name": "month",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Budget period closed",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BudgetPeriod" }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
           "409": { "$ref": "#/components/responses/Conflict" }
         }
       }
@@ -576,6 +831,47 @@
         }
       }
     },
+    "/workspaces/{workspaceId}/accounts/{accountId}/opening-balance": {
+      "post": {
+        "operationId": "postOpeningBalance",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceId" },
+          { "$ref": "#/components/parameters/IdempotencyKey" },
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["amountMinorUnits"],
+                "properties": {
+                  "amountMinorUnits": { "type": "string", "pattern": "^[0-9]+$" },
+                  "effectiveDate": { "type": "string", "format": "date" },
+                  "description": { "type": "string", "maxLength": 500 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Opening balance posted",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Transaction" } } }
+          },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
     "/workspaces/{workspaceId}/balances/rebuild": {
       "get": {
         "operationId": "rebuildBalances",
@@ -593,6 +889,35 @@
                     "properties": {
                       "accountId": { "type": "string", "format": "uuid" },
                       "balanceMinorUnits": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/balances": {
+      "get": {
+        "operationId": "getBalanceViews",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "responses": {
+          "200": {
+            "description": "Ledger, cleared and reconciled balance views",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["accountId", "ledger", "cleared", "reconciled"],
+                    "properties": {
+                      "accountId": { "type": "string", "format": "uuid" },
+                      "ledger": { "$ref": "#/components/schemas/MoneyDto" },
+                      "cleared": { "$ref": "#/components/schemas/MoneyDto" },
+                      "reconciled": { "$ref": "#/components/schemas/MoneyDto" }
                     }
                   }
                 }
@@ -693,6 +1018,23 @@
         }
       }
     },
+    "/workspaces/{workspaceId}/transactions/export": {
+      "get": {
+        "operationId": "exportTransactions",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "responses": {
+          "200": {
+            "description": "Policy-filtered transaction CSV",
+            "content": {
+              "text/csv": {
+                "schema": { "type": "string" }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
     "/workspaces/{workspaceId}/transactions/{transactionId}": {
       "get": {
         "operationId": "getTransaction",
@@ -720,6 +1062,91 @@
       }
     }
     ,
+    "/workspaces/{workspaceId}/transactions/{transactionId}/classification": {
+      "get": {
+        "operationId": "getTransactionClassification",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceId" },
+          {
+            "name": "transactionId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Immutable transaction classification",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/ClassificationLine" }
+                }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "post": {
+        "operationId": "classifyTransaction",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceId" },
+          {
+            "name": "transactionId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["lines"],
+                "properties": {
+                  "lines": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 50,
+                    "items": {
+                      "type": "object",
+                      "required": ["categoryId", "amountMinorUnits"],
+                      "properties": {
+                        "categoryId": { "type": "string", "format": "uuid" },
+                        "amountMinorUnits": { "type": "string" },
+                        "tagIds": { "type": "array", "items": { "type": "string", "format": "uuid" } }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Classification saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/ClassificationLine" }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
     "/workspaces/{workspaceId}/transactions/{transactionId}/replace": {
       "post": {
         "operationId": "replaceTransaction",
@@ -772,6 +1199,344 @@
           "404": { "$ref": "#/components/responses/NotFound" },
           "409": { "$ref": "#/components/responses/Conflict" }
         }
+      }
+    },
+    "/workspaces/{workspaceId}/transactions/{transactionId}/void": {
+      "post": {
+        "operationId": "voidTransaction",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceId" },
+          { "$ref": "#/components/parameters/IdempotencyKey" },
+          {
+            "name": "transactionId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["reason"],
+                "properties": {
+                  "reason": { "type": "string", "maxLength": 500 },
+                  "effectiveDate": { "type": "string", "format": "date" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Original marked voided and reversal posted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["original", "reversal"],
+                  "properties": {
+                    "original": { "$ref": "#/components/schemas/Transaction" },
+                    "reversal": { "$ref": "#/components/schemas/Transaction" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/transactions/{transactionId}/source-links": {
+      "get": {
+        "operationId": "getTransactionSourceLinks",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceId" },
+          { "name": "transactionId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Source links for a visible journal",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/JournalSourceLink" } }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/group/participants": {
+      "get": {
+        "operationId": "listGroupParticipants",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "responses": {
+          "200": { "description": "Participants", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/GroupParticipant" } } } } },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "operationId": "createGroupParticipant",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateGroupParticipantRequest" } } } },
+        "responses": {
+          "201": { "description": "Participant created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GroupParticipant" } } } },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/group/collections": {
+      "get": {
+        "operationId": "listGroupCollections",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "responses": {
+          "200": { "description": "Collections", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/GroupCollection" } } } } },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "operationId": "createGroupCollection",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["name"], "properties": { "name": { "type": "string" } } } } } },
+        "responses": {
+          "201": { "description": "Collection created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GroupCollection" } } } },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/group/collections/{collectionId}/obligations": {
+      "get": {
+        "operationId": "listGroupObligations",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }, { "name": "collectionId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": { "200": { "description": "Obligations", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/GroupObligation" } } } } }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      },
+      "post": {
+        "operationId": "addGroupObligation",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }, { "name": "collectionId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GroupAmountRequest" } } } },
+        "responses": { "201": { "description": "Obligation created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GroupObligation" } } } }, "400": { "$ref": "#/components/responses/ValidationError" }, "403": { "$ref": "#/components/responses/Forbidden" }, "409": { "$ref": "#/components/responses/Conflict" } }
+      }
+    },
+    "/workspaces/{workspaceId}/group/collections/{collectionId}/progress": {
+      "get": {
+        "operationId": "getGroupCollectionProgress",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }, { "name": "collectionId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": { "200": { "description": "Collection progress", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GroupCollectionProgress" } } } }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      }
+    },
+    "/workspaces/{workspaceId}/group/collections/{collectionId}/submissions": {
+      "get": {
+        "operationId": "listGroupSubmissions",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }, { "name": "collectionId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": { "200": { "description": "Contribution submissions", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/GroupSubmission" } } } } }, "403": { "$ref": "#/components/responses/Forbidden" } }
+      },
+      "post": {
+        "operationId": "submitGroupContribution",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }, { "name": "collectionId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SubmitContributionRequest" } } } },
+        "responses": { "201": { "description": "Submission created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GroupSubmission" } } } }, "400": { "$ref": "#/components/responses/ValidationError" }, "403": { "$ref": "#/components/responses/Forbidden" } }
+      }
+    },
+    "/workspaces/{workspaceId}/group/submissions/{submissionId}/verify": {
+      "post": {
+        "operationId": "verifyGroupContribution",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }, { "name": "submissionId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/VerifyContributionRequest" } } } },
+        "responses": { "201": { "description": "Submission verified and posted", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GroupSubmission" } } } }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" }, "409": { "$ref": "#/components/responses/Conflict" } }
+      }
+    },
+    "/workspaces/{workspaceId}/group/submissions/{submissionId}/resolve-overpayment": {
+      "post": {
+        "operationId": "resolveGroupContributionOverpayment",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }, { "name": "submissionId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ResolveContributionOverpaymentRequest" } } } },
+        "responses": { "201": { "description": "Overpayment resolution applied", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GroupSubmission" } } } }, "400": { "$ref": "#/components/responses/ValidationError" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" }, "409": { "$ref": "#/components/responses/Conflict" } }
+      }
+    },
+    "/workspaces/{workspaceId}/group/sponsored-expenses": {
+      "get": {
+        "operationId": "listSponsoredExpenses",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "responses": { "200": { "description": "Sponsored expenses", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/GroupSponsoredExpense" } } } } }, "403": { "$ref": "#/components/responses/Forbidden" } }
+      },
+      "post": {
+        "operationId": "createSponsoredExpense",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GroupDescriptionAmountRequest" } } } },
+        "responses": { "201": { "description": "Sponsored expense created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GroupSponsoredExpense" } } } }, "400": { "$ref": "#/components/responses/ValidationError" }, "403": { "$ref": "#/components/responses/Forbidden" } }
+      }
+    },
+    "/workspaces/{workspaceId}/group/claims": {
+      "get": {
+        "operationId": "listGroupClaims",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "responses": { "200": { "description": "Claims", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/GroupClaim" } } } } }, "403": { "$ref": "#/components/responses/Forbidden" } }
+      },
+      "post": {
+        "operationId": "createGroupClaim",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateGroupClaimRequest" } } } },
+        "responses": { "201": { "description": "Claim created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GroupClaim" } } } }, "400": { "$ref": "#/components/responses/ValidationError" }, "403": { "$ref": "#/components/responses/Forbidden" } }
+      }
+    },
+    "/workspaces/{workspaceId}/group/claims/{claimId}/approve": {
+      "post": {
+        "operationId": "approveGroupClaim",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }, { "name": "claimId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": { "201": { "description": "Claim approved", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GroupClaim" } } } }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" }, "409": { "$ref": "#/components/responses/Conflict" } }
+      }
+    },
+    "/workspaces/{workspaceId}/group/claims/{claimId}/reimburse": {
+      "post": {
+        "operationId": "reimburseGroupClaim",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }, { "name": "claimId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }, { "$ref": "#/components/parameters/IdempotencyKey" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReimburseGroupClaimRequest" } } } },
+        "responses": { "201": { "description": "Claim reimbursed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GroupReimbursementResult" } } } }, "400": { "$ref": "#/components/responses/ValidationError" }, "403": { "$ref": "#/components/responses/Forbidden" }, "409": { "$ref": "#/components/responses/Conflict" } }
+      }
+    },
+    "/workspaces/{workspaceId}/group/payables": {
+      "get": {
+        "operationId": "listGroupPayables",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "responses": { "200": { "description": "Open and settled payables", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/GroupPayable" } } } } }, "403": { "$ref": "#/components/responses/Forbidden" } }
+      }
+    },
+    "/workspaces/{workspaceId}/group/expenses": {
+      "get": {
+        "operationId": "listDirectGroupExpenses",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "responses": { "200": { "description": "Posted direct group expenses", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/GroupDirectExpense" } } } } }, "403": { "$ref": "#/components/responses/Forbidden" } }
+      },
+      "post": {
+        "operationId": "postDirectGroupExpense",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }, { "$ref": "#/components/parameters/IdempotencyKey" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateDirectGroupExpenseRequest" } } } },
+        "responses": { "201": { "description": "Direct group expense posted", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GroupDirectExpense" } } } }, "400": { "$ref": "#/components/responses/ValidationError" }, "403": { "$ref": "#/components/responses/Forbidden" }, "409": { "$ref": "#/components/responses/Conflict" } }
+      }
+    },
+    "/workspaces/{workspaceId}/group/reports/summary": {
+      "get": {
+        "operationId": "getGroupReportSummary",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "responses": { "200": { "description": "Permission-filtered Group Treasury summary", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GroupReportSummary" } } } }, "403": { "$ref": "#/components/responses/Forbidden" } }
+      }
+    },
+    "/workspaces/{workspaceId}/imports": {
+      "get": {
+        "operationId": "listImportSessions",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "responses": {
+          "200": { "description": "Private import sessions", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/ImportSession" } } } } },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "operationId": "createImportSession",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateImportSessionRequest" } } } },
+        "responses": {
+          "201": { "description": "CSV received and normalized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ImportSessionResult" } } } },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/imports/{sessionId}/records": {
+      "get": {
+        "operationId": "listImportedRecords",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }, { "name": "sessionId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": { "200": { "description": "Normalized records", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/ImportedRecord" } } } } }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      }
+    },
+    "/workspaces/{workspaceId}/imports/{sessionId}/raw": {
+      "delete": {
+        "operationId": "deleteImportRawData",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }, { "name": "sessionId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": { "200": { "description": "Raw import data deleted", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ImportSession" } } } }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" }, "409": { "$ref": "#/components/responses/Conflict" } }
+      }
+    },
+    "/workspaces/{workspaceId}/imports/records/{recordId}/match": {
+      "post": {
+        "operationId": "matchImportedRecord",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }, { "name": "recordId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["transactionId"], "properties": { "transactionId": { "type": "string", "format": "uuid" } } } } } },
+        "responses": { "201": { "description": "Record matched without posting", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ImportedRecord" } } } }, "400": { "$ref": "#/components/responses/ValidationError" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" }, "409": { "$ref": "#/components/responses/Conflict" } }
+      }
+    },
+    "/workspaces/{workspaceId}/imports/records/confirm": {
+      "post": {
+        "operationId": "bulkConfirmImportedRecords",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }, { "$ref": "#/components/parameters/IdempotencyKey" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/BulkConfirmImportedRecordsRequest" } } } },
+        "responses": { "201": { "description": "Per-record confirmation results", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/BulkConfirmImportedRecordsResult" } } } }, "400": { "$ref": "#/components/responses/ValidationError" }, "403": { "$ref": "#/components/responses/Forbidden" } }
+      }
+    },
+    "/workspaces/{workspaceId}/imports/records/{recordId}/confirm": {
+      "post": {
+        "operationId": "confirmImportedRecord",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }, { "$ref": "#/components/parameters/IdempotencyKey" }, { "name": "recordId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": { "201": { "description": "Record confirmed and linked to one journal", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ImportedRecord" } } } }, "400": { "$ref": "#/components/responses/ValidationError" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" }, "409": { "$ref": "#/components/responses/Conflict" } }
+      }
+    },
+    "/workspaces/{workspaceId}/imports/records/{recordId}/ignore": {
+      "post": {
+        "operationId": "ignoreImportedRecord",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }, { "name": "recordId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ImportDecisionRequest" } } } },
+        "responses": { "201": { "description": "Record ignored", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ImportedRecord" } } } }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" }, "409": { "$ref": "#/components/responses/Conflict" } }
+      }
+    },
+    "/workspaces/{workspaceId}/imports/records/{recordId}/needs-attention": {
+      "post": {
+        "operationId": "markImportedRecordNeedsAttention",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }, { "name": "recordId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ImportDecisionRequest" } } } },
+        "responses": { "201": { "description": "Record requires attention", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ImportedRecord" } } } }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" }, "409": { "$ref": "#/components/responses/Conflict" } }
+      }
+    },
+    "/workspaces/{workspaceId}/reconciliations": {
+      "get": {
+        "operationId": "listReconciliations",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "responses": {
+          "200": {
+            "description": "Workspace reconciliation checkpoints",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Reconciliation" }
+                }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "operationId": "startReconciliation",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/StartReconciliationRequest" } } } },
+        "responses": { "201": { "description": "Reconciliation checkpoint", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Reconciliation" } } } }, "400": { "$ref": "#/components/responses/ValidationError" }, "403": { "$ref": "#/components/responses/Forbidden" } }
+      }
+    },
+    "/workspaces/{workspaceId}/reconciliations/{checkpointId}/adjust": {
+      "post": {
+        "operationId": "adjustReconciliation",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }, { "name": "checkpointId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReconciliationAdjustmentRequest" } } } },
+        "responses": { "201": { "description": "Reconciliation resolved", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Reconciliation" } } } }, "400": { "$ref": "#/components/responses/ValidationError" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" }, "409": { "$ref": "#/components/responses/Conflict" } }
       }
     }
   },
@@ -869,6 +1634,30 @@
           "service": { "type": "string", "const": "finwise-api" }
         }
       },
+      "HealthLiveResponse": {
+        "type": "object",
+        "required": ["status", "service", "version"],
+        "properties": {
+          "status": { "type": "string", "const": "ok" },
+          "service": { "type": "string", "const": "finwise-api" },
+          "version": { "type": "string" }
+        }
+      },
+      "HealthReadyResponse": {
+        "type": "object",
+        "required": ["status", "service", "checks"],
+        "properties": {
+          "status": { "type": "string", "enum": ["ok", "not_ready"] },
+          "service": { "type": "string", "const": "finwise-api" },
+          "checks": {
+            "type": "object",
+            "required": ["database"],
+            "properties": {
+              "database": { "type": "string", "enum": ["ok", "not_configured", "failed"] }
+            }
+          }
+        }
+      },
       "User": {
         "type": "object",
         "required": ["id", "displayName"],
@@ -899,6 +1688,450 @@
           "name": { "type": "string" },
           "protected": { "type": "boolean" },
           "permissions": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "Category": {
+        "type": "object",
+        "required": ["id", "workspaceId", "name", "status"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "workspaceId": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "parentId": { "type": "string", "format": "uuid" },
+          "status": { "type": "string", "enum": ["active", "archived"] }
+        }
+      },
+      "CreateCategoryRequest": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "parentId": { "type": "string", "format": "uuid" }
+        }
+      },
+      "Tag": {
+        "type": "object",
+        "required": ["id", "workspaceId", "name", "status"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "workspaceId": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "status": { "type": "string", "enum": ["active", "archived"] }
+        }
+      },
+      "CreateTagRequest": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 100 }
+        }
+      },
+      "ClassificationLine": {
+        "type": "object",
+        "required": ["id", "workspaceId", "transactionId", "categoryId", "amount", "tagIds"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "workspaceId": { "type": "string", "format": "uuid" },
+          "transactionId": { "type": "string", "format": "uuid" },
+          "categoryId": { "type": "string", "format": "uuid" },
+          "amount": { "$ref": "#/components/schemas/MoneyDto" },
+          "tagIds": { "type": "array", "items": { "type": "string", "format": "uuid" } }
+        }
+      },
+      "BudgetPeriod": {
+        "type": "object",
+        "required": ["id", "workspaceId", "month", "base", "carry", "status"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "workspaceId": { "type": "string", "format": "uuid" },
+          "month": { "type": "string", "pattern": "^\\d{4}-(0[1-9]|1[0-2])$" },
+          "base": { "$ref": "#/components/schemas/MoneyDto" },
+          "carry": { "$ref": "#/components/schemas/MoneyDto" },
+          "status": { "type": "string", "enum": ["open", "closed"] }
+        }
+      },
+      "CreateBudgetRequest": {
+        "type": "object",
+        "required": ["month", "baseMinorUnits", "constraints"],
+        "properties": {
+          "month": { "type": "string", "pattern": "^\\d{4}-(0[1-9]|1[0-2])$" },
+          "baseMinorUnits": { "type": "string" },
+          "constraints": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "object",
+              "required": ["categoryId", "mode"],
+              "properties": {
+                "categoryId": { "type": "string", "format": "uuid" },
+                "mode": { "type": "string", "enum": ["BY_CHILDREN", "SHARED_POOL", "HYBRID"] },
+                "fixedMinorUnits": { "type": "string" },
+                "percentageBasisPoints": { "type": "integer", "minimum": 0, "maximum": 10000 },
+                "rolloverMode": { "type": "string", "enum": ["NONE", "POSITIVE_ONLY", "FULL_BALANCE"] }
+              }
+            }
+          }
+        }
+      },
+      "BudgetOverview": {
+        "allOf": [
+          { "$ref": "#/components/schemas/BudgetPeriod" },
+          {
+            "type": "object",
+            "required": ["constraints", "totals"],
+            "properties": {
+              "constraints": { "type": "array", "items": { "type": "object" } },
+              "totals": { "type": "object" }
+            }
+          }
+        ]
+      },
+      "GroupParticipant": {
+        "type": "object",
+        "required": ["id", "workspaceId", "memberId", "displayName", "status"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "workspaceId": { "type": "string", "format": "uuid" },
+          "memberId": { "type": "string", "format": "uuid" },
+          "displayName": { "type": "string" },
+          "status": { "type": "string" }
+        }
+      },
+      "CreateGroupParticipantRequest": {
+        "type": "object",
+        "required": ["memberId", "displayName"],
+        "properties": {
+          "memberId": { "type": "string", "format": "uuid" },
+          "displayName": { "type": "string" }
+        }
+      },
+      "GroupCollection": {
+        "type": "object",
+        "required": ["id", "workspaceId", "name", "createdByMemberId", "status"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "workspaceId": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "createdByMemberId": { "type": "string", "format": "uuid" },
+          "status": { "type": "string" }
+        }
+      },
+      "GroupObligation": {
+        "type": "object",
+        "required": ["id", "collectionId", "participantId", "amount", "paid"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "collectionId": { "type": "string", "format": "uuid" },
+          "participantId": { "type": "string", "format": "uuid" },
+          "amount": { "$ref": "#/components/schemas/MoneyDto" },
+          "paid": { "$ref": "#/components/schemas/MoneyDto" }
+        }
+      },
+      "GroupCollectionProgress": {
+        "type": "object",
+        "required": ["collectionId", "total", "paid", "outstanding", "participantCount", "completedParticipants"],
+        "properties": {
+          "collectionId": { "type": "string", "format": "uuid" },
+          "total": { "$ref": "#/components/schemas/MoneyDto" },
+          "paid": { "$ref": "#/components/schemas/MoneyDto" },
+          "outstanding": { "$ref": "#/components/schemas/MoneyDto" },
+          "participantCount": { "type": "integer", "minimum": 0 },
+          "completedParticipants": { "type": "integer", "minimum": 0 }
+        }
+      },
+      "VerifyContributionRequest": {
+        "type": "object",
+        "properties": {
+          "effectiveDate": { "type": "string", "format": "date" },
+          "allocations": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["participantId", "amountMinorUnits"],
+              "properties": {
+                "participantId": { "type": "string", "format": "uuid" },
+                "amountMinorUnits": { "type": "string" }
+              }
+            }
+          }
+        }
+      },
+      "ResolveContributionOverpaymentRequest": {
+        "type": "object",
+        "required": ["resolution"],
+        "properties": {
+          "resolution": { "type": "string", "enum": ["apply_credit", "adjust_obligation", "refund"] }
+        }
+      },
+      "GroupSubmission": {
+        "type": "object",
+        "required": ["id", "collectionId", "participantId", "amount", "accountId", "status"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "collectionId": { "type": "string", "format": "uuid" },
+          "participantId": { "type": "string", "format": "uuid" },
+          "amount": { "$ref": "#/components/schemas/MoneyDto" },
+          "accountId": { "type": "string", "format": "uuid" },
+          "status": { "type": "string" },
+          "resolution": { "type": "string", "enum": ["apply_credit", "adjust_obligation", "refund"] },
+          "journalTransactionId": { "type": "string", "format": "uuid" }
+        }
+      },
+      "GroupAmountRequest": {
+        "type": "object",
+        "required": ["participantId", "amountMinorUnits"],
+        "properties": {
+          "participantId": { "type": "string", "format": "uuid" },
+          "amountMinorUnits": { "type": "string" }
+        }
+      },
+      "SubmitContributionRequest": {
+        "type": "object",
+        "required": ["participantId", "accountId", "amountMinorUnits"],
+        "properties": {
+          "participantId": { "type": "string", "format": "uuid" },
+          "accountId": { "type": "string", "format": "uuid" },
+          "amountMinorUnits": { "type": "string" }
+        }
+      },
+      "GroupSponsoredExpense": {
+        "type": "object",
+        "required": ["id", "workspaceId", "sponsorMemberId", "amount", "description", "status", "reimbursed"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "workspaceId": { "type": "string", "format": "uuid" },
+          "sponsorMemberId": { "type": "string", "format": "uuid" },
+          "amount": { "$ref": "#/components/schemas/MoneyDto" },
+          "description": { "type": "string" },
+          "status": { "type": "string" },
+          "reimbursed": { "$ref": "#/components/schemas/MoneyDto" }
+        }
+      },
+      "GroupDescriptionAmountRequest": {
+        "type": "object",
+        "required": ["amountMinorUnits", "description"],
+        "properties": {
+          "amountMinorUnits": { "type": "string" },
+          "description": { "type": "string" }
+        }
+      },
+      "GroupClaim": {
+        "type": "object",
+        "required": ["id", "workspaceId", "claimantParticipantId", "accountId", "amount", "description", "status", "paid"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "workspaceId": { "type": "string", "format": "uuid" },
+          "claimantParticipantId": { "type": "string", "format": "uuid" },
+          "accountId": { "type": "string", "format": "uuid" },
+          "amount": { "$ref": "#/components/schemas/MoneyDto" },
+          "description": { "type": "string" },
+          "status": { "type": "string" },
+          "paid": { "$ref": "#/components/schemas/MoneyDto" },
+          "payableId": { "type": "string", "format": "uuid" }
+        }
+      },
+      "CreateGroupClaimRequest": {
+        "type": "object",
+        "required": ["claimantParticipantId", "accountId", "amountMinorUnits", "description"],
+        "properties": {
+          "claimantParticipantId": { "type": "string", "format": "uuid" },
+          "accountId": { "type": "string", "format": "uuid" },
+          "amountMinorUnits": { "type": "string" },
+          "description": { "type": "string" }
+        }
+      },
+      "GroupPayable": {
+        "type": "object",
+        "required": ["id", "workspaceId", "claimantParticipantId", "claimId", "amount", "paid", "status"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "workspaceId": { "type": "string", "format": "uuid" },
+          "claimantParticipantId": { "type": "string", "format": "uuid" },
+          "claimId": { "type": "string", "format": "uuid" },
+          "amount": { "$ref": "#/components/schemas/MoneyDto" },
+          "paid": { "$ref": "#/components/schemas/MoneyDto" },
+          "status": { "type": "string" }
+        }
+      },
+      "GroupDirectExpense": {
+        "type": "object",
+        "required": ["id", "workspaceId", "accountId", "amount", "description", "journalTransactionId", "createdByMemberId", "createdAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "workspaceId": { "type": "string", "format": "uuid" },
+          "accountId": { "type": "string", "format": "uuid" },
+          "amount": { "$ref": "#/components/schemas/MoneyDto" },
+          "description": { "type": "string" },
+          "journalTransactionId": { "type": "string", "format": "uuid" },
+          "createdByMemberId": { "type": "string", "format": "uuid" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CreateDirectGroupExpenseRequest": {
+        "type": "object",
+        "required": ["accountId", "amountMinorUnits", "description"],
+        "properties": {
+          "accountId": { "type": "string", "format": "uuid" },
+          "amountMinorUnits": { "type": "string" },
+          "description": { "type": "string" },
+          "effectiveDate": { "type": "string", "format": "date" }
+        }
+      },
+      "GroupReportSummary": {
+        "type": "object",
+        "required": ["collectionExpected", "collectionReceived", "collectionOutstanding", "directExpense", "approvedClaimExpense", "sponsoredValue", "openPayable", "pendingSubmissionCount", "pendingSubmissionAmount"],
+        "properties": {
+          "collectionExpected": { "$ref": "#/components/schemas/MoneyDto" },
+          "collectionReceived": { "$ref": "#/components/schemas/MoneyDto" },
+          "collectionOutstanding": { "$ref": "#/components/schemas/MoneyDto" },
+          "directExpense": { "$ref": "#/components/schemas/MoneyDto" },
+          "approvedClaimExpense": { "$ref": "#/components/schemas/MoneyDto" },
+          "sponsoredValue": { "$ref": "#/components/schemas/MoneyDto" },
+          "openPayable": { "$ref": "#/components/schemas/MoneyDto" },
+          "pendingSubmissionCount": { "type": "integer", "minimum": 0 },
+          "pendingSubmissionAmount": { "$ref": "#/components/schemas/MoneyDto" }
+        }
+      },
+      "ReimburseGroupClaimRequest": {
+        "type": "object",
+        "required": ["payerAccountId", "amountMinorUnits"],
+        "properties": {
+          "payerAccountId": { "type": "string", "format": "uuid" },
+          "amountMinorUnits": { "type": "string" },
+          "effectiveDate": { "type": "string", "format": "date" }
+        }
+      },
+      "GroupReimbursementResult": {
+        "type": "object",
+        "required": ["claim", "payable", "reimbursement"],
+        "properties": {
+          "claim": { "$ref": "#/components/schemas/GroupClaim" },
+          "payable": { "$ref": "#/components/schemas/GroupPayable" },
+          "reimbursement": { "type": "object" }
+        }
+      },
+      "ImportSession": {
+        "type": "object",
+        "required": ["id", "workspaceId", "accountId", "fileName", "fileHash", "rawSizeBytes", "status", "createdAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "workspaceId": { "type": "string", "format": "uuid" },
+          "accountId": { "type": "string", "format": "uuid" },
+          "fileName": { "type": "string" },
+          "fileHash": { "type": "string" },
+          "rawSizeBytes": { "type": "integer" },
+          "rawDeletedAt": { "type": "string", "format": "date-time" },
+          "status": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ImportSessionResult": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ImportSession" },
+          { "type": "object", "required": ["duplicate"], "properties": { "duplicate": { "type": "boolean" } } }
+        ]
+      },
+      "CreateImportSessionRequest": {
+        "type": "object",
+        "required": ["accountId", "fileName", "csvContent"],
+        "properties": {
+          "accountId": { "type": "string", "format": "uuid" },
+          "fileName": { "type": "string", "maxLength": 255 },
+          "csvContent": { "type": "string", "maxLength": 10000000 }
+        }
+      },
+      "ImportedRecord": {
+        "type": "object",
+        "required": ["id", "sessionId", "workspaceId", "accountId", "effectiveDate", "amount", "type", "description", "sourceKey", "status"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "sessionId": { "type": "string", "format": "uuid" },
+          "workspaceId": { "type": "string", "format": "uuid" },
+          "accountId": { "type": "string", "format": "uuid" },
+          "effectiveDate": { "type": "string", "format": "date" },
+          "amount": { "$ref": "#/components/schemas/MoneyDto" },
+          "type": { "type": "string", "enum": ["income", "expense"] },
+          "description": { "type": "string" },
+          "sourceKey": { "type": "string" },
+          "status": { "type": "string" },
+          "matchedTransactionId": { "type": "string", "format": "uuid" },
+          "confirmedTransactionId": { "type": "string", "format": "uuid" },
+          "decisionReason": { "type": "string" }
+        }
+      },
+      "BulkConfirmImportedRecordsRequest": {
+        "type": "object",
+        "required": ["recordIds"],
+        "properties": {
+          "recordIds": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 500,
+            "uniqueItems": true,
+            "items": { "type": "string", "format": "uuid" }
+          }
+        }
+      },
+      "BulkConfirmImportedRecordsResult": {
+        "type": "object",
+        "required": ["results"],
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["recordId", "ok"],
+              "properties": {
+                "recordId": { "type": "string", "format": "uuid" },
+                "ok": { "type": "boolean" },
+                "record": { "$ref": "#/components/schemas/ImportedRecord" },
+                "error": {
+                  "type": "object",
+                  "required": ["code", "message"],
+                  "properties": { "code": { "type": "string" }, "message": { "type": "string" } }
+                }
+              }
+            }
+          }
+        }
+      },
+      "ImportDecisionRequest": {
+        "type": "object",
+        "required": ["reason"],
+        "properties": { "reason": { "type": "string", "maxLength": 500 } }
+      },
+      "StartReconciliationRequest": {
+        "type": "object",
+        "required": ["accountId", "statementDate", "externalBalanceMinorUnits"],
+        "properties": {
+          "accountId": { "type": "string", "format": "uuid" },
+          "statementDate": { "type": "string", "format": "date" },
+          "externalBalanceMinorUnits": { "type": "string" }
+        }
+      },
+      "ReconciliationAdjustmentRequest": {
+        "type": "object",
+        "required": ["amountMinorUnits", "reason", "effectiveDate"],
+        "properties": {
+          "amountMinorUnits": { "type": "string" },
+          "reason": { "type": "string", "maxLength": 500 },
+          "effectiveDate": { "type": "string", "format": "date" }
+        }
+      },
+      "Reconciliation": {
+        "type": "object",
+        "required": ["id", "workspaceId", "accountId", "statementDate", "externalBalance", "ledgerBalance", "difference", "status"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "workspaceId": { "type": "string", "format": "uuid" },
+          "accountId": { "type": "string", "format": "uuid" },
+          "statementDate": { "type": "string", "format": "date" },
+          "externalBalance": { "$ref": "#/components/schemas/MoneyDto" },
+          "ledgerBalance": { "$ref": "#/components/schemas/MoneyDto" },
+          "difference": { "$ref": "#/components/schemas/MoneyDto" },
+          "status": { "type": "string", "enum": ["open", "resolved"] },
+          "adjustmentTransactionId": { "type": "string", "format": "uuid" }
         }
       },
       "Member": {
@@ -1127,6 +2360,17 @@
             "type": "array",
             "items": { "$ref": "#/components/schemas/TransactionEntry" }
           }
+        }
+      },
+      "JournalSourceLink": {
+        "type": "object",
+        "required": ["id", "transactionId", "sourceType", "sourceId", "createdAt"],
+        "properties": {
+          "id": { "type": "string" },
+          "transactionId": { "type": "string" },
+          "sourceType": { "type": "string", "enum": ["import_record", "group_submission", "reconciliation"] },
+          "sourceId": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" }
         }
       },
       "OverviewResponse": {

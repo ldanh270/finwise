@@ -3,3 +3,26 @@ packages:
   - frontend
   - mobile
   - packages/*
+
+# Keep the root workspace aligned with the dependency safety settings that
+# previously lived in backend/pnpm-workspace.yaml. The eslint toolchain pulled
+# ignore@7.0.7 into the lockfile immediately after its release; this exact
+# package is explicitly reviewed so local installs are not blocked while the
+# rest of the minimum-release-age policy remains active.
+confirmModulesPurge: false
+allowBuilds:
+  '@prisma/engines': true
+  '@swc/core': true
+  prisma: true
+minimumReleaseAgeExclude:
+  - '@prisma/adapter-pg@7.10.0'
+  - '@prisma/client-runtime-utils@7.10.0'
+  - '@prisma/client@7.10.0'
+  - '@prisma/config@7.10.0'
+  - '@prisma/debug@7.10.0'
+  - '@prisma/driver-adapter-utils@7.10.0'
+  - '@prisma/engines@7.10.0'
+  - '@prisma/fetch-engine@7.10.0'
+  - '@prisma/get-platform@7.10.0'
+  - prisma@7.10.0
+  - ignore@7.0.7

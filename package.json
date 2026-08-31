@@ -30,8 +30,8 @@
     "typecheck:backend": "pnpm --filter backend typecheck",
     "typecheck:frontend": "pnpm --filter frontend typecheck",
     "test": "pnpm test:backend",
-    "test:backend": "pnpm --filter backend test -- --runInBand",
-    "test:e2e": "pnpm --filter backend test:e2e -- --runInBand",
+    "test:backend": "pnpm --filter backend test --runInBand",
+    "test:e2e": "pnpm --filter backend test:e2e --runInBand",
     "test:cov": "pnpm --filter backend test:cov",
     "db:generate": "pnpm --filter backend db:generate",
     "db:validate": "pnpm --filter backend db:validate",
@@ -42,6 +42,7 @@
     "db:deploy": "pnpm --filter backend db:deploy",
     "db:migrate:deploy": "pnpm db:deploy",
     "db:status": "pnpm --filter backend db:status",
+    "db:preflight": "node scripts/database-preflight.mjs",
     "db:seed": "pnpm --filter backend db:seed",
     "db:reset": "pnpm --filter backend db:reset",
     "db:studio": "pnpm --filter backend db:studio"
