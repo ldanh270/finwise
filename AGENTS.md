@@ -235,3 +235,13 @@ subject and include a short body when the change affects security, migrations,
 API compatibility, or other non-obvious behavior. Writing the message does not
 authorize staging, committing, or pushing; those actions require an explicit
 request. Review the walkthrough and commit message together with the diff.
+
+## Phase-level commit cadence
+
+When implementation is being driven from the phase roadmap, batch related
+vertical slices, their walkthroughs, and phase-plan updates together. Create a
+commit only at a meaningful phase boundary after that batch passes its relevant
+verification gates; do not create a commit for every tiny slice. If a phase is
+blocked by missing external infrastructure, leave the worktree reviewable and
+document the blocker and the next safe follow-up instead of claiming the phase
+complete.
