@@ -15,6 +15,10 @@ export type AccountKind =
   | 'liability'
   | 'system';
 export type AccountStatus = 'active' | 'archived';
+export type CategoryStatus = 'active' | 'archived';
+export type BudgetPeriodStatus = 'open' | 'closed';
+export type BudgetConstraintMode = 'BY_CHILDREN' | 'SHARED_POOL' | 'HYBRID';
+export type BudgetRolloverMode = 'NONE' | 'POSITIVE_ONLY' | 'FULL_BALANCE';
 export type AccountVisibilityMode =
   'workspace_default' | 'exclude_selected' | 'include_only' | 'owner_only';
 export type JournalKind =
@@ -22,6 +26,8 @@ export type JournalKind =
 export type JournalStatus = 'posted' | 'voided';
 export type EntryDirection = 'increase' | 'decrease';
 export type TransactionAuditAction = 'created' | 'voided' | 'replaced';
+export type JournalSourceType =
+  'import_record' | 'group_submission' | 'reconciliation';
 
 export const PERMISSIONS = {
   workspaceRead: 'workspace.read',
@@ -37,6 +43,11 @@ export const PERMISSIONS = {
   transactionRead: 'transaction.read',
   transactionCreate: 'transaction.create',
   transactionVoid: 'transaction.void',
+  categoryRead: 'category.read',
+  categoryManage: 'category.manage',
+  budgetRead: 'budget.read',
+  budgetManage: 'budget.manage',
+  reportRead: 'report.read',
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -120,6 +131,56 @@ export interface AccountRecord {
   readonly createdAt: Date;
 }
 
+export interface CategoryRecord {
+  readonly id: string;
+  readonly workspaceId: string;
+  name: string;
+  readonly parentId?: string;
+  status: CategoryStatus;
+  readonly createdAt: Date;
+}
+
+export interface TagRecord {
+  readonly id: string;
+  readonly workspaceId: string;
+  name: string;
+  status: CategoryStatus;
+  readonly createdAt: Date;
+}
+
+export interface ClassificationLineRecord {
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly transactionId: string;
+  readonly categoryId: string;
+  readonly amountMinorUnits: bigint;
+  readonly tagIds: readonly string[];
+  readonly createdAt: Date;
+}
+
+export interface BudgetConstraintRecord {
+  readonly id: string;
+  readonly budgetPeriodId: string;
+  readonly categoryId: string;
+  readonly mode: BudgetConstraintMode;
+  readonly fixedMinorUnits: bigint;
+  readonly percentageBasisPoints: number;
+  readonly rolloverMode: BudgetRolloverMode;
+  readonly fundedByMemberId: string;
+}
+
+export interface BudgetPeriodRecord {
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly month: string;
+  readonly baseMinorUnits: bigint;
+  readonly carryMinorUnits: bigint;
+  status: BudgetPeriodStatus;
+  readonly createdByMemberId: string;
+  readonly createdAt: Date;
+  readonly constraintIds: readonly string[];
+}
+
 export interface JournalEntryRecord {
   readonly id: string;
   readonly accountId: string;
@@ -149,6 +210,15 @@ export interface TransactionAuditRecord {
   readonly actorMemberId: string;
   readonly action: TransactionAuditAction;
   readonly details?: Readonly<Record<string, string>>;
+  readonly createdAt: Date;
+}
+
+export interface JournalSourceLinkRecord {
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly transactionId: string;
+  readonly sourceType: JournalSourceType;
+  readonly sourceId: string;
   readonly createdAt: Date;
 }
 

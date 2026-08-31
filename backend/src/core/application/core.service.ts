@@ -12,8 +12,19 @@ import {
   WorkspaceKind,
   WorkspaceInvitationRecord,
   OwnerTransferRecord,
+  CategoryRecord,
+  TagRecord,
+  ClassificationLineRecord,
+  BudgetConstraintMode,
+  BudgetRolloverMode,
 } from '../domain/ledger.types';
-import { BootstrapResult, CoreStorePort, JournalDraft } from './core.ports';
+import {
+  BootstrapResult,
+  BudgetOverviewProjection,
+  ClassificationLineDraft,
+  CoreStorePort,
+  JournalDraft,
+} from './core.ports';
 
 export interface WorkspaceResponse {
   readonly id: string;
@@ -40,6 +51,108 @@ export interface BalanceProjectionResponse {
   readonly balanceMinorUnits: string;
 }
 
+/**
+ * Balance views intentionally keep the three accounting states separate at
+ * the API boundary. The in-memory MVP ledger has no pending-clearing state,
+ * so manually posted journals currently contribute to all three projections.
+ */
+export interface BalanceViewsResponse {
+  readonly accountId: string;
+  readonly ledger: {
+    readonly currency: typeof MVP_CURRENCY;
+    readonly minorUnits: string;
+  };
+  readonly cleared: {
+    readonly currency: typeof MVP_CURRENCY;
+    readonly minorUnits: string;
+  };
+  readonly reconciled: {
+    readonly currency: typeof MVP_CURRENCY;
+    readonly minorUnits: string;
+  };
+}
+
+export interface CategoryResponse {
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly name: string;
+  readonly parentId?: string;
+  readonly status: string;
+}
+
+export interface TagResponse {
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly name: string;
+  readonly status: string;
+}
+
+export interface ClassificationLineResponse {
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly transactionId: string;
+  readonly categoryId: string;
+  readonly amount: {
+    readonly currency: typeof MVP_CURRENCY;
+    readonly minorUnits: string;
+  };
+  readonly tagIds: readonly string[];
+}
+
+export interface BudgetPeriodResponse {
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly month: string;
+  readonly base: {
+    readonly currency: typeof MVP_CURRENCY;
+    readonly minorUnits: string;
+  };
+  readonly carry: {
+    readonly currency: typeof MVP_CURRENCY;
+    readonly minorUnits: string;
+  };
+  readonly status: string;
+}
+
+export interface BudgetOverviewResponse extends BudgetPeriodResponse {
+  readonly constraints: readonly {
+    readonly categoryId: string;
+    readonly mode: string;
+    readonly fixed: {
+      readonly currency: typeof MVP_CURRENCY;
+      readonly minorUnits: string;
+    };
+    readonly percentageBasisPoints: number;
+    readonly rolloverMode: string;
+    readonly allocated: {
+      readonly currency: typeof MVP_CURRENCY;
+      readonly minorUnits: string;
+    };
+    readonly actual: {
+      readonly currency: typeof MVP_CURRENCY;
+      readonly minorUnits: string;
+    };
+    readonly remaining: {
+      readonly currency: typeof MVP_CURRENCY;
+      readonly minorUnits: string;
+    };
+  }[];
+  readonly totals: {
+    readonly allocated: {
+      readonly currency: typeof MVP_CURRENCY;
+      readonly minorUnits: string;
+    };
+    readonly actual: {
+      readonly currency: typeof MVP_CURRENCY;
+      readonly minorUnits: string;
+    };
+    readonly remaining: {
+      readonly currency: typeof MVP_CURRENCY;
+      readonly minorUnits: string;
+    };
+  };
+}
+
 export interface TransactionResponse {
   readonly id: string;
   readonly workspaceId: string;
@@ -59,6 +172,14 @@ export interface TransactionResponse {
     readonly amountMinorUnits: string;
     readonly direction: string;
   }[];
+}
+
+export interface JournalSourceLinkResponse {
+  readonly id: string;
+  readonly transactionId: string;
+  readonly sourceType: string;
+  readonly sourceId: string;
+  readonly createdAt: string;
 }
 
 export interface BootstrapResponse {
@@ -89,6 +210,7 @@ export interface OverviewResponse {
     readonly date: string;
     readonly description: string;
     readonly type: 'INCOME' | 'EXPENSE' | 'TRANSFER';
+    readonly status: 'posted' | 'voided';
     readonly amount: {
       readonly currency: typeof MVP_CURRENCY;
       readonly minorUnits: string;
@@ -219,6 +341,7 @@ export class CoreService {
           date: transaction.effectiveDate,
           description: transaction.description ?? 'Untitled transaction',
           type: transactionTypeForOverview(transaction.kind),
+          status: transaction.status,
           amount: {
             currency: transaction.currency,
             minorUnits: transaction.amountMinorUnits.toString(),
@@ -234,7 +357,7 @@ export class CoreService {
         income: moneyDto(income),
         spending: moneyDto(spending),
       },
-      hasPartialAccess: false,
+      hasPartialAccess: this.store.hasPartialAccountAccess(workspaceId, actor),
     };
   }
 
@@ -467,6 +590,139 @@ export class CoreService {
     return { member: this.memberResponse(member), accounts };
   }
 
+  createCategory(
+    actor: AuthenticatedActor,
+    workspaceId: string,
+    body: unknown,
+  ): CategoryResponse {
+    const input = bodyRecord(body);
+    return this.categoryResponse(
+      this.store.createCategory(
+        workspaceId,
+        actor,
+        requiredString(input, 'name', 1, 100),
+        optionalString(input, 'parentId', 100),
+      ),
+    );
+  }
+
+  listCategories(
+    actor: AuthenticatedActor,
+    workspaceId: string,
+  ): readonly CategoryResponse[] {
+    return this.store
+      .listCategories(workspaceId, actor)
+      .map((category) => this.categoryResponse(category));
+  }
+
+  archiveCategory(
+    actor: AuthenticatedActor,
+    workspaceId: string,
+    categoryId: string,
+  ): CategoryResponse {
+    return this.categoryResponse(
+      this.store.archiveCategory(workspaceId, actor, categoryId),
+    );
+  }
+
+  createTag(
+    actor: AuthenticatedActor,
+    workspaceId: string,
+    body: unknown,
+  ): TagResponse {
+    const input = bodyRecord(body);
+    return this.tagResponse(
+      this.store.createTag(
+        workspaceId,
+        actor,
+        requiredString(input, 'name', 1, 100),
+      ),
+    );
+  }
+
+  listTags(
+    actor: AuthenticatedActor,
+    workspaceId: string,
+  ): readonly TagResponse[] {
+    return this.store
+      .listTags(workspaceId, actor)
+      .map((tag) => this.tagResponse(tag));
+  }
+
+  classifyTransaction(
+    actor: AuthenticatedActor,
+    workspaceId: string,
+    transactionId: string,
+    body: unknown,
+  ): readonly ClassificationLineResponse[] {
+    const input = bodyRecord(body);
+    const lines = parseClassificationLines(input.lines);
+    return this.store
+      .classifyTransaction(workspaceId, actor, transactionId, lines)
+      .map((line) => this.classificationLineResponse(line));
+  }
+
+  getClassification(
+    actor: AuthenticatedActor,
+    workspaceId: string,
+    transactionId: string,
+  ): readonly ClassificationLineResponse[] {
+    return this.store
+      .getClassification(workspaceId, actor, transactionId)
+      .map((line) => this.classificationLineResponse(line));
+  }
+
+  createBudgetPeriod(
+    actor: AuthenticatedActor,
+    workspaceId: string,
+    body: unknown,
+  ): BudgetPeriodResponse {
+    const input = bodyRecord(body);
+    const month = requiredMonth(input.month);
+    const baseMinorUnits = requiredPositiveMinorUnits(
+      input.baseMinorUnits,
+      'baseMinorUnits',
+    );
+    return this.budgetPeriodResponse(
+      this.store.createBudgetPeriod(
+        workspaceId,
+        actor,
+        month,
+        baseMinorUnits,
+        parseBudgetConstraints(input.constraints),
+      ),
+    );
+  }
+
+  listBudgetPeriods(
+    actor: AuthenticatedActor,
+    workspaceId: string,
+  ): readonly BudgetPeriodResponse[] {
+    return this.store
+      .listBudgetPeriods(workspaceId, actor)
+      .map((period) => this.budgetPeriodResponse(period));
+  }
+
+  getBudgetOverview(
+    actor: AuthenticatedActor,
+    workspaceId: string,
+    month: string,
+  ): BudgetOverviewResponse {
+    return this.budgetOverviewResponse(
+      this.store.getBudgetOverview(workspaceId, actor, requiredMonth(month)),
+    );
+  }
+
+  closeBudgetPeriod(
+    actor: AuthenticatedActor,
+    workspaceId: string,
+    month: string,
+  ): BudgetPeriodResponse {
+    return this.budgetPeriodResponse(
+      this.store.closeBudgetPeriod(workspaceId, actor, requiredMonth(month)),
+    );
+  }
+
   listAccounts(
     actor: AuthenticatedActor,
     workspaceId: string,
@@ -520,6 +776,21 @@ export class CoreService {
       accountId: projection.accountId,
       balanceMinorUnits: projection.balanceMinorUnits.toString(),
     }));
+  }
+
+  getBalanceViews(
+    actor: AuthenticatedActor,
+    workspaceId: string,
+  ): readonly BalanceViewsResponse[] {
+    return this.store.rebuildBalances(workspaceId, actor).map((projection) => {
+      const balance = moneyDto(projection.balanceMinorUnits);
+      return {
+        accountId: projection.accountId,
+        ledger: balance,
+        cleared: balance,
+        reconciled: balance,
+      };
+    });
   }
 
   postOpeningBalance(
@@ -662,6 +933,45 @@ export class CoreService {
     return this.store
       .listTransactions(workspaceId, actor)
       .map((transaction) => this.transactionResponse(transaction));
+  }
+
+  exportTransactions(actor: AuthenticatedActor, workspaceId: string): string {
+    const accounts = new Map(
+      this.store
+        .listAccounts(workspaceId, actor)
+        .map((account) => [account.id, account.name] as const),
+    );
+    const transactions = this.store.listTransactions(workspaceId, actor);
+    const rows = [
+      [
+        'id',
+        'date',
+        'type',
+        'amountMinorUnits',
+        'currency',
+        'description',
+        'accountName',
+        'status',
+      ],
+      ...transactions.map((transaction) => {
+        const visibleAccountName = transaction.entries
+          .map((entry) => accounts.get(entry.accountId))
+          .find((name): name is string => name !== undefined);
+        return [
+          transaction.id,
+          transaction.effectiveDate,
+          transaction.kind,
+          transaction.amountMinorUnits.toString(),
+          transaction.currency,
+          transaction.description ?? '',
+          visibleAccountName ?? 'Visible account',
+          transaction.status,
+        ];
+      }),
+    ];
+    return rows
+      .map((row) => row.map((value) => csvEscape(value)).join(','))
+      .join('\r\n');
   }
 
   getTransaction(
@@ -822,6 +1132,22 @@ export class CoreService {
       }));
   }
 
+  sourceLinks(
+    actor: AuthenticatedActor,
+    workspaceId: string,
+    transactionId: string,
+  ): readonly JournalSourceLinkResponse[] {
+    return this.store
+      .getJournalSourceLinks(workspaceId, transactionId, actor)
+      .map((link) => ({
+        id: link.id,
+        transactionId: link.transactionId,
+        sourceType: link.sourceType,
+        sourceId: link.sourceId,
+        createdAt: link.createdAt.toISOString(),
+      }));
+  }
+
   private entriesFor(
     workspaceId: string,
     actor: AuthenticatedActor,
@@ -963,6 +1289,74 @@ export class CoreService {
     };
   }
 
+  private categoryResponse(category: CategoryRecord): CategoryResponse {
+    return {
+      id: category.id,
+      workspaceId: category.workspaceId,
+      name: category.name,
+      parentId: category.parentId,
+      status: category.status,
+    };
+  }
+
+  private tagResponse(tag: TagRecord): TagResponse {
+    return {
+      id: tag.id,
+      workspaceId: tag.workspaceId,
+      name: tag.name,
+      status: tag.status,
+    };
+  }
+
+  private classificationLineResponse(
+    line: ClassificationLineRecord,
+  ): ClassificationLineResponse {
+    return {
+      id: line.id,
+      workspaceId: line.workspaceId,
+      transactionId: line.transactionId,
+      categoryId: line.categoryId,
+      amount: moneyDto(line.amountMinorUnits),
+      tagIds: line.tagIds,
+    };
+  }
+
+  private budgetPeriodResponse(
+    period: BudgetOverviewProjection['period'],
+  ): BudgetPeriodResponse {
+    return {
+      id: period.id,
+      workspaceId: period.workspaceId,
+      month: period.month,
+      base: moneyDto(period.baseMinorUnits),
+      carry: moneyDto(period.carryMinorUnits),
+      status: period.status,
+    };
+  }
+
+  private budgetOverviewResponse(
+    overview: BudgetOverviewProjection,
+  ): BudgetOverviewResponse {
+    return {
+      ...this.budgetPeriodResponse(overview.period),
+      constraints: overview.constraints.map((projection) => ({
+        categoryId: projection.constraint.categoryId,
+        mode: projection.constraint.mode,
+        fixed: moneyDto(projection.constraint.fixedMinorUnits),
+        percentageBasisPoints: projection.constraint.percentageBasisPoints,
+        rolloverMode: projection.constraint.rolloverMode,
+        allocated: moneyDto(projection.allocatedMinorUnits),
+        actual: moneyDto(projection.actualMinorUnits),
+        remaining: moneyDto(projection.remainingMinorUnits),
+      })),
+      totals: {
+        allocated: moneyDto(overview.totalAllocatedMinorUnits),
+        actual: moneyDto(overview.totalActualMinorUnits),
+        remaining: moneyDto(overview.totalRemainingMinorUnits),
+      },
+    };
+  }
+
   private transactionResponse(
     transaction: JournalTransactionRecord,
   ): TransactionResponse {
@@ -1073,6 +1467,135 @@ function requiredStringArray(
   return value.map((item) => (item as string).trim());
 }
 
+function parseClassificationLines(
+  value: unknown,
+): readonly ClassificationLineDraft[] {
+  if (!Array.isArray(value) || value.length === 0 || value.length > 50) {
+    throw FinwiseError.validation(
+      'lines must contain between 1 and 50 classification entries.',
+      { field: 'lines' },
+    );
+  }
+  return value.map((line, index) => {
+    const input = bodyRecord(line);
+    const tagValue = input.tagIds;
+    if (
+      tagValue !== undefined &&
+      (!Array.isArray(tagValue) ||
+        tagValue.length > 20 ||
+        tagValue.some(
+          (tagId) => typeof tagId !== 'string' || tagId.trim().length === 0,
+        ))
+    ) {
+      throw FinwiseError.validation(
+        `lines[${index}].tagIds must be an array of tag IDs.`,
+        { field: `lines[${index}].tagIds` },
+      );
+    }
+    return {
+      categoryId: requiredString(input, 'categoryId', 1, 100),
+      amountMinorUnits: requiredPositiveMinorUnits(
+        input.amountMinorUnits,
+        `lines[${index}].amountMinorUnits`,
+      ),
+      tagIds:
+        tagValue === undefined
+          ? []
+          : (tagValue as string[]).map((tagId) => tagId.trim()),
+    };
+  });
+}
+
+function parseBudgetConstraints(value: unknown): readonly {
+  readonly categoryId: string;
+  readonly mode: BudgetConstraintMode;
+  readonly fixedMinorUnits: bigint;
+  readonly percentageBasisPoints: number;
+  readonly rolloverMode: BudgetRolloverMode;
+}[] {
+  if (!Array.isArray(value) || value.length > 100) {
+    throw FinwiseError.validation(
+      'constraints must be an array with at most 100 entries.',
+      { field: 'constraints' },
+    );
+  }
+  return value.map((constraint, index) => {
+    const input = bodyRecord(constraint);
+    const mode = input.mode;
+    if (mode !== 'BY_CHILDREN' && mode !== 'SHARED_POOL' && mode !== 'HYBRID') {
+      throw FinwiseError.validation(`constraints[${index}].mode is invalid.`, {
+        field: `constraints[${index}].mode`,
+      });
+    }
+    const rolloverMode = input.rolloverMode ?? 'NONE';
+    if (
+      rolloverMode !== 'NONE' &&
+      rolloverMode !== 'POSITIVE_ONLY' &&
+      rolloverMode !== 'FULL_BALANCE'
+    ) {
+      throw FinwiseError.validation(
+        `constraints[${index}].rolloverMode is invalid.`,
+        { field: `constraints[${index}].rolloverMode` },
+      );
+    }
+    const percentage = input.percentageBasisPoints ?? 0;
+    if (
+      typeof percentage !== 'number' ||
+      !Number.isInteger(percentage) ||
+      percentage < 0 ||
+      percentage > 10000
+    ) {
+      throw FinwiseError.validation(
+        `constraints[${index}].percentageBasisPoints must be an integer from 0 to 10000.`,
+        { field: `constraints[${index}].percentageBasisPoints` },
+      );
+    }
+    return {
+      categoryId: requiredString(input, 'categoryId', 1, 100),
+      mode,
+      fixedMinorUnits: nonNegativeMinorUnits(
+        input.fixedMinorUnits ?? '0',
+        `constraints[${index}].fixedMinorUnits`,
+      ),
+      percentageBasisPoints: percentage,
+      rolloverMode,
+    };
+  });
+}
+
+function requiredMonth(value: unknown): string {
+  if (typeof value !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) {
+    throw FinwiseError.validation('month must be an ISO month (YYYY-MM).', {
+      field: 'month',
+    });
+  }
+  return value;
+}
+
+function requiredPositiveMinorUnits(value: unknown, field: string): bigint {
+  if (typeof value !== 'string' || !/^(0|[1-9][0-9]*)$/.test(value)) {
+    throw FinwiseError.validation(`${field} must be a minor-unit string.`, {
+      field,
+    });
+  }
+  const parsed = BigInt(value);
+  if (parsed <= 0n) {
+    throw FinwiseError.validation(`${field} must be greater than zero.`, {
+      field,
+    });
+  }
+  return parsed;
+}
+
+function nonNegativeMinorUnits(value: unknown, field: string): bigint {
+  if (typeof value !== 'string' || !/^(0|[1-9][0-9]*)$/.test(value)) {
+    throw FinwiseError.validation(`${field} must be a minor-unit string.`, {
+      field,
+    });
+  }
+  return BigInt(value);
+}
+
 function parseMoney(input: Record<string, unknown>): Money {
   const structured = input.amount;
   if (
@@ -1147,6 +1670,11 @@ function moneyDto(minorUnits: bigint): {
   readonly minorUnits: string;
 } {
   return { currency: MVP_CURRENCY, minorUnits: minorUnits.toString() };
+}
+
+function csvEscape(value: string): string {
+  if (!/[",\r\n]/.test(value)) return value;
+  return `"${value.replaceAll('"', '""')}"`;
 }
 
 function readAccountId(

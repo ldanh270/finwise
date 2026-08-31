@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   Headers,
   Param,
   Patch,
@@ -38,6 +39,49 @@ export class CoreController {
     @Param('workspaceId') workspaceId: string,
   ) {
     return this.coreService.listMembers(actor, workspaceId);
+  }
+
+  @Get('workspaces/:workspaceId/categories')
+  listCategories(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('workspaceId') workspaceId: string,
+  ) {
+    return this.coreService.listCategories(actor, workspaceId);
+  }
+
+  @Post('workspaces/:workspaceId/categories')
+  createCategory(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('workspaceId') workspaceId: string,
+    @Body() body: unknown,
+  ) {
+    return this.coreService.createCategory(actor, workspaceId, body);
+  }
+
+  @Post('workspaces/:workspaceId/categories/:categoryId/archive')
+  archiveCategory(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('workspaceId') workspaceId: string,
+    @Param('categoryId') categoryId: string,
+  ) {
+    return this.coreService.archiveCategory(actor, workspaceId, categoryId);
+  }
+
+  @Get('workspaces/:workspaceId/tags')
+  listTags(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('workspaceId') workspaceId: string,
+  ) {
+    return this.coreService.listTags(actor, workspaceId);
+  }
+
+  @Post('workspaces/:workspaceId/tags')
+  createTag(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('workspaceId') workspaceId: string,
+    @Body() body: unknown,
+  ) {
+    return this.coreService.createTag(actor, workspaceId, body);
   }
 
   @Post('workspaces/:workspaceId/invitations')
@@ -188,6 +232,41 @@ export class CoreController {
     return this.coreService.listAccounts(actor, workspaceId);
   }
 
+  @Get('workspaces/:workspaceId/budgets')
+  listBudgetPeriods(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('workspaceId') workspaceId: string,
+  ) {
+    return this.coreService.listBudgetPeriods(actor, workspaceId);
+  }
+
+  @Post('workspaces/:workspaceId/budgets')
+  createBudgetPeriod(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('workspaceId') workspaceId: string,
+    @Body() body: unknown,
+  ) {
+    return this.coreService.createBudgetPeriod(actor, workspaceId, body);
+  }
+
+  @Get('workspaces/:workspaceId/budgets/:month')
+  getBudgetOverview(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('workspaceId') workspaceId: string,
+    @Param('month') month: string,
+  ) {
+    return this.coreService.getBudgetOverview(actor, workspaceId, month);
+  }
+
+  @Post('workspaces/:workspaceId/budgets/:month/close')
+  closeBudgetPeriod(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('workspaceId') workspaceId: string,
+    @Param('month') month: string,
+  ) {
+    return this.coreService.closeBudgetPeriod(actor, workspaceId, month);
+  }
+
   @Get('workspaces/:workspaceId/overview')
   overview(
     @CurrentActor() actor: AuthenticatedActor,
@@ -231,6 +310,14 @@ export class CoreController {
     return this.coreService.rebuildBalances(actor, workspaceId);
   }
 
+  @Get('workspaces/:workspaceId/balances')
+  getBalanceViews(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('workspaceId') workspaceId: string,
+  ) {
+    return this.coreService.getBalanceViews(actor, workspaceId);
+  }
+
   @Post('workspaces/:workspaceId/accounts/:accountId/access')
   updateAccountAccess(
     @CurrentActor() actor: AuthenticatedActor,
@@ -271,6 +358,19 @@ export class CoreController {
     return this.coreService.listTransactions(actor, workspaceId);
   }
 
+  @Get('workspaces/:workspaceId/transactions/export')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header(
+    'Content-Disposition',
+    'attachment; filename="finwise-transactions.csv"',
+  )
+  exportTransactions(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('workspaceId') workspaceId: string,
+  ) {
+    return this.coreService.exportTransactions(actor, workspaceId);
+  }
+
   @Post('workspaces/:workspaceId/transactions')
   createTransaction(
     @CurrentActor() actor: AuthenticatedActor,
@@ -293,6 +393,34 @@ export class CoreController {
     @Param('transactionId') transactionId: string,
   ) {
     return this.coreService.getTransaction(actor, workspaceId, transactionId);
+  }
+
+  @Post('workspaces/:workspaceId/transactions/:transactionId/classification')
+  classifyTransaction(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('workspaceId') workspaceId: string,
+    @Param('transactionId') transactionId: string,
+    @Body() body: unknown,
+  ) {
+    return this.coreService.classifyTransaction(
+      actor,
+      workspaceId,
+      transactionId,
+      body,
+    );
+  }
+
+  @Get('workspaces/:workspaceId/transactions/:transactionId/classification')
+  getClassification(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('workspaceId') workspaceId: string,
+    @Param('transactionId') transactionId: string,
+  ) {
+    return this.coreService.getClassification(
+      actor,
+      workspaceId,
+      transactionId,
+    );
   }
 
   @Post('workspaces/:workspaceId/transactions/:transactionId/void')
@@ -336,5 +464,14 @@ export class CoreController {
     @Param('transactionId') transactionId: string,
   ) {
     return this.coreService.audits(actor, workspaceId, transactionId);
+  }
+
+  @Get('workspaces/:workspaceId/transactions/:transactionId/source-links')
+  sourceLinks(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('workspaceId') workspaceId: string,
+    @Param('transactionId') transactionId: string,
+  ) {
+    return this.coreService.sourceLinks(actor, workspaceId, transactionId);
   }
 }

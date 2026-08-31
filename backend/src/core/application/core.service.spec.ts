@@ -57,6 +57,35 @@ describe('CoreService', () => {
     ).toBe('-1250000');
   });
 
+  it('exports only policy-visible transactions as escaped CSV', () => {
+    const service = createService();
+    const workspaceId = service.bootstrap(actor).suggestedWorkspaceId;
+    const account = service.createAccount(actor, workspaceId, {
+      name: 'Daily, cash',
+      kind: 'cash',
+    });
+
+    service.createTransaction(
+      actor,
+      workspaceId,
+      {
+        type: 'expense',
+        accountId: account.id,
+        amountMinorUnits: '125000',
+        effectiveDate: '2026-08-30',
+        description: 'Lunch, team',
+      },
+      'cmd-export',
+    );
+
+    expect(service.exportTransactions(actor, workspaceId)).toContain(
+      'id,date,type,amountMinorUnits,currency,description,accountName,status\r\n',
+    );
+    expect(service.exportTransactions(actor, workspaceId)).toContain(
+      '"Lunch, team","Daily, cash"',
+    );
+  });
+
   it('voids a posted transaction through a reversal and restores the balance', () => {
     const service = createService();
     const workspaceId = service.bootstrap(actor).suggestedWorkspaceId;
@@ -202,6 +231,61 @@ describe('CoreService', () => {
     });
 
     expect(service.listAccounts(actor, workspaceId)).toHaveLength(1);
+    expect(service.overview(actor, workspaceId).hasPartialAccess).toBe(false);
+  });
+
+  it('returns separated balance views and filters hidden accounts for members', () => {
+    const service = createService();
+    const workspaceId = service.bootstrap(actor).suggestedWorkspaceId;
+    const privateAccount = service.createAccount(actor, workspaceId, {
+      name: 'Private cash',
+      kind: 'cash',
+    });
+    service.updateAccountAccess(actor, workspaceId, privateAccount.id, {
+      visibilityMode: 'owner_only',
+    });
+    service.createTransaction(
+      actor,
+      workspaceId,
+      {
+        type: 'income',
+        accountId: privateAccount.id,
+        amountMinorUnits: '450000',
+        effectiveDate: '2026-08-30',
+      },
+      'cmd-balance-view',
+    );
+
+    const ownerViews = service.getBalanceViews(actor, workspaceId);
+    expect(ownerViews).toEqual([
+      {
+        accountId: privateAccount.id,
+        ledger: { currency: 'VND', minorUnits: '450000' },
+        cleared: { currency: 'VND', minorUnits: '450000' },
+        reconciled: { currency: 'VND', minorUnits: '450000' },
+      },
+    ]);
+
+    const invitedActor = {
+      userId: 'balance-viewer',
+      providerIssuer: 'https://local.finwise.dev',
+      providerSubject: 'balance-viewer',
+    };
+    const invited = service.bootstrap(invitedActor);
+    const viewerRole = service.createRole(actor, workspaceId, {
+      name: 'Balance viewer',
+      permissions: ['account.read', 'transaction.read'],
+    });
+    const invitation = service.createInvitation(actor, workspaceId, {
+      invitedUserId: invited.user.id,
+      roleId: viewerRole.id,
+    });
+    service.acceptInvitation(invitedActor, invitation.token);
+
+    expect(service.getBalanceViews(invitedActor, workspaceId)).toEqual([]);
+    expect(service.overview(invitedActor, workspaceId).hasPartialAccess).toBe(
+      true,
+    );
   });
 
   it('accepts and removes a workspace invitation with an optional role', () => {
@@ -374,5 +458,187 @@ describe('CoreService', () => {
         'archive-write',
       ),
     ).toThrow('Archived accounts cannot receive postings.');
+  });
+
+  it('enforces two-level categories and exact immutable transaction splits', () => {
+    const service = createService();
+    const workspaceId = service.bootstrap(actor).suggestedWorkspaceId;
+    const parent = service.createCategory(actor, workspaceId, { name: 'Food' });
+    const groceries = service.createCategory(actor, workspaceId, {
+      name: 'Groceries',
+      parentId: parent.id,
+    });
+    const dining = service.createCategory(actor, workspaceId, {
+      name: 'Dining',
+      parentId: parent.id,
+    });
+    expect(() =>
+      service.createCategory(actor, workspaceId, {
+        name: 'Too deep',
+        parentId: groceries.id,
+      }),
+    ).toThrow('at most two levels');
+    const tag = service.createTag(actor, workspaceId, { name: 'Essential' });
+    const account = service.createAccount(actor, workspaceId, {
+      name: 'Cash',
+      kind: 'cash',
+    });
+    const transaction = service.createTransaction(
+      actor,
+      workspaceId,
+      {
+        type: 'expense',
+        accountId: account.id,
+        amountMinorUnits: '500000',
+        effectiveDate: '2026-08-30',
+      },
+      'classification-source',
+    );
+    expect(() =>
+      service.classifyTransaction(actor, workspaceId, transaction.id, {
+        lines: [{ categoryId: groceries.id, amountMinorUnits: '499999' }],
+      }),
+    ).toThrow('equal the transaction amount');
+    const lines = service.classifyTransaction(
+      actor,
+      workspaceId,
+      transaction.id,
+      {
+        lines: [
+          {
+            categoryId: groceries.id,
+            amountMinorUnits: '300000',
+            tagIds: [tag.id],
+          },
+          { categoryId: dining.id, amountMinorUnits: '200000' },
+        ],
+      },
+    );
+    expect(lines).toHaveLength(2);
+    expect(
+      service.getAccount(actor, workspaceId, account.id).balanceMinorUnits,
+    ).toBe('-500000');
+    expect(
+      service.getClassification(actor, workspaceId, transaction.id),
+    ).toHaveLength(2);
+  });
+
+  it('calculates a descendant budget from classified expense lines', () => {
+    const service = createService();
+    const workspaceId = service.bootstrap(actor).suggestedWorkspaceId;
+    const parent = service.createCategory(actor, workspaceId, {
+      name: 'Living',
+    });
+    const child = service.createCategory(actor, workspaceId, {
+      name: 'Rent',
+      parentId: parent.id,
+    });
+    const account = service.createAccount(actor, workspaceId, {
+      name: 'Bank',
+      kind: 'bank',
+    });
+    const transaction = service.createTransaction(
+      actor,
+      workspaceId,
+      {
+        type: 'expense',
+        accountId: account.id,
+        amountMinorUnits: '500000',
+        effectiveDate: '2026-08-15',
+      },
+      'budget-expense',
+    );
+    service.classifyTransaction(actor, workspaceId, transaction.id, {
+      lines: [{ categoryId: child.id, amountMinorUnits: '500000' }],
+    });
+    service.createBudgetPeriod(actor, workspaceId, {
+      month: '2026-08',
+      baseMinorUnits: '1000000',
+      constraints: [
+        {
+          categoryId: parent.id,
+          mode: 'BY_CHILDREN',
+          fixedMinorUnits: '800000',
+          rolloverMode: 'NONE',
+        },
+      ],
+    });
+    const overview = service.getBudgetOverview(actor, workspaceId, '2026-08');
+    expect(overview.constraints[0]?.allocated.minorUnits).toBe('800000');
+    expect(overview.constraints[0]?.actual.minorUnits).toBe('500000');
+    expect(overview.constraints[0]?.remaining.minorUnits).toBe('300000');
+    expect(overview.totals.remaining.minorUnits).toBe('300000');
+    expect(
+      service.closeBudgetPeriod(actor, workspaceId, '2026-08').status,
+    ).toBe('closed');
+  });
+
+  it('does not add nested budget constraints twice in period totals', () => {
+    const service = createService();
+    const workspaceId = service.bootstrap(actor).suggestedWorkspaceId;
+    const parent = service.createCategory(actor, workspaceId, {
+      name: 'Essentials',
+    });
+    const rent = service.createCategory(actor, workspaceId, {
+      name: 'Rent',
+      parentId: parent.id,
+    });
+    const food = service.createCategory(actor, workspaceId, {
+      name: 'Food',
+      parentId: parent.id,
+    });
+    const account = service.createAccount(actor, workspaceId, {
+      name: 'Bank',
+      kind: 'bank',
+    });
+    const transaction = service.createTransaction(
+      actor,
+      workspaceId,
+      {
+        type: 'expense',
+        accountId: account.id,
+        amountMinorUnits: '500000',
+        effectiveDate: '2026-08-15',
+      },
+      'nested-budget-expense',
+    );
+    service.classifyTransaction(actor, workspaceId, transaction.id, {
+      lines: [
+        { categoryId: rent.id, amountMinorUnits: '300000' },
+        { categoryId: food.id, amountMinorUnits: '200000' },
+      ],
+    });
+    service.createBudgetPeriod(actor, workspaceId, {
+      month: '2026-08',
+      baseMinorUnits: '1000000',
+      constraints: [
+        {
+          categoryId: parent.id,
+          mode: 'BY_CHILDREN',
+          fixedMinorUnits: '0',
+          rolloverMode: 'NONE',
+        },
+        {
+          categoryId: rent.id,
+          mode: 'BY_CHILDREN',
+          fixedMinorUnits: '400000',
+          rolloverMode: 'NONE',
+        },
+        {
+          categoryId: food.id,
+          mode: 'BY_CHILDREN',
+          fixedMinorUnits: '300000',
+          rolloverMode: 'NONE',
+        },
+      ],
+    });
+
+    const overview = service.getBudgetOverview(actor, workspaceId, '2026-08');
+    expect(
+      overview.constraints.map((constraint) => constraint.allocated.minorUnits),
+    ).toEqual(['700000', '400000', '300000']);
+    expect(overview.totals.allocated.minorUnits).toBe('700000');
+    expect(overview.totals.actual.minorUnits).toBe('500000');
+    expect(overview.totals.remaining.minorUnits).toBe('200000');
   });
 });

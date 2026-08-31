@@ -5,9 +5,15 @@ import {
   AccountKind,
   AccountRecord,
   AccountVisibilityMode,
+  BudgetConstraintRecord,
+  BudgetPeriodRecord,
+  CategoryRecord,
+  ClassificationLineRecord,
+  TagRecord,
   ExternalIdentityRecord,
   IdempotencyRecord,
   JournalTransactionRecord,
+  JournalSourceLinkRecord,
   OwnerTransferRecord,
   PERMISSIONS,
   Permission,
@@ -21,9 +27,13 @@ import {
   WorkspaceRecord,
 } from '../domain/ledger.types';
 import { MVP_CURRENCY } from '../../shared/domain/money';
+import { calculateBudgetAllocations } from '../domain/budget-allocation';
 import {
   BootstrapResult,
+  BudgetConstraintDraft,
+  BudgetOverviewProjection,
   CoreStorePort,
+  ClassificationLineDraft,
   JournalDraft,
 } from '../application/core.ports';
 
@@ -44,6 +54,17 @@ function normalizeRoleName(value: string): string {
   return name;
 }
 
+function normalizeLabel(value: string, resource: string): string {
+  const name = value.trim();
+  if (name.length < 1 || name.length > 100) {
+    throw FinwiseError.validation(
+      `${resource} name must be between 1 and 100 characters.`,
+      { field: 'name' },
+    );
+  }
+  return name;
+}
+
 export class InMemoryFinwiseStore implements CoreStorePort {
   private readonly users = new Map<string, UserRecord>();
   private readonly identities = new Map<string, ExternalIdentityRecord>();
@@ -54,6 +75,7 @@ export class InMemoryFinwiseStore implements CoreStorePort {
   private readonly accounts = new Map<string, AccountRecord>();
   private readonly transactions = new Map<string, JournalTransactionRecord>();
   private readonly audits = new Map<string, TransactionAuditRecord>();
+  private readonly sourceLinks = new Map<string, JournalSourceLinkRecord>();
   private readonly idempotencies = new Map<string, IdempotencyRecord>();
   private readonly accountAccess = new Map<string, AccountAccessOverride>();
   private readonly personalWorkspaceByUser = new Map<string, string>();
@@ -63,6 +85,17 @@ export class InMemoryFinwiseStore implements CoreStorePort {
     WorkspaceInvitationRecord
   >();
   private readonly ownerTransfers = new Map<string, OwnerTransferRecord>();
+  private readonly categories = new Map<string, CategoryRecord>();
+  private readonly tags = new Map<string, TagRecord>();
+  private readonly classifications = new Map<
+    string,
+    readonly ClassificationLineRecord[]
+  >();
+  private readonly budgetPeriods = new Map<string, BudgetPeriodRecord>();
+  private readonly budgetConstraints = new Map<
+    string,
+    BudgetConstraintRecord
+  >();
 
   bootstrap(actor: AuthenticatedActor): BootstrapResult {
     const identityKey = `${actor.providerIssuer}:${actor.providerSubject}`;
@@ -691,6 +724,21 @@ export class InMemoryFinwiseStore implements CoreStorePort {
     );
   }
 
+  hasPartialAccountAccess(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+  ): boolean {
+    const member = this.requireMemberByUser(workspaceId, actor.userId, false);
+    this.requirePermission(member, PERMISSIONS.accountRead);
+    const accounts = [...this.accounts.values()].filter(
+      (account) =>
+        account.workspaceId === workspaceId &&
+        account.status === 'active' &&
+        !account.isSystem,
+    );
+    return accounts.some((account) => !this.canAccessAccount(account, member));
+  }
+
   getAccount(
     workspaceId: string,
     accountId: string,
@@ -957,7 +1005,12 @@ export class InMemoryFinwiseStore implements CoreStorePort {
     this.requirePermission(member, PERMISSIONS.accountRead);
     const balances = new Map<string, bigint>();
     for (const account of this.accounts.values()) {
-      if (account.workspaceId === workspaceId) {
+      if (
+        account.workspaceId === workspaceId &&
+        account.status === 'active' &&
+        !account.isSystem &&
+        this.canAccessAccount(account, member)
+      ) {
         balances.set(account.id, 0n);
       }
     }
@@ -979,6 +1032,429 @@ export class InMemoryFinwiseStore implements CoreStorePort {
       accountId,
       balanceMinorUnits,
     }));
+  }
+
+  createCategory(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    name: string,
+    parentId?: string,
+  ): CategoryRecord {
+    const member = this.requireMemberByUser(workspaceId, actor.userId, false);
+    this.requirePermission(member, PERMISSIONS.categoryManage);
+    const normalizedName = normalizeLabel(name, 'Category');
+    let parent: CategoryRecord | undefined;
+    if (parentId !== undefined) {
+      parent = this.requireCategory(workspaceId, parentId);
+      if (parent.status !== 'active') {
+        throw FinwiseError.businessState(
+          'Archived categories cannot receive children.',
+        );
+      }
+      if (parent.parentId !== undefined) {
+        throw FinwiseError.validation(
+          'Categories may have at most two levels.',
+        );
+      }
+    }
+    const duplicate = [...this.categories.values()].some(
+      (category) =>
+        category.workspaceId === workspaceId &&
+        category.status === 'active' &&
+        category.parentId === parent?.id &&
+        category.name.toLocaleLowerCase() ===
+          normalizedName.toLocaleLowerCase(),
+    );
+    if (duplicate) {
+      throw FinwiseError.conflict('A category with this name already exists.');
+    }
+    const category: CategoryRecord = {
+      id: randomUUID(),
+      workspaceId,
+      name: normalizedName,
+      parentId: parent?.id,
+      status: 'active',
+      createdAt: new Date(),
+    };
+    this.categories.set(category.id, category);
+    return category;
+  }
+
+  listCategories(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+  ): readonly CategoryRecord[] {
+    const member = this.requireMemberByUser(workspaceId, actor.userId, false);
+    this.requirePermission(member, PERMISSIONS.categoryRead);
+    return [...this.categories.values()]
+      .filter((category) => category.workspaceId === workspaceId)
+      .sort((left, right) => left.name.localeCompare(right.name));
+  }
+
+  archiveCategory(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    categoryId: string,
+  ): CategoryRecord {
+    const member = this.requireMemberByUser(workspaceId, actor.userId, false);
+    this.requirePermission(member, PERMISSIONS.categoryManage);
+    const category = this.requireCategory(workspaceId, categoryId);
+    if (category.status === 'archived') {
+      throw FinwiseError.businessState('Category is already archived.');
+    }
+    const hasActiveChildren = [...this.categories.values()].some(
+      (candidate) =>
+        candidate.parentId === category.id && candidate.status === 'active',
+    );
+    if (hasActiveChildren) {
+      throw FinwiseError.conflict(
+        'Archive child categories before archiving their parent.',
+      );
+    }
+    category.status = 'archived';
+    return category;
+  }
+
+  createTag(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    name: string,
+  ): TagRecord {
+    const member = this.requireMemberByUser(workspaceId, actor.userId, false);
+    this.requirePermission(member, PERMISSIONS.categoryManage);
+    const normalizedName = normalizeLabel(name, 'Tag');
+    const duplicate = [...this.tags.values()].some(
+      (tag) =>
+        tag.workspaceId === workspaceId &&
+        tag.status === 'active' &&
+        tag.name.toLocaleLowerCase() === normalizedName.toLocaleLowerCase(),
+    );
+    if (duplicate) {
+      throw FinwiseError.conflict('A tag with this name already exists.');
+    }
+    const tag: TagRecord = {
+      id: randomUUID(),
+      workspaceId,
+      name: normalizedName,
+      status: 'active',
+      createdAt: new Date(),
+    };
+    this.tags.set(tag.id, tag);
+    return tag;
+  }
+
+  listTags(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+  ): readonly TagRecord[] {
+    const member = this.requireMemberByUser(workspaceId, actor.userId, false);
+    this.requirePermission(member, PERMISSIONS.categoryRead);
+    return [...this.tags.values()]
+      .filter((tag) => tag.workspaceId === workspaceId)
+      .sort((left, right) => left.name.localeCompare(right.name));
+  }
+
+  classifyTransaction(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    transactionId: string,
+    lines: readonly ClassificationLineDraft[],
+  ): readonly ClassificationLineRecord[] {
+    const member = this.requireMemberByUser(workspaceId, actor.userId, false);
+    this.requirePermission(member, PERMISSIONS.transactionCreate);
+    const transaction = this.getTransaction(workspaceId, transactionId, actor);
+    if (transaction.status !== 'posted') {
+      throw FinwiseError.businessState(
+        'Only posted transactions can be classified.',
+      );
+    }
+    if (this.classifications.has(transactionId)) {
+      throw FinwiseError.conflict(
+        'Transaction classification is immutable once posted.',
+      );
+    }
+    if (lines.length === 0 || lines.length > 50) {
+      throw FinwiseError.validation(
+        'Classification must contain between 1 and 50 lines.',
+      );
+    }
+    let total = 0n;
+    const records: ClassificationLineRecord[] = [];
+    for (const line of lines) {
+      if (line.amountMinorUnits <= 0n) {
+        throw FinwiseError.validation(
+          'Classification line amounts must be positive.',
+        );
+      }
+      const category = this.requireCategory(workspaceId, line.categoryId);
+      if (category.status !== 'active') {
+        throw FinwiseError.businessState(
+          'Archived categories cannot classify new transactions.',
+        );
+      }
+      if (this.categoryHasActiveChildren(category.id)) {
+        throw FinwiseError.validation(
+          'Post to a leaf category or create an Other child category.',
+        );
+      }
+      const uniqueTagIds = [...new Set(line.tagIds)];
+      for (const tagId of uniqueTagIds) {
+        const tag = this.tags.get(tagId);
+        if (
+          !tag ||
+          tag.workspaceId !== workspaceId ||
+          tag.status !== 'active'
+        ) {
+          throw FinwiseError.notFound('Tag');
+        }
+      }
+      total += line.amountMinorUnits;
+      records.push({
+        id: randomUUID(),
+        workspaceId,
+        transactionId,
+        categoryId: category.id,
+        amountMinorUnits: line.amountMinorUnits,
+        tagIds: uniqueTagIds,
+        createdAt: new Date(),
+      });
+    }
+    if (total !== transaction.amountMinorUnits) {
+      throw FinwiseError.validation(
+        'Classification line amounts must equal the transaction amount.',
+      );
+    }
+    this.classifications.set(transactionId, records);
+    return records;
+  }
+
+  getClassification(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    transactionId: string,
+  ): readonly ClassificationLineRecord[] {
+    this.getTransaction(workspaceId, transactionId, actor);
+    return this.classifications.get(transactionId) ?? [];
+  }
+
+  createBudgetPeriod(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    month: string,
+    baseMinorUnits: bigint,
+    constraints: readonly BudgetConstraintDraft[],
+  ): BudgetPeriodRecord {
+    const member = this.requireMemberByUser(workspaceId, actor.userId, false);
+    this.requirePermission(member, PERMISSIONS.budgetManage);
+    if (baseMinorUnits <= 0n) {
+      throw FinwiseError.validation('Budget base must be positive.');
+    }
+    const key = `${workspaceId}:${month}`;
+    if (
+      [...this.budgetPeriods.values()].some(
+        (period) => `${period.workspaceId}:${period.month}` === key,
+      )
+    ) {
+      throw FinwiseError.conflict(
+        'A budget period already exists for this month.',
+      );
+    }
+    if (constraints.length > 100) {
+      throw FinwiseError.validation(
+        'A budget period cannot exceed 100 constraints.',
+      );
+    }
+    const categoryIds = new Set<string>();
+    let fixedTotal = 0n;
+    let percentageTotal = 0;
+    for (const constraint of constraints) {
+      if (categoryIds.has(constraint.categoryId)) {
+        throw FinwiseError.conflict(
+          'A category may only have one budget constraint per period.',
+        );
+      }
+      categoryIds.add(constraint.categoryId);
+      const category = this.requireCategory(workspaceId, constraint.categoryId);
+      if (category.status !== 'active') {
+        throw FinwiseError.businessState(
+          'Archived categories cannot be budgeted.',
+        );
+      }
+      if (constraint.fixedMinorUnits < 0n) {
+        throw FinwiseError.validation(
+          'Budget fixed allocation cannot be negative.',
+        );
+      }
+      if (
+        !Number.isInteger(constraint.percentageBasisPoints) ||
+        constraint.percentageBasisPoints < 0 ||
+        constraint.percentageBasisPoints > 10000
+      ) {
+        throw FinwiseError.validation(
+          'Budget percentage must be between 0 and 100 percent.',
+        );
+      }
+      fixedTotal += constraint.fixedMinorUnits;
+      percentageTotal += constraint.percentageBasisPoints;
+    }
+    if (fixedTotal > baseMinorUnits) {
+      throw FinwiseError.validation(
+        'Fixed budget allocations cannot exceed the period base.',
+      );
+    }
+    if (percentageTotal > 10000) {
+      throw FinwiseError.validation(
+        'Budget percentages cannot exceed 100 percent.',
+      );
+    }
+    const period: BudgetPeriodRecord = {
+      id: randomUUID(),
+      workspaceId,
+      month,
+      baseMinorUnits,
+      carryMinorUnits: 0n,
+      status: 'open',
+      createdByMemberId: member.id,
+      createdAt: new Date(),
+      constraintIds: [],
+    };
+    this.budgetPeriods.set(period.id, period);
+    const constraintIds = period.constraintIds as string[];
+    for (const constraint of constraints) {
+      const record: BudgetConstraintRecord = {
+        id: randomUUID(),
+        budgetPeriodId: period.id,
+        categoryId: constraint.categoryId,
+        mode: constraint.mode,
+        fixedMinorUnits: constraint.fixedMinorUnits,
+        percentageBasisPoints: constraint.percentageBasisPoints,
+        rolloverMode: constraint.rolloverMode,
+        fundedByMemberId: member.id,
+      };
+      this.budgetConstraints.set(record.id, record);
+      constraintIds.push(record.id);
+    }
+    return period;
+  }
+
+  listBudgetPeriods(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+  ): readonly BudgetPeriodRecord[] {
+    const member = this.requireMemberByUser(workspaceId, actor.userId, false);
+    this.requirePermission(member, PERMISSIONS.budgetRead);
+    return [...this.budgetPeriods.values()]
+      .filter((period) => period.workspaceId === workspaceId)
+      .sort((left, right) => right.month.localeCompare(left.month));
+  }
+
+  getBudgetOverview(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    month: string,
+  ): BudgetOverviewProjection {
+    const member = this.requireMemberByUser(workspaceId, actor.userId, false);
+    this.requirePermission(member, PERMISSIONS.budgetRead);
+    const period = [...this.budgetPeriods.values()].find(
+      (candidate) =>
+        candidate.workspaceId === workspaceId && candidate.month === month,
+    );
+    if (!period) {
+      throw FinwiseError.notFound('Budget period');
+    }
+    const constraints = period.constraintIds
+      .map((constraintId) => this.budgetConstraints.get(constraintId))
+      .filter(
+        (constraint): constraint is BudgetConstraintRecord =>
+          constraint !== undefined,
+      );
+    const allocations = calculateBudgetAllocations(
+      period.baseMinorUnits,
+      constraints,
+      (categoryId, ancestorId) => this.isCategoryWithin(categoryId, ancestorId),
+      (categoryId) => this.categoryDepth(categoryId),
+    );
+    const allocationById = new Map(
+      allocations.map((allocation) => [allocation.constraintId, allocation]),
+    );
+    const projections = constraints.map((constraint) => {
+      const allocated =
+        allocationById.get(constraint.id)?.allocatedMinorUnits ?? 0n;
+      let actual = 0n;
+      for (const [transactionId, lines] of this.classifications.entries()) {
+        const transaction = this.transactions.get(transactionId);
+        if (
+          !transaction ||
+          transaction.workspaceId !== workspaceId ||
+          transaction.kind !== 'expense' ||
+          transaction.status !== 'posted' ||
+          !transaction.effectiveDate.startsWith(month) ||
+          !this.canViewTransaction(transaction, member)
+        ) {
+          continue;
+        }
+        for (const line of lines) {
+          if (this.isCategoryWithin(line.categoryId, constraint.categoryId)) {
+            actual += line.amountMinorUnits;
+          }
+        }
+      }
+      return {
+        constraint,
+        allocatedMinorUnits: allocated,
+        actualMinorUnits: actual,
+        remainingMinorUnits: allocated + period.carryMinorUnits - actual,
+      };
+    });
+    return {
+      period,
+      constraints: projections,
+      totalAllocatedMinorUnits: projections.reduce(
+        (total, projection) =>
+          total +
+          (allocationById.get(projection.constraint.id)?.contributesToTotals
+            ? projection.allocatedMinorUnits
+            : 0n),
+        0n,
+      ),
+      totalActualMinorUnits: projections.reduce(
+        (total, projection) =>
+          total +
+          (allocationById.get(projection.constraint.id)?.contributesToTotals
+            ? projection.actualMinorUnits
+            : 0n),
+        0n,
+      ),
+      totalRemainingMinorUnits: projections.reduce(
+        (total, projection) =>
+          total +
+          (allocationById.get(projection.constraint.id)?.contributesToTotals
+            ? projection.remainingMinorUnits
+            : 0n),
+        0n,
+      ),
+    };
+  }
+
+  closeBudgetPeriod(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    month: string,
+  ): BudgetPeriodRecord {
+    const member = this.requireMemberByUser(workspaceId, actor.userId, false);
+    this.requirePermission(member, PERMISSIONS.budgetManage);
+    const period = [...this.budgetPeriods.values()].find(
+      (candidate) =>
+        candidate.workspaceId === workspaceId && candidate.month === month,
+    );
+    if (!period) {
+      throw FinwiseError.notFound('Budget period');
+    }
+    if (period.status === 'closed') {
+      throw FinwiseError.businessState('Budget period is already closed.');
+    }
+    period.status = 'closed';
+    return period;
   }
 
   getIdempotency<T extends object>(
@@ -1035,6 +1511,55 @@ export class InMemoryFinwiseStore implements CoreStorePort {
       );
   }
 
+  linkJournalSource(
+    workspaceId: string,
+    transactionId: string,
+    sourceType: JournalSourceLinkRecord['sourceType'],
+    sourceId: string,
+    actor: AuthenticatedActor,
+  ): JournalSourceLinkRecord {
+    this.getTransaction(workspaceId, transactionId, actor);
+    if (!sourceId.trim())
+      throw FinwiseError.validation('Source id is required.');
+    const key = `${workspaceId}:${sourceType}:${sourceId}`;
+    const existing = this.sourceLinks.get(key);
+    if (existing) {
+      if (existing.transactionId !== transactionId) {
+        throw FinwiseError.conflict(
+          'A source can link to only one transaction.',
+        );
+      }
+      return existing;
+    }
+    const link: JournalSourceLinkRecord = {
+      id: randomUUID(),
+      workspaceId,
+      transactionId,
+      sourceType,
+      sourceId: sourceId.trim(),
+      createdAt: new Date(),
+    };
+    this.sourceLinks.set(key, link);
+    return link;
+  }
+
+  getJournalSourceLinks(
+    workspaceId: string,
+    transactionId: string,
+    actor: AuthenticatedActor,
+  ): readonly JournalSourceLinkRecord[] {
+    this.getTransaction(workspaceId, transactionId, actor);
+    return [...this.sourceLinks.values()]
+      .filter(
+        (link) =>
+          link.workspaceId === workspaceId &&
+          link.transactionId === transactionId,
+      )
+      .sort(
+        (left, right) => left.createdAt.getTime() - right.createdAt.getTime(),
+      );
+  }
+
   private createWorkspaceInternal(
     name: string,
     kind: WorkspaceKind,
@@ -1065,6 +1590,44 @@ export class InMemoryFinwiseStore implements CoreStorePort {
       throw FinwiseError.notFound('Role');
     }
     return role;
+  }
+
+  private requireCategory(
+    workspaceId: string,
+    categoryId: string,
+  ): CategoryRecord {
+    const category = this.categories.get(categoryId);
+    if (!category || category.workspaceId !== workspaceId) {
+      throw FinwiseError.notFound('Category');
+    }
+    return category;
+  }
+
+  private categoryHasActiveChildren(categoryId: string): boolean {
+    return [...this.categories.values()].some(
+      (candidate) =>
+        candidate.parentId === categoryId && candidate.status === 'active',
+    );
+  }
+
+  private isCategoryWithin(categoryId: string, ancestorId: string): boolean {
+    let current = this.categories.get(categoryId);
+    while (current) {
+      if (current.id === ancestorId) return true;
+      if (!current.parentId) return false;
+      current = this.categories.get(current.parentId);
+    }
+    return false;
+  }
+
+  private categoryDepth(categoryId: string): number {
+    let depth = 0;
+    let current = this.categories.get(categoryId);
+    while (current?.parentId) {
+      depth += 1;
+      current = this.categories.get(current.parentId);
+    }
+    return depth;
   }
 
   private validateJournalDraft(draft: JournalDraft): void {

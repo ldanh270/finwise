@@ -8,11 +8,19 @@ import {
   JournalKind,
   JournalTransactionRecord,
   TransactionAuditRecord,
+  JournalSourceLinkRecord,
   WorkspaceKind,
   WorkspaceRecord,
   WorkspaceMemberRecord,
   WorkspaceInvitationRecord,
   OwnerTransferRecord,
+  CategoryRecord,
+  TagRecord,
+  ClassificationLineRecord,
+  BudgetConstraintMode,
+  BudgetRolloverMode,
+  BudgetPeriodRecord,
+  BudgetConstraintRecord,
 } from '../domain/ledger.types';
 
 export interface BootstrapResult {
@@ -85,6 +93,35 @@ export interface JournalDraft {
   readonly reversalOfId?: string;
 }
 
+export interface ClassificationLineDraft {
+  readonly categoryId: string;
+  readonly amountMinorUnits: bigint;
+  readonly tagIds: readonly string[];
+}
+
+export interface BudgetConstraintDraft {
+  readonly categoryId: string;
+  readonly mode: BudgetConstraintMode;
+  readonly fixedMinorUnits: bigint;
+  readonly percentageBasisPoints: number;
+  readonly rolloverMode: BudgetRolloverMode;
+}
+
+export interface BudgetConstraintProjection {
+  readonly constraint: BudgetConstraintRecord;
+  readonly allocatedMinorUnits: bigint;
+  readonly actualMinorUnits: bigint;
+  readonly remainingMinorUnits: bigint;
+}
+
+export interface BudgetOverviewProjection {
+  readonly period: BudgetPeriodRecord;
+  readonly constraints: readonly BudgetConstraintProjection[];
+  readonly totalAllocatedMinorUnits: bigint;
+  readonly totalActualMinorUnits: bigint;
+  readonly totalRemainingMinorUnits: bigint;
+}
+
 export interface CoreStorePort extends CoreMembershipPort {
   bootstrap(actor: AuthenticatedActor): BootstrapResult;
   createWorkspace(
@@ -137,6 +174,10 @@ export interface CoreStorePort extends CoreMembershipPort {
     workspaceId: string,
     actor: AuthenticatedActor,
   ): readonly AccountRecord[];
+  hasPartialAccountAccess(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+  ): boolean;
   createAccount(
     workspaceId: string,
     actor: AuthenticatedActor,
@@ -195,6 +236,62 @@ export interface CoreStorePort extends CoreMembershipPort {
     readonly accountId: string;
     readonly balanceMinorUnits: bigint;
   }[];
+  createCategory(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    name: string,
+    parentId?: string,
+  ): CategoryRecord;
+  listCategories(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+  ): readonly CategoryRecord[];
+  archiveCategory(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    categoryId: string,
+  ): CategoryRecord;
+  createTag(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    name: string,
+  ): TagRecord;
+  listTags(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+  ): readonly TagRecord[];
+  classifyTransaction(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    transactionId: string,
+    lines: readonly ClassificationLineDraft[],
+  ): readonly ClassificationLineRecord[];
+  getClassification(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    transactionId: string,
+  ): readonly ClassificationLineRecord[];
+  createBudgetPeriod(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    month: string,
+    baseMinorUnits: bigint,
+    constraints: readonly BudgetConstraintDraft[],
+  ): BudgetPeriodRecord;
+  listBudgetPeriods(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+  ): readonly BudgetPeriodRecord[];
+  getBudgetOverview(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    month: string,
+  ): BudgetOverviewProjection;
+  closeBudgetPeriod(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    month: string,
+  ): BudgetPeriodRecord;
   getIdempotency<T extends object>(
     workspaceId: string,
     key: string,
@@ -214,4 +311,16 @@ export interface CoreStorePort extends CoreMembershipPort {
     transactionId: string,
     actor: AuthenticatedActor,
   ): readonly TransactionAuditRecord[];
+  linkJournalSource(
+    workspaceId: string,
+    transactionId: string,
+    sourceType: JournalSourceLinkRecord['sourceType'],
+    sourceId: string,
+    actor: AuthenticatedActor,
+  ): JournalSourceLinkRecord;
+  getJournalSourceLinks(
+    workspaceId: string,
+    transactionId: string,
+    actor: AuthenticatedActor,
+  ): readonly JournalSourceLinkRecord[];
 }
