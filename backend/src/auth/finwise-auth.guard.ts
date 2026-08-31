@@ -89,17 +89,16 @@ export class FinwiseTokenVerifier implements TokenVerifierPort {
     ) {
       throw FinwiseError.sessionExpired();
     }
-    const issuer =
-      typeof payload.iss === 'string'
-        ? payload.iss
-        : process.env.SUPABASE_JWT_ISSUER;
-    if (!issuer) {
+    const issuer = typeof payload.iss === 'string' ? payload.iss : undefined;
+    const expectedIssuer = process.env.SUPABASE_JWT_ISSUER;
+    if (!issuer || (expectedIssuer && issuer !== expectedIssuer)) {
       throw FinwiseError.authRequired();
     }
+    const expectedAudience =
+      process.env.SUPABASE_JWT_AUDIENCE ?? 'authenticated';
     const audienceValid =
-      payload.aud === undefined ||
-      payload.aud === 'authenticated' ||
-      (Array.isArray(payload.aud) && payload.aud.includes('authenticated'));
+      (typeof payload.aud === 'string' && payload.aud === expectedAudience) ||
+      (Array.isArray(payload.aud) && payload.aud.includes(expectedAudience));
     if (!audienceValid) {
       throw FinwiseError.authRequired();
     }
