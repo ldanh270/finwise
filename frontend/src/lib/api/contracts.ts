@@ -205,6 +205,9 @@ export type OverviewResponse = {
 export type ApiErrorCode =
   | "API_NOT_CONFIGURED"
   | "AUTH_REQUIRED"
+  | "AUTH_INVALID_CREDENTIALS"
+  | "AUTH_ACCOUNT_LOCKED"
+  | "AUTH_CONFIGURATION"
   | "SESSION_EXPIRED"
   | "MEMBERSHIP_REQUIRED"
   | "PERMISSION_DENIED"
@@ -232,6 +235,9 @@ export function isApiErrorCode(value: unknown): value is ApiErrorCode {
   return (
     value === "API_NOT_CONFIGURED" ||
     value === "AUTH_REQUIRED" ||
+    value === "AUTH_INVALID_CREDENTIALS" ||
+    value === "AUTH_ACCOUNT_LOCKED" ||
+    value === "AUTH_CONFIGURATION" ||
     value === "SESSION_EXPIRED" ||
     value === "MEMBERSHIP_REQUIRED" ||
     value === "PERMISSION_DENIED" ||

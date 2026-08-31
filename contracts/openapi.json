@@ -64,6 +64,63 @@
         }
       }
     },
+    "/auth/register": {
+      "post": {
+        "operationId": "registerAuthUser",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RegisterRequest" } } }
+        },
+        "responses": {
+          "201": { "description": "Account created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthSessionResponse" } } } },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "operationId": "loginAuthUser",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoginRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "Authenticated session", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthSessionResponse" } } } },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "operationId": "refreshAuthSession",
+        "security": [],
+        "responses": {
+          "200": { "description": "Rotated session", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthSessionResponse" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "operationId": "logoutAuthSession",
+        "security": [],
+        "responses": { "204": { "description": "Session revoked" } }
+      }
+    },
+    "/auth/session": {
+      "get": {
+        "operationId": "getAuthSession",
+        "security": [],
+        "responses": {
+          "200": { "description": "Current session", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthSessionCheckResponse" } } } }
+        }
+      }
+    },
     "/session/bootstrap": {
       "get": {
         "operationId": "bootstrapSession",
@@ -1602,6 +1659,14 @@
             "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
           }
         }
+      },
+      "RateLimited": {
+        "description": "Authentication rate limit reached",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+          }
+        }
       }
     },
     "schemas": {
@@ -2231,6 +2296,48 @@
             "items": { "type": "string" },
             "maxItems": 50
           }
+        }
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": { "type": "string", "format": "email", "maxLength": 320 },
+          "password": { "type": "string", "minLength": 12, "maxLength": 128 },
+          "displayName": { "type": "string", "maxLength": 120 }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": { "type": "string", "format": "email", "maxLength": 320 },
+          "password": { "type": "string", "maxLength": 128 }
+        }
+      },
+      "AuthUser": {
+        "type": "object",
+        "required": ["id", "email"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "email": { "type": "string", "format": "email" },
+          "displayName": { "type": "string" }
+        }
+      },
+      "AuthSessionResponse": {
+        "type": "object",
+        "required": ["accessToken", "accessTokenExpiresAt", "user"],
+        "properties": {
+          "accessToken": { "type": "string" },
+          "accessTokenExpiresAt": { "type": "string", "format": "date-time" },
+          "user": { "$ref": "#/components/schemas/AuthUser" }
+        }
+      },
+      "AuthSessionCheckResponse": {
+        "type": "object",
+        "required": ["user"],
+        "properties": {
+          "user": { "anyOf": [{ "$ref": "#/components/schemas/AuthUser" }, { "type": "null" }] }
         }
       },
       "BootstrapResponse": {

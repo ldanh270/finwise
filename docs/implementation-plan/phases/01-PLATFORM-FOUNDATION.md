@@ -13,10 +13,10 @@ for vertical feature delivery without implementing financial features yet.
 
 - Keep one root pnpm workspace/lockfile for `backend`, `frontend`, `mobile`
   (when scaffolded), `packages`, and `contracts`; do not add Nx/Turborepo.
-- NestJS is the only business API. Next.js and mobile never query PostgreSQL or
-  the Supabase Data API for financial data.
+- NestJS is the only business API. Next.js and mobile never query PostgreSQL
+  directly for financial data.
 - Domain/application modules may depend only on ports and shared primitives;
-  Prisma, NestJS, Supabase SDKs, HTTP DTOs, and UI types stay at the edges.
+  Prisma, NestJS, auth crypto adapters, HTTP DTOs, and UI types stay at the edges.
 - All API responses use typed errors `{ code, message, details?, requestId }`.
 - Money is exact: `Money { currency: VND, minorUnits: bigint }` internally and
   string/structured DTOs over JSON. No financial calculation uses JS `number`.
@@ -100,7 +100,7 @@ reviewable diff from feature work.
 
 - 2026-08-31: runtime configuration is parsed once at startup with safe
   development defaults, bounded ports, explicit CORS origins, and fail-closed
-  production requirements for database and Supabase JWT secrets. See the
+  production requirements for database and Finwise JWT key material. See the
   [runtime configuration walkthrough](../../reviews/2026-08-31-runtime-config-walkthrough.md).
 - 2026-08-31: `@finwise/api-client` now exposes shared typed transport
   operations for balance views, manual transactions, CSV, PATCH, and DELETE,

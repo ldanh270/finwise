@@ -31,14 +31,14 @@
 $ pnpm install
 ```
 
-### Supabase and Prisma
+### PostgreSQL and Prisma
 
 Copy `.env.example` to `.env` and replace the placeholders with connection
-strings from the Supabase dashboard. `DATABASE_URL` is used by the NestJS
+strings from your PostgreSQL provider. `DATABASE_URL` is used by the NestJS
 runtime; `DIRECT_URL` is used by Prisma CLI migrations.
 The sample uses a dedicated database role named `prisma`; create it and grant
-it access to schema `finwise` in Supabase, or replace that username with the
-role you already use.
+it access to schema `finwise`, or replace that username with the role you
+already use.
 
 ```bash
 pnpm db:generate
@@ -51,6 +51,14 @@ and commit the generated migration.
 
 All Finwise tables and enums are mapped to the PostgreSQL schema `finwise`.
 Do not expose either database URL to the frontend.
+
+### Custom JWT sessions
+
+Finwise signs short-lived RS256 access tokens and stores only hashed, rotated
+refresh tokens in `auth_refresh_sessions`. Generate local key material with
+`node scripts/generate-jwt-keys.mjs`; never commit the printed private key.
+Apply `20260831000000_custom_auth` after the database preflight and set the
+`FINWISE_JWT_*` variables from `.env.example` before using register/login.
 
 ## Compile and run the project
 

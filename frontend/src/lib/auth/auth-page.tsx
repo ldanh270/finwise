@@ -1,99 +1,52 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
-import { getSupabaseBrowserClient } from "./supabase-browser";
+import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { login, register } from "./session";
 
-type AuthStep = "email" | "code";
-
-const OTP_COOLDOWN_SECONDS = 30;
+type AuthMode = "login" | "register";
 
 export default function AuthPage() {
-  const [step, setStep] = useState<AuthStep>("email");
+  const [mode, setMode] = useState<AuthMode>("login");
+  const router = useRouter();
   const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
-  const [cooldown, setCooldown] = useState(0);
+  const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [status, setStatus] = useState<
     | { readonly kind: "idle" }
     | { readonly kind: "loading" }
     | { readonly kind: "error"; readonly message: string }
-    | { readonly kind: "success"; readonly message: string }
   >({ kind: "idle" });
 
-  useEffect(() => {
-    if (cooldown <= 0) return;
-    const timer = window.setInterval(() => {
-      setCooldown((value) => Math.max(0, value - 1));
-    }, 1000);
-    return () => window.clearInterval(timer);
-  }, [cooldown]);
-
-  async function requestCode(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const normalizedEmail = email.trim().toLowerCase();
-    const client = getSupabaseBrowserClient();
-    if (!client) {
+    setStatus({ kind: "loading" });
+    try {
+      if (mode === "login") {
+        await login({ email: email.trim(), password });
+      } else {
+        await register({
+          email: email.trim(),
+          password,
+          ...(displayName.trim() ? { displayName: displayName.trim() } : {}),
+        });
+      }
+      router.push("/");
+      router.refresh();
+    } catch (error: unknown) {
       setStatus({
         kind: "error",
         message:
-          "Authentication is not configured for this environment. Add the Supabase public URL and anon key, then try again.",
+          error instanceof Error
+            ? error.message
+            : "We could not authenticate you. Check your details and try again.",
       });
-      return;
     }
-    setStatus({ kind: "loading" });
-    const { error } = await client.auth.signInWithOtp({
-      email: normalizedEmail,
-      options: { shouldCreateUser: true },
-    });
-    if (error) {
-      setStatus({
-        kind: "error",
-        message: "We could not send a code. Check the email and try again.",
-      });
-      return;
-    }
-    setEmail(normalizedEmail);
-    setStep("code");
-    setCode("");
-    setCooldown(OTP_COOLDOWN_SECONDS);
-    setStatus({ kind: "success", message: "Code sent. Check your inbox." });
   }
 
-  async function verifyCode(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const client = getSupabaseBrowserClient();
-    if (!client) {
-      setStatus({
-        kind: "error",
-        message: "Authentication is not configured for this environment.",
-      });
-      return;
-    }
-    setStatus({ kind: "loading" });
-    const { error } = await client.auth.verifyOtp({
-      email,
-      token: code.trim(),
-      type: "email",
-    });
-    if (error) {
-      setStatus({
-        kind: "error",
-        message:
-          "That code is invalid or expired. Request a new code and try again.",
-      });
-      return;
-    }
-    setStatus({
-      kind: "success",
-      message: "Signed in. Opening your workspace…",
-    });
-    window.location.assign("/");
-  }
-
-  async function resendCode() {
-    if (cooldown > 0 || !email) return;
-    await requestCode({
-      preventDefault: () => undefined,
-    } as FormEvent<HTMLFormElement>);
+  function switchMode(nextMode: AuthMode) {
+    setMode(nextMode);
+    setStatus({ kind: "idle" });
   }
 
   return (
@@ -107,101 +60,103 @@ export default function AuthPage() {
         <div className="auth-heading">
           <span className="section-kicker">PRIVATE MONEY WORKSPACE</span>
           <h1 id="auth-title">
-            {step === "email" ? "Welcome back" : "Check your email"}
+            {mode === "login" ? "Welcome back" : "Create your workspace"}
           </h1>
           <p>
-            {step === "email"
-              ? "Sign in or create your workspace with a six-digit email code."
-              : `Enter the six-digit code we sent to ${email}.`}
+            {mode === "login"
+              ? "Sign in to continue to your private financial workspace."
+              : "Start with a secure personal workspace. You can invite others later."}
           </p>
         </div>
 
-        {step === "email" ? (
-          <form className="auth-form" onSubmit={requestCode}>
-            <label htmlFor="auth-email">Email address</label>
-            <input
-              id="auth-email"
-              type="email"
-              autoComplete="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
-              maxLength={320}
-            />
-            <button
-              className="primary-button auth-submit"
-              type="submit"
-              disabled={status.kind === "loading"}
-              aria-busy={status.kind === "loading"}
-            >
-              {status.kind === "loading"
-                ? "Sending code…"
-                : "Continue with email"}
-            </button>
-          </form>
-        ) : (
-          <form className="auth-form" onSubmit={verifyCode}>
-            <label htmlFor="auth-code">Six-digit code</label>
-            <input
-              id="auth-code"
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              pattern="[0-9]{6}"
-              minLength={6}
-              maxLength={6}
-              placeholder="000000"
-              value={code}
-              onChange={(event) =>
-                setCode(event.target.value.replace(/\D/g, ""))
-              }
-              required
-              autoFocus
-            />
-            <button
-              className="primary-button auth-submit"
-              type="submit"
-              disabled={status.kind === "loading"}
-              aria-busy={status.kind === "loading"}
-            >
-              {status.kind === "loading"
-                ? "Verifying…"
-                : "Verify and open workspace"}
-            </button>
-            <div className="auth-secondary-actions">
-              <button
-                className="text-button"
-                type="button"
-                onClick={() => setStep("email")}
-              >
-                Use a different email
-              </button>
-              <button
-                className="text-button"
-                type="button"
-                onClick={() => void resendCode()}
-                disabled={cooldown > 0 || status.kind === "loading"}
-              >
-                {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend code"}
-              </button>
-            </div>
-          </form>
-        )}
+        <div
+          className="auth-mode-switch"
+          role="tablist"
+          aria-label="Authentication mode"
+        >
+          <button
+            className={mode === "login" ? "is-active" : ""}
+            type="button"
+            role="tab"
+            aria-selected={mode === "login"}
+            onClick={() => switchMode("login")}
+          >
+            Sign in
+          </button>
+          <button
+            className={mode === "register" ? "is-active" : ""}
+            type="button"
+            role="tab"
+            aria-selected={mode === "register"}
+            onClick={() => switchMode("register")}
+          >
+            Create account
+          </button>
+        </div>
+
+        <form className="auth-form" onSubmit={submit}>
+          {mode === "register" ? (
+            <>
+              <label htmlFor="auth-display-name">Display name (optional)</label>
+              <input
+                id="auth-display-name"
+                type="text"
+                autoComplete="name"
+                placeholder="Your name"
+                value={displayName}
+                onChange={(event) => setDisplayName(event.target.value)}
+                maxLength={120}
+              />
+            </>
+          ) : null}
+          <label htmlFor="auth-email">Email address</label>
+          <input
+            id="auth-email"
+            type="email"
+            autoComplete="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            required
+            maxLength={320}
+          />
+          <label htmlFor="auth-password">Password</label>
+          <input
+            id="auth-password"
+            type="password"
+            autoComplete={
+              mode === "login" ? "current-password" : "new-password"
+            }
+            placeholder="At least 12 characters"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            required
+            minLength={mode === "register" ? 12 : undefined}
+            maxLength={128}
+          />
+          <button
+            className="primary-button auth-submit"
+            type="submit"
+            disabled={status.kind === "loading"}
+            aria-busy={status.kind === "loading"}
+          >
+            {status.kind === "loading"
+              ? "Please wait…"
+              : mode === "login"
+                ? "Sign in"
+                : "Create account"}
+          </button>
+        </form>
 
         {status.kind === "error" ? (
           <p className="auth-feedback is-error" role="alert">
             {status.message}
           </p>
-        ) : status.kind === "success" ? (
-          <p className="auth-feedback" role="status">
-            {status.message}
-          </p>
         ) : null}
 
         <p className="auth-legal">
-          By continuing, you agree to keep your workspace private and use
-          Finwise only for your own authorized financial records.
+          Passwords are hashed server-side and sessions use short-lived signed
+          access tokens with rotated HTTP-only refresh cookies.
         </p>
       </section>
     </main>

@@ -81,7 +81,7 @@ behavior, test matrix, migration notes, and exit criteria.
 | --- | --- | --- |
 | [00. Roadmap and decisions](phases/00-ROADMAP-AND-DECISIONS.md) | Ready | Decisions, release boundary, preflight, and traceability are frozen |
 | [01. Platform foundation](phases/01-PLATFORM-FOUNDATION.md) | Boundary complete | Runtime primitives and strengthened contract gate work; official generator freshness remains |
-| [02. Identity/workspace/access](phases/02-IDENTITY-WORKSPACE-ACCESS.md) | In progress | Bootstrap, RBAC, invitations, membership lifecycle, owner transfer and archive work; Supabase/OTP persistence remains |
+| [02. Identity/workspace/access](phases/02-IDENTITY-WORKSPACE-ACCESS.md) | In progress | Bootstrap, RBAC, invitations, membership lifecycle, owner transfer and archive work; durable workspace authorization remains |
 | [03. Ledger/accounts/transactions](phases/03-LEDGER-ACCOUNTS-TRANSACTIONS.md) | In progress | In-memory journals, archive, reversal/replacement and rebuild work; Prisma/checkpoints/source links remain |
 | [04. Classification/budgets/reporting](phases/04-CLASSIFICATION-BUDGETING-REPORTING.md) | Planning boundary complete | Categories/tags/monthly budget editor and projections work; split UI, rollover persistence, goals/full reports remain |
 | [05. Group Treasury](phases/05-GROUP-TREASURY.md) | MVP boundary complete | Core application + web progress/report slice works; production persistence and advanced workflow gates remain |

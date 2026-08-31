@@ -1,6 +1,6 @@
 # Phase 2 — Identity, workspace, and access
 
-Status: In progress — development bootstrap/RBAC/membership slices landed; production auth pending
+Status: In progress — custom JWT credential/session slice landed; durable workspace authorization remains
 Depends on: [Phase 1](01-PLATFORM-FOUNDATION.md), [auth/session architecture](../AUTH-SESSION-ARCHITECTURE.md)  
 Unblocks: all workspace-owned features
 
@@ -11,8 +11,8 @@ plus account/resource visibility on every API query and command.
 
 ## Business rules
 
-- Supabase proves identity only. Verify JWT signature, issuer, audience, expiry,
-  and subject in Nest; never use email as the identity key.
+- Finwise Auth proves identity. Verify RS256 JWT signature, key id, issuer,
+  audience, expiry, and subject in Nest; never use email as the identity key.
 - Unique `(providerIssuer, providerSubject)` maps to one internal `User`.
 - The first successful bootstrap creates one personal workspace, one owner
   membership, and one protected owner role atomically. Concurrent calls return
@@ -31,7 +31,7 @@ plus account/resource visibility on every API query and command.
 ## Data flow
 
 ```text
-Supabase token -> Nest verifier -> ExternalIdentity/User lookup or provision
+Finwise access JWT -> Nest verifier -> User lookup and session claims
                 -> membership/workspace bootstrap -> policy context
                 -> command/query use case -> scoped repository -> response
 ```
@@ -66,7 +66,8 @@ Expose at minimum:
 
 ## Client behavior
 
-Web implements OTP request/code screens, session proxy/refresh, protected
+Web implements email/password sign-in and registration, refresh-cookie session
+proxy, protected
 layouts, workspace switcher, member/role/account-visibility administration,
 denied and partial-data states. It never treats hidden navigation as security.
 The generated client is prepared for mobile; mobile auth/session adapter and
@@ -95,7 +96,7 @@ for malformed legacy memberships, never a request-time silent fix.
 
 ## Exit criteria
 
-- OTP login to bootstrap returns one stable user and personal workspace.
+- Authenticated login to bootstrap returns one stable user and personal workspace.
 - All workspace routes enforce membership and resource policy server-side.
 - Role/account scope changes are audited and hidden data cannot leak through
   reports or aggregates.
@@ -103,23 +104,23 @@ for malformed legacy memberships, never a request-time silent fix.
 
 ## First-slice evidence
 
-`backend/src/auth` now provides a development token boundary with issuer and
-audience claim checks and
+`backend/src/auth` now provides a custom RS256 token boundary with issuer,
+audience, key-id and expiry checks plus
 `GET /v1/session/bootstrap` provisions one internal user plus one personal
 workspace through an in-memory adapter. The core slices also provide custom
 role CRUD, role assignment, account visibility policy/access preview,
 invitation lifecycle, member removal, owner transfer and owner-only archive.
-OTP UI, production Supabase JWKS validation, email delivery and durable
+Password credential storage, refresh rotation/reuse detection, and auth session
+persistence now use PostgreSQL. Email delivery, password reset/MFA and durable
 authorization audit remain. See the [identity/RBAC walkthrough](../../reviews/2026-08-30-identity-rbac-account-scope-walkthrough.md),
 [membership lifecycle walkthrough](../../reviews/2026-08-30-membership-lifecycle-walkthrough.md),
 and [JWT claims walkthrough](../../reviews/2026-08-31-auth-jwt-claims-walkthrough.md).
 
 ## Delivered web session slice
 
-On 2026-08-31 the Next.js web boundary added the `/auth` email OTP request and
-verification screens, protected `/` routing, Supabase cookie refresh, browser
-sign-out, and bearer-token injection into the Nest API transport. This closes
-the web session boundary for local/staging integration but does not close the
-phase: production SMTP/rate limits, JWKS rotation, durable identity mapping,
-and browser E2E against a real Supabase project remain open. See the [web auth
-gate walkthrough](../../reviews/2026-08-31-web-auth-gate-walkthrough.md).
+On 2026-08-31 the Next.js web boundary added email/password registration and
+login, protected `/` routing, rotated HTTP-only refresh cookies, browser
+sign-out, and bearer-token injection into the Nest API transport. PostgreSQL
+stores password hashes and refresh-session families. Workspace persistence,
+password reset/MFA, rate limiting and browser E2E against a real database
+remain open. See the [custom JWT walkthrough](../../reviews/2026-08-31-custom-jwt-auth-walkthrough.md).

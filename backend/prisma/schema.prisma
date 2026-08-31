@@ -93,16 +93,61 @@ enum TransactionAuditAction {
   @@schema("finwise")
 }
 
+enum UserStatus {
+  active
+  suspended
+  deleted
+
+  @@schema("finwise")
+}
+
+enum AuthRefreshSessionStatus {
+  active
+  rotated
+  revoked
+
+  @@schema("finwise")
+}
+
 model User {
-  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  displayName        String?            @map("display_name") @db.Text
-  emailSnapshot      String?            @map("email_snapshot") @db.Text
-  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt          DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                 String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  displayName        String?              @map("display_name") @db.Text
+  emailSnapshot      String?              @map("email_snapshot") @db.Text
+  normalizedEmail    String?              @unique @map("normalized_email") @db.Text
+  passwordHash       String?              @map("password_hash") @db.Text
+  status             UserStatus           @default(active)
+  failedLoginCount   Int                  @default(0) @map("failed_login_count")
+  lockedUntil        DateTime?            @map("locked_until") @db.Timestamptz(6)
+  lastLoginAt        DateTime?            @map("last_login_at") @db.Timestamptz(6)
+  createdAt          DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
   externalIdentities ExternalIdentity[]
   memberships        WorkspaceMember[]
+  authSessions       AuthRefreshSession[]
 
   @@map("users")
+  @@schema("finwise")
+}
+
+model AuthRefreshSession {
+  id           String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String                   @map("user_id") @db.Uuid
+  familyId     String                   @map("family_id") @db.Uuid
+  tokenHash    String                   @unique @map("token_hash") @db.Char(64)
+  parentId     String?                  @map("parent_id") @db.Uuid
+  replacedById String?                  @map("replaced_by_id") @db.Uuid
+  status       AuthRefreshSessionStatus @default(active)
+  issuedAt     DateTime                 @default(now()) @map("issued_at") @db.Timestamptz(6)
+  expiresAt    DateTime                 @map("expires_at") @db.Timestamptz(6)
+  lastUsedAt   DateTime?                @map("last_used_at") @db.Timestamptz(6)
+  revokedAt    DateTime?                @map("revoked_at") @db.Timestamptz(6)
+  userAgent    String?                  @map("user_agent") @db.Text
+  ipHash       String?                  @map("ip_hash") @db.Char(64)
+  user         User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([familyId, status])
+  @@map("auth_refresh_sessions")
   @@schema("finwise")
 }
 
@@ -123,46 +168,46 @@ model ExternalIdentity {
 }
 
 model Workspace {
-  id                   String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name                 String             @db.Text
-  kind                 WorkspaceKind      @default(personal)
-  defaultCurrency      String             @default("VND") @map("default_currency") @db.Char(3)
-  timezone             String             @default("Asia/Ho_Chi_Minh") @db.Text
-  status               WorkspaceStatus    @default(active)
-  archivedAt           DateTime?          @map("archived_at") @db.Timestamptz(6)
-  ownerMembershipId    String?            @unique @map("owner_membership_id") @db.Uuid
-  createdAt            DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt            DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
-  memberships          WorkspaceMember[]
-  ownerMembership      WorkspaceMember?   @relation("WorkspaceOwner", fields: [ownerMembershipId], references: [id])
-  roles                Role[]
-  accounts             FinancialAccount[]
-  journalTransactions  JournalTransaction[]
-  idempotencyKeys      IdempotencyKey[]
-  transactionAudits    TransactionAudit[]
+  id                  String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                String               @db.Text
+  kind                WorkspaceKind        @default(personal)
+  defaultCurrency     String               @default("VND") @map("default_currency") @db.Char(3)
+  timezone            String               @default("Asia/Ho_Chi_Minh") @db.Text
+  status              WorkspaceStatus      @default(active)
+  archivedAt          DateTime?            @map("archived_at") @db.Timestamptz(6)
+  ownerMembershipId   String?              @unique @map("owner_membership_id") @db.Uuid
+  createdAt           DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+  memberships         WorkspaceMember[]
+  ownerMembership     WorkspaceMember?     @relation("WorkspaceOwner", fields: [ownerMembershipId], references: [id])
+  roles               Role[]
+  accounts            FinancialAccount[]
+  journalTransactions JournalTransaction[]
+  idempotencyKeys     IdempotencyKey[]
+  transactionAudits   TransactionAudit[]
 
   @@map("workspaces")
   @@schema("finwise")
 }
 
 model WorkspaceMember {
-  id                String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workspaceId       String                @map("workspace_id") @db.Uuid
-  userId            String                @map("user_id") @db.Uuid
-  status            MembershipStatus      @default(active)
-  isOwner           Boolean               @default(false) @map("is_owner")
-  joinedAt          DateTime?             @map("joined_at") @db.Timestamptz(6)
-  removedAt         DateTime?             @map("removed_at") @db.Timestamptz(6)
-  createdAt         DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
-  workspace         Workspace             @relation(fields: [workspaceId], references: [id])
-  user              User                  @relation(fields: [userId], references: [id])
-  ownerOf           Workspace?            @relation("WorkspaceOwner")
-  roleAssignments   RoleAssignment[]
-  accountAccess     AccountMemberAccess[]
-  createdAccounts   FinancialAccount[]    @relation("AccountCreator")
-  createdJournals   JournalTransaction[]  @relation("JournalCreator")
-  changedAudits     TransactionAudit[]    @relation("AuditActor")
+  id              String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId     String                @map("workspace_id") @db.Uuid
+  userId          String                @map("user_id") @db.Uuid
+  status          MembershipStatus      @default(active)
+  isOwner         Boolean               @default(false) @map("is_owner")
+  joinedAt        DateTime?             @map("joined_at") @db.Timestamptz(6)
+  removedAt       DateTime?             @map("removed_at") @db.Timestamptz(6)
+  createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+  workspace       Workspace             @relation(fields: [workspaceId], references: [id])
+  user            User                  @relation(fields: [userId], references: [id])
+  ownerOf         Workspace?            @relation("WorkspaceOwner")
+  roleAssignments RoleAssignment[]
+  accountAccess   AccountMemberAccess[]
+  createdAccounts FinancialAccount[]    @relation("AccountCreator")
+  createdJournals JournalTransaction[]  @relation("JournalCreator")
+  changedAudits   TransactionAudit[]    @relation("AuditActor")
 
   @@unique([workspaceId, userId])
   @@index([userId, status])
@@ -242,7 +287,7 @@ model AccountMemberAccess {
   allowed   Boolean          @default(true)
   createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
   account   FinancialAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  member    WorkspaceMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  member    WorkspaceMember  @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@unique([accountId, memberId])
   @@map("account_member_access")
@@ -250,25 +295,25 @@ model AccountMemberAccess {
 }
 
 model JournalTransaction {
-  id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workspaceId        String              @map("workspace_id") @db.Uuid
-  kind               JournalKind
-  status             JournalStatus       @default(posted)
-  amountMinor        BigInt              @map("amount_minor")
-  currencyCode       String              @default("VND") @map("currency_code") @db.Char(3)
-  effectiveDate      DateTime            @map("effective_date") @db.Date
-  recordedAt         DateTime            @default(now()) @map("recorded_at") @db.Timestamptz(6)
-  description        String?             @db.Text
-  createdByMemberId  String              @map("created_by_member_id") @db.Uuid
-  reversalOfId       String?             @map("reversal_of_id") @db.Uuid
-  createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
-  workspace          Workspace           @relation(fields: [workspaceId], references: [id])
-  createdByMember    WorkspaceMember     @relation("JournalCreator", fields: [createdByMemberId], references: [id])
-  entries            JournalEntry[]
-  reversalOf         JournalTransaction? @relation("ReversalChain", fields: [reversalOfId], references: [id])
-  reversals          JournalTransaction[] @relation("ReversalChain")
-  idempotencyKeys    IdempotencyKey[]
-  audits             TransactionAudit[]
+  id                String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId       String               @map("workspace_id") @db.Uuid
+  kind              JournalKind
+  status            JournalStatus        @default(posted)
+  amountMinor       BigInt               @map("amount_minor")
+  currencyCode      String               @default("VND") @map("currency_code") @db.Char(3)
+  effectiveDate     DateTime             @map("effective_date") @db.Date
+  recordedAt        DateTime             @default(now()) @map("recorded_at") @db.Timestamptz(6)
+  description       String?              @db.Text
+  createdByMemberId String               @map("created_by_member_id") @db.Uuid
+  reversalOfId      String?              @map("reversal_of_id") @db.Uuid
+  createdAt         DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  workspace         Workspace            @relation(fields: [workspaceId], references: [id])
+  createdByMember   WorkspaceMember      @relation("JournalCreator", fields: [createdByMemberId], references: [id])
+  entries           JournalEntry[]
+  reversalOf        JournalTransaction?  @relation("ReversalChain", fields: [reversalOfId], references: [id])
+  reversals         JournalTransaction[] @relation("ReversalChain")
+  idempotencyKeys   IdempotencyKey[]
+  audits            TransactionAudit[]
 
   @@unique([workspaceId, id])
   @@index([workspaceId, effectiveDate(sort: Desc)])
@@ -294,16 +339,16 @@ model JournalEntry {
 }
 
 model TransactionAudit {
-  id            String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workspaceId   String              @map("workspace_id") @db.Uuid
-  transactionId String              @map("transaction_id") @db.Uuid
-  actorMemberId String              @map("actor_member_id") @db.Uuid
+  id            String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId   String                 @map("workspace_id") @db.Uuid
+  transactionId String                 @map("transaction_id") @db.Uuid
+  actorMemberId String                 @map("actor_member_id") @db.Uuid
   action        TransactionAuditAction
   details       Json?
-  createdAt     DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
-  workspace     Workspace           @relation(fields: [workspaceId], references: [id])
-  transaction   JournalTransaction  @relation(fields: [transactionId], references: [id])
-  actor         WorkspaceMember     @relation("AuditActor", fields: [actorMemberId], references: [id])
+  createdAt     DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  workspace     Workspace              @relation(fields: [workspaceId], references: [id])
+  transaction   JournalTransaction     @relation(fields: [transactionId], references: [id])
+  actor         WorkspaceMember        @relation("AuditActor", fields: [actorMemberId], references: [id])
 
   @@index([workspaceId, transactionId, createdAt])
   @@map("transaction_audits")

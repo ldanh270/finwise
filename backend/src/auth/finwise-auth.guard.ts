@@ -1,5 +1,4 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
-import { createHmac, timingSafeEqual } from 'node:crypto';
 import { Request } from 'express';
 import {
   AuthenticatedActor,
@@ -7,6 +6,7 @@ import {
   TokenVerifierPort,
 } from '../shared/application/auth';
 import { FinwiseError } from '../shared/errors/finwise-error';
+import { JwtTokenService } from './jwt-token.service';
 
 export interface AuthenticatedRequest extends Request {
   actor?: AuthenticatedActor;
@@ -17,6 +17,8 @@ export const AUTH_GUARD = Symbol('AUTH_GUARD');
 
 @Injectable()
 export class FinwiseTokenVerifier implements TokenVerifierPort {
+  constructor(private readonly jwtTokens = new JwtTokenService()) {}
+
   verify(
     authorizationHeader: string | undefined,
     devUserId?: string,
@@ -45,73 +47,7 @@ export class FinwiseTokenVerifier implements TokenVerifierPort {
         };
       }
     }
-    return this.verifySupabaseHs256(token);
-  }
-
-  private verifySupabaseHs256(token: string): AuthenticatedActor {
-    const secret = process.env.SUPABASE_JWT_SECRET;
-    if (!secret) {
-      throw FinwiseError.authRequired();
-    }
-    const parts = token.split('.');
-    if (parts.length !== 3) {
-      throw FinwiseError.authRequired();
-    }
-    const [encodedHeader, encodedPayload, signature] = parts;
-    let header: JwtHeader;
-    let payload: JwtPayload;
-    try {
-      header = parseBase64Json<JwtHeader>(encodedHeader);
-      payload = parseBase64Json<JwtPayload>(encodedPayload);
-    } catch {
-      throw FinwiseError.authRequired();
-    }
-    if (
-      header.alg !== 'HS256' ||
-      typeof payload.sub !== 'string' ||
-      !payload.sub
-    ) {
-      throw FinwiseError.authRequired();
-    }
-    const expected = createHmac('sha256', secret)
-      .update(`${encodedHeader}.${encodedPayload}`)
-      .digest();
-    const provided = Buffer.from(signature, 'base64url');
-    if (
-      provided.length !== expected.length ||
-      !timingSafeEqual(provided, expected)
-    ) {
-      throw FinwiseError.authRequired();
-    }
-    if (
-      typeof payload.exp !== 'number' ||
-      payload.exp <= Math.floor(Date.now() / 1000)
-    ) {
-      throw FinwiseError.sessionExpired();
-    }
-    const issuer = typeof payload.iss === 'string' ? payload.iss : undefined;
-    const expectedIssuer = process.env.SUPABASE_JWT_ISSUER;
-    if (!issuer || (expectedIssuer && issuer !== expectedIssuer)) {
-      throw FinwiseError.authRequired();
-    }
-    const expectedAudience =
-      process.env.SUPABASE_JWT_AUDIENCE ?? 'authenticated';
-    const audienceValid =
-      (typeof payload.aud === 'string' && payload.aud === expectedAudience) ||
-      (Array.isArray(payload.aud) && payload.aud.includes(expectedAudience));
-    if (!audienceValid) {
-      throw FinwiseError.authRequired();
-    }
-    return {
-      userId: payload.sub,
-      providerIssuer: issuer,
-      providerSubject: payload.sub,
-      email: typeof payload.email === 'string' ? payload.email : undefined,
-      displayName:
-        typeof payload.user_metadata?.full_name === 'string'
-          ? payload.user_metadata.full_name
-          : undefined,
-    };
+    return this.jwtTokens.verifyAccessToken(token);
   }
 }
 
@@ -139,21 +75,4 @@ export function actorFromRequest(
     throw FinwiseError.authRequired();
   }
   return request.actor;
-}
-
-interface JwtHeader {
-  readonly alg?: unknown;
-}
-
-interface JwtPayload {
-  readonly sub?: unknown;
-  readonly iss?: unknown;
-  readonly exp?: unknown;
-  readonly aud?: unknown;
-  readonly email?: unknown;
-  readonly user_metadata?: Record<string, unknown>;
-}
-
-function parseBase64Json<T>(value: string): T {
-  return JSON.parse(Buffer.from(value, 'base64url').toString('utf8')) as T;
 }

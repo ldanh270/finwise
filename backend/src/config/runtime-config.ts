@@ -16,12 +16,20 @@ export function readRuntimeConfig(
   if (nodeEnv === 'production') {
     requireProductionSecret(environment.DATABASE_URL, 'DATABASE_URL');
     requireProductionSecret(
-      environment.SUPABASE_JWT_SECRET,
-      'SUPABASE_JWT_SECRET',
+      environment.FINWISE_JWT_PRIVATE_KEY_BASE64,
+      'FINWISE_JWT_PRIVATE_KEY_BASE64',
     );
     requireProductionSecret(
-      environment.SUPABASE_JWT_ISSUER,
-      'SUPABASE_JWT_ISSUER',
+      environment.FINWISE_JWT_PUBLIC_KEY_BASE64,
+      'FINWISE_JWT_PUBLIC_KEY_BASE64',
+    );
+    requireProductionSecret(
+      environment.FINWISE_JWT_ISSUER,
+      'FINWISE_JWT_ISSUER',
+    );
+    requireProductionSecret(
+      environment.FINWISE_JWT_AUDIENCE,
+      'FINWISE_JWT_AUDIENCE',
     );
   }
   const frontendOrigins = parseOrigins(environment.FRONTEND_ORIGINS, nodeEnv);

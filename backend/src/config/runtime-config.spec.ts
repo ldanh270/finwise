@@ -41,9 +41,10 @@ describe('readRuntimeConfig', () => {
       readRuntimeConfig({
         NODE_ENV: 'production',
         DATABASE_URL: 'postgres://db',
-        SUPABASE_JWT_SECRET: 'secret',
+        FINWISE_JWT_PRIVATE_KEY_BASE64: 'private',
+        FINWISE_JWT_PUBLIC_KEY_BASE64: 'public',
         FRONTEND_ORIGINS: 'https://app.example',
       }),
-    ).toThrow('SUPABASE_JWT_ISSUER');
+    ).toThrow('FINWISE_JWT_ISSUER');
   });
 });

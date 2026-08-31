@@ -1,5 +1,8 @@
 export type FinwiseErrorCode =
   | 'AUTH_REQUIRED'
+  | 'AUTH_INVALID_CREDENTIALS'
+  | 'AUTH_ACCOUNT_LOCKED'
+  | 'AUTH_CONFIGURATION'
   | 'SESSION_EXPIRED'
   | 'IDENTITY_PROVISIONING_FAILED'
   | 'MEMBERSHIP_REQUIRED'
@@ -24,6 +27,28 @@ export class FinwiseError extends Error {
 
   static authRequired(message = 'Authentication is required.'): FinwiseError {
     return new FinwiseError('AUTH_REQUIRED', message, 401);
+  }
+
+  static invalidCredentials(): FinwiseError {
+    return new FinwiseError(
+      'AUTH_INVALID_CREDENTIALS',
+      'Email or password is incorrect.',
+      401,
+    );
+  }
+
+  static accountLocked(): FinwiseError {
+    return new FinwiseError(
+      'AUTH_ACCOUNT_LOCKED',
+      'Too many failed attempts. Try again later.',
+      429,
+    );
+  }
+
+  static configuration(
+    message = 'Authentication service is unavailable.',
+  ): FinwiseError {
+    return new FinwiseError('AUTH_CONFIGURATION', message, 503);
   }
 
   static sessionExpired(): FinwiseError {

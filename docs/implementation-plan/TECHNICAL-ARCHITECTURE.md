@@ -12,7 +12,7 @@ Prisma schema until the open decisions are confirmed.
 | Area | Current state |
 | --- | --- |
 | Web | Next.js 16 App Router, React 19, TypeScript, Tailwind CSS 4 starter |
-| API | NestJS 11, TypeScript, Prisma 7, PostgreSQL/Supabase starter |
+| API | NestJS 11, TypeScript, Prisma 7, PostgreSQL |
 | Mobile | React Native/TypeScript for iOS and Android; Expo development builds and Prebuild/CNG are the recommended baseline |
 | Repository | TypeScript monorepo target; applications currently use separate pnpm installs and the mobile source migration is pending |
 | Database | Existing Prisma model is an obsolete database-first draft and is not approved domain truth |
@@ -29,12 +29,12 @@ React Native Android -- shared generated TypeScript client ----+          |
                                                                           |
                                                                +----------+----------+
                                                                |                     |
-                                                     PostgreSQL / Supabase      Worker process
+                                                     PostgreSQL                 Worker process
                                                                |               bank sync/import/
                                                                |               notifications
                                                                +--- outbox/jobs -----+
 
-External edges: Supabase Auth, bank providers, object storage,
+External edges: Finwise Auth crypto, bank providers, object storage,
 push notification service, future market-price providers.
 ```
 
@@ -48,8 +48,8 @@ Recommendations:
    API contract as web.
 5. PostgreSQL is the transactional source of truth. Redis/queues and read
    projections are derived/infrastructure concerns.
-6. Supabase clients may be used for authentication and approved storage flows;
-   web/mobile must not use the Supabase Data API to bypass Nest authorization.
+6. Auth crypto and storage adapters stay at the edges; web/mobile must not
+   query PostgreSQL to bypass Nest authorization.
 
 ## 3. Repository strategy
 
@@ -249,33 +249,34 @@ authenticate -> resolve membership -> permission/resource policy
 
 | Option | Advantages | Disadvantages |
 | --- | --- | --- |
-| Supabase Auth | Existing Supabase footprint, Next/React Native support, OAuth/email, JWT/JWKS | Vendor dependency; SSR/mobile token storage and deep links need care |
+| Finwise Auth | Full credential/session control, RS256/JWT, PostgreSQL auditability | Key rotation, abuse controls, recovery and MFA are owned operationally |
 | Self-hosted Better Auth | More control and TypeScript-first | More operational/security ownership; mobile integration must be proven |
 | Clerk/Auth0 | Fast polished auth and administration | Higher recurring cost and vendor coupling |
 
-**Recommendation for MVP:** Supabase Auth, subject to product-owner approval.
-It fits the current database provider and the intended `externalAuthUserId`.
+**MVP decision:** Finwise-owned email/password auth with PostgreSQL-backed
+refresh sessions and RS256 access JWTs.
 The detailed login, provisioning, refresh, logout, and deletion proposal is in
 [`AUTH-SESSION-ARCHITECTURE.md`](AUTH-SESSION-ARCHITECTURE.md).
 
 Boundary rules:
 
-- Supabase Auth proves identity only; workspace roles/account policies remain in
+- Finwise Auth proves identity only; workspace roles/account policies remain in
   Finwise;
 - Nest verifies access-token signature, issuer, audience, expiry, and subject
   using provider JWKS/high-quality JWT tooling;
 - Nest maps `sub` to internal `UserId` and performs authorization on every API
   request;
 - web uses secure, HTTP-only session cookie integration where practical;
-- React Native uses `@supabase/supabase-js` behind an approved SecureStore-backed
-  session adapter and sends the access token only to NestJS business endpoints;
+- React Native uses the generated Finwise auth contract behind an approved
+  SecureStore-backed session adapter and sends the access token only to NestJS
+  business endpoints;
 - biometric unlock is a local app-lock convenience, not a replacement for
   server authentication;
 - clients never receive database service keys or bank secrets.
 
 ## 8. Persistence and money representation
 
-PostgreSQL/Supabase remains recommended. Prisma is an infrastructure adapter,
+PostgreSQL remains recommended. Prisma is an infrastructure adapter,
 not the domain model.
 
 Recommended numeric model:
@@ -298,8 +299,8 @@ Persistence redesign must include:
 - audit/outbox records in the same transaction as the business write;
 - indexes derived from approved queries, not speculative blanket indexing.
 
-Use separate Supabase projects or equivalent isolated resources for development,
-staging, and production. Migrations run through CI/deploy, never from browser or
+Use isolated PostgreSQL resources for development, staging, and production.
+Migrations run through CI/deploy, never from browser or
 mobile clients.
 
 ## 9. Background jobs and events
@@ -333,7 +334,7 @@ later.
 
 ## 10. Files, receipts, and exports
 
-Use object storage (Supabase Storage or S3-compatible) for CSV originals,
+Use object storage (S3-compatible or managed provider) for CSV originals,
 receipts, avatars, and generated exports. PostgreSQL stores metadata, ownership,
 hash, scan status, retention status, and object key—not large binary payloads.
 
@@ -383,7 +384,7 @@ Deployment provider is Open. The architecture requires:
 - long-running/container Nest API rather than relying exclusively on short-lived
   serverless functions;
 - separately runnable worker once background jobs are enabled;
-- managed PostgreSQL/Supabase;
+- managed PostgreSQL;
 - managed Redis only when BullMQ is introduced;
 - React Native Android builds may run locally or in compatible CI; React Native
   iOS builds require macOS/Xcode locally or a macOS cloud runner, code signing,
@@ -407,7 +408,7 @@ expected pilot traffic are known.
 
 ### Slice 1: identity and workspace shell
 
-- Supabase Auth spike for Next + React Native + Nest JWT verification;
+- Finwise Auth spike for Next + React Native + Nest JWT verification;
 - user provisioning, workspace creation/switching;
 - protected routes and permission-denied contract;
 - web/mobile workspace shell.
@@ -452,11 +453,10 @@ before exposing one usable vertical workflow.
 
 ## 15. Decisions required before implementation
 
-1. Approve Supabase Auth or choose another identity provider.
+1. Confirm Finwise-owned auth operations, key rotation, and recovery policy.
 2. Approve the pnpm monorepo and one shared generated TypeScript OpenAPI client.
 3. Approve mobile offline level defined in the mobile plan.
-4. Choose first login methods: email/password, email OTP/magic link, Google,
-   and/or Apple.
+4. Confirm email/password as the first login method; defer OTP/social methods.
 5. Choose deployment budget/provider preference and primary region.
 6. Confirm whether the first pilot needs receipts/image uploads and push
    notifications.

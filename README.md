@@ -13,14 +13,14 @@ The current implementation slice covers development-auth bootstrap, personal
 and shared-workspace boundaries, VND exact-money accounts, opening balances,
 income/expense/transfer journals, idempotent commands, void-by-reversal, audit
 history, custom RBAC/account scope, and a responsive web dashboard shell. The
-remaining MVP contexts (production Supabase OTP/JWKS,
+remaining MVP contexts (workspace persistence, password recovery/MFA,
 PostgreSQL repositories/migrations, budgets,
 Group Treasury, CSV reconciliation, and the pilot hardening gate) remain
 tracked in [`docs/implementation-plan/README.md`](docs/implementation-plan/README.md).
 
 ## Setup
 
-Copy the backend environment template, fill in the Supabase connection values,
+Copy the backend environment template, fill in the PostgreSQL connection values,
 then install dependencies and generate the Prisma client:
 
 ```powershell
@@ -30,6 +30,13 @@ pnpm setup
 
 `pnpm setup` installs all workspace packages and runs `pnpm db:generate`. It
 does not create or modify environment files.
+
+Generate a local RSA signing pair for custom JWT sessions and copy the printed
+values into `backend/.env`:
+
+```powershell
+node scripts/generate-jwt-keys.mjs
+```
 
 ## Development
 

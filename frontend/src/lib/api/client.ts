@@ -31,7 +31,7 @@ import {
   isReconciliationSummary,
   isRecord,
 } from "./contracts";
-import { getSupabaseBrowserClient } from "../auth/supabase-browser";
+import { getAccessToken } from "../auth/session";
 
 export type AccessTokenProvider = () => Promise<string | undefined>;
 
@@ -171,6 +171,9 @@ type HttpFinwiseApiOptions = {
 
 const errorMessages: Record<string, ApiError["code"]> = {
   AUTH_REQUIRED: "AUTH_REQUIRED",
+  AUTH_INVALID_CREDENTIALS: "AUTH_INVALID_CREDENTIALS",
+  AUTH_ACCOUNT_LOCKED: "AUTH_ACCOUNT_LOCKED",
+  AUTH_CONFIGURATION: "AUTH_CONFIGURATION",
   SESSION_EXPIRED: "SESSION_EXPIRED",
   MEMBERSHIP_REQUIRED: "MEMBERSHIP_REQUIRED",
   PERMISSION_DENIED: "PERMISSION_DENIED",
@@ -242,15 +245,7 @@ export function createHttpFinwiseApi(
     : undefined;
 
   const getRuntimeAccessToken: AccessTokenProvider =
-    options.getAccessToken ??
-    (async () => {
-      const supabase = getSupabaseBrowserClient();
-      if (!supabase) return undefined;
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      return session?.access_token;
-    });
+    options.getAccessToken ?? getAccessToken;
 
   async function getJson<T>(
     path: string,

@@ -23,8 +23,8 @@ React Native Android ------ TypeScript OpenAPI client ----+       +--> PostgreSQ
                                                                  +--> workers/providers
 ```
 
-No web or mobile client directly queries Finwise financial tables. Supabase may
-provide identity and signed storage access, but NestJS is the only business API,
+No web or mobile client directly queries Finwise financial tables. Finwise Auth
+and storage adapters stay behind application ports, and NestJS is the only API,
 authorization boundary, and source of confirmed financial state.
 
 ## 2. Recommended Expo workflow
@@ -200,7 +200,7 @@ Rules:
 
 1. Route files read route params and compose screens; they do not call HTTP or
    contain financial logic.
-2. Presentational components do not call HTTP, SQLite, Supabase, or native APIs.
+2. Presentational components do not call HTTP, SQLite, auth adapters, or native APIs.
 3. Feature repositories coordinate generated API operations and local storage.
 4. API DTOs and SQLite rows are mapped explicitly to UI-facing models.
 5. Mobile validation improves UX; Nest repeats important validation and owns
@@ -222,7 +222,7 @@ SDK's supported versions.
 | Forms | React Hook Form plus Zod | Form UX only; backend validates again |
 | HTTP | Generated TypeScript OpenAPI client | Thin runtime/auth adapter |
 | Local relational data | `expo-sqlite` | Cache, migrations, drafts, outbox |
-| Auth | `@supabase/supabase-js` if Supabase Auth is approved | Identity only |
+| Auth | Generated Finwise auth contract + SecureStore adapter | Identity only |
 | Secrets/session | `expo-secure-store` adapter | Tokens/small secrets, not app data |
 | Biometrics | `expo-local-authentication` | Local app lock only |
 | Camera/receipts | Expo camera/image-picker packages | App-private staging before upload |
@@ -308,15 +308,15 @@ supplies:
 - refresh/logout behavior;
 - safe logging with secret and PII redaction.
 
-With Supabase Auth:
+With Finwise Auth:
 
-1. React Native authenticates through `@supabase/supabase-js`.
+1. React Native authenticates through the generated Finwise auth contract.
 2. A mobile storage adapter persists session material using the approved secure
    storage design.
 3. Mobile attaches the access token only to Nest business requests.
 4. Nest validates signature, issuer, audience, expiry, and subject.
 5. Nest maps `sub` to internal `UserId` and evaluates Finwise permissions.
-6. Mobile never uses the Supabase Data API for financial reads or writes.
+6. Mobile never queries PostgreSQL directly for financial reads or writes.
 
 The proposed first login method, session state machine, Nest bootstrap contract,
 logout behavior, and account-deletion flow are specified in
@@ -515,8 +515,8 @@ Remaining product/operations choices:
 
 1. Confirm Expo/CNG as binding rather than recommended, or select bare React
    Native with an explicit native-maintenance reason.
-2. Confirm the proposed email OTP-only pilot login method and production custom
-   SMTP requirement.
+2. Confirm production password recovery/MFA, rate-limit, and key-rotation
+   boundaries for the custom auth service.
 3. Decide whether offline drafts survive logout/user switching or require
    sync/export/discard.
 4. Decide whether SQLCipher is required for the pilot threat model.

@@ -15,7 +15,7 @@ controlled offline drafts without creating a second ledger.
 - Use Expo Router, development builds, Prebuild/CNG, and the New Architecture.
   Expo Go is not the primary verification runtime; generated native projects are
   not hand-edited.
-- Supabase Auth uses one SecureStore-backed adapter. Tokens never enter
+- Finwise Auth uses one SecureStore-backed adapter. Tokens never enter
   AsyncStorage, SQLite, query caches, logs, analytics, route params, or crash
   breadcrumbs. Biometric lock is local convenience only.
 - Bootstrap must reach `AUTHENTICATED_READY` before protected cached data renders.
@@ -66,7 +66,7 @@ contribution/claim submission and approval inbox consume online workflows.
 
 | Area | Required cases |
 | --- | --- |
-| Auth | OTP/deep link, secure restore, refresh single-flight, revoked session, biometric recovery |
+| Auth | Credential login, secure restore, refresh single-flight, revoked session, biometric recovery |
 | Data | generated-client contract, cache freshness, workspace/user partition isolation |
 | Offline | draft → process death → retry → server confirmation, duplicate retry, conflict/action required |
 | UX | loading/cached/stale/empty/error/offline/denied/partial/expired-session states |

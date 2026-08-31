@@ -19,10 +19,10 @@ investments are expansion work.
 - Expose REST `/v1` with Nest-generated OpenAPI and a disposable generated
   TypeScript client shared by web and React Native. Do not share ORM/domain
   types with clients.
-- Use Supabase Auth with six-digit email OTP for the pilot. Nest verifies the
-  JWT and owns all workspace/resource authorization. Production pilot requires
-  custom SMTP, sender authentication, rate limits, cooldowns, and generic auth
-  responses.
+- Use Finwise-owned email/password authentication on PostgreSQL. Nest signs
+  short-lived RS256 access JWTs and rotates hashed opaque refresh sessions;
+  Nest owns all workspace/resource authorization. Production requires key
+  rotation, rate limits, recovery controls, and generic auth responses.
 - Bootstrap one personal workspace exactly once per internal user. Additional
   workspaces are explicit creates or invitations.
 - Effective permissions are the union of active roles. Typed resource policies

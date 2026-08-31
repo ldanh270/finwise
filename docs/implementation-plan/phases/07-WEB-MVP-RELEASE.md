@@ -23,8 +23,8 @@ repeatable dev → staging → pilot release gate.
   Group Treasury core, CSV/reconciliation, audit, exports, and core reports.
   Bank API, mobile, loans, investments, recurring transactions, multi-currency,
   billing, and peer settlement remain outside the pilot gate.
-- Auth pilot requires custom SMTP, six-digit OTP cooldown/rate limits, generic
-  responses, abuse monitoring, and safe support/request IDs.
+- Auth pilot requires password recovery/MFA planning, login/refresh rate limits,
+  generic responses, abuse monitoring, key rotation, and safe request IDs.
 
 ## Data flow
 
@@ -61,7 +61,7 @@ focus management, labels, table alternatives for charts, and responsive layouts.
 
 | Area | Required cases |
 | --- | --- |
-| Critical journeys | OTP → bootstrap → account → transaction → budget/report refresh |
+| Critical journeys | Login → bootstrap → account → transaction → budget/report refresh |
 | Group/import | collection verification, claim/reimbursement, CSV confirm, reconciliation |
 | State UX | loading/empty/stale/retry/business error/denied/partial on every data screen |
 | Security | route/API cross-tenant denial, hidden-account aggregate/export leak |
