@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "Finwise",
+    "slug": "finwise",
+    "scheme": "finwise",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "plugins": ["expo-router", "expo-secure-store"],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "ios": {
+      "bundleIdentifier": "com.finwise.mobile"
+    },
+    "android": {
+      "package": "com.finwise.mobile"
+    }
+  }
+}
