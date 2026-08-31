@@ -1,6 +1,6 @@
 # Phase 8 — React Native mobile
 
-Status: Starts after web MVP pilot contracts stabilize  
+Status: Outbox boundary complete — Expo/outbox scaffold, generated-client adapter, and restart snapshots delivered; native adapters remain
 Depends on: [Phase 7](07-WEB-MVP-RELEASE.md), generated OpenAPI client, [auth/session architecture](../AUTH-SESSION-ARCHITECTURE.md)  
 Unblocks: first-class iOS/Android daily capture
 
@@ -83,6 +83,15 @@ deep-link domains, Auth/Storage resources, and runtime-version policy. Build an
 internal development build before device verification; iOS signing requires a
 macOS local or managed runner.
 
+## Delivered slices
+
+- 2026-08-31: Expo Router scaffold, exact-money manual-draft outbox, cache
+  partitioning, and provider-neutral online sync coordinator are checked in.
+  The coordinator preserves `clientCommandId` as the idempotency key and
+  distinguishes retryable failures from conflicts requiring user action. See
+  the [mobile outbox scaffold walkthrough](../../reviews/2026-08-31-mobile-outbox-scaffold-walkthrough.md)
+  and [mobile sync walkthrough](../../reviews/2026-08-31-mobile-outbox-sync-walkthrough.md).
+
 ## Exit criteria
 
 - One codebase delivers the online path sign-in → bootstrap → workspace →
@@ -91,3 +100,15 @@ macOS local or managed runner.
   cannot create duplicates or alter confirmed balances.
 - Secure logout/user switching, cache partitioning, deep links, and typed error
   handling pass physical-device tests.
+
+## Delivered slices
+
+- 2026-08-31: Expo Router/CNG metadata, controlled manual-draft outbox state
+  machine, stable idempotency key, and user/workspace cache partition helper.
+  See the [change walkthrough](../../reviews/2026-08-31-mobile-outbox-scaffold-walkthrough.md).
+- 2026-08-31: a provider-neutral adapter now maps the generated transaction
+  client into the outbox and validates user/workspace-partitioned snapshots for
+  process restart recovery. See the [outbox persistence adapter walkthrough](../../reviews/2026-08-31-mobile-outbox-persistence-adapter-walkthrough.md).
+
+The phase remains open until SecureStore, SQLite, generated API screens,
+process-death recovery, and Android/iOS development-build verification pass.

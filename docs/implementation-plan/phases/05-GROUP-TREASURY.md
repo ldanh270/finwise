@@ -1,6 +1,6 @@
 # Phase 5 — Group Treasury MVP
 
-Status: Ready after Phase 4  
+Status: MVP boundary complete — application + web progress/report slice is shipped in-memory; production persistence gates remain
 Depends on: [Phase 2](02-IDENTITY-WORKSPACE-ACCESS.md), [Phase 3](03-LEDGER-ACCOUNTS-TRANSACTIONS.md), [Phase 4](04-CLASSIFICATION-BUDGETING-REPORTING.md)  
 Unblocks: group-facing web MVP and future mobile group flows
 
@@ -107,3 +107,21 @@ original evidence.
 - No submission/approval changes balance before the specified posting action.
 - Group reports keep cash, expense, payable, sponsored value, and pending queue
   distinct and do not double count reimbursements.
+
+## First-slice evidence
+
+`backend/src/group` now separates participant/collection workflow records from
+the Ledger port. It supports obligations, pending contribution submissions,
+verification posting, explicit overpayment user-action state, sponsored
+expenses, self-approval prevention for claims, payable creation and partial or
+full reimbursement transfers. Reimbursement now requires an idempotency key
+and replays duplicate commands without a second transfer. The application
+slice now also supports one-receipt allocation across obligations, explicit
+overpayment decisions, direct group-account expenses, collection progress, and
+separate summary measures. Durable audit/source links, controlled templates,
+and Prisma constraints remain. See the
+[Group Treasury walkthrough](../../reviews/2026-08-31-group-treasury-walkthrough.md),
+[retry-safety walkthrough](../../reviews/2026-08-31-group-reimbursement-idempotency-walkthrough.md),
+[collection progress walkthrough](../../reviews/2026-08-31-group-collection-progress-walkthrough.md),
+[web walkthrough](../../reviews/2026-08-31-group-treasury-web-walkthrough.md),
+and [MVP phase walkthrough](../../reviews/2026-08-31-group-treasury-mvp-phase-walkthrough.md).

@@ -1,6 +1,6 @@
 # Phase 9 — Wealth modules and bank beta
 
-Status: Expansion after web MVP/mobile foundation  
+Status: Application boundary complete — pure wealth calculators and workspace-scoped application slice delivered; persistence/API/provider work remains
 Depends on: ledger source links, access policies, ingestion/reconciliation, Phase 7 release controls  
 Blocks: none for MVP
 
@@ -95,3 +95,16 @@ gates; code must remain adapter/provider-neutral.
 - A selected bank provider can sync/retry into the shared inbox without duplicate
   records or journals, and revoked/pending data is handled safely.
 - Worker failure cannot roll back committed financial truth or leak secrets.
+
+## Delivered slices
+
+- 2026-08-31: exact bigint loan schedules/payment allocation and weighted-
+  average investment position/valuation calculators. See the [change
+  walkthrough](../../reviews/2026-08-31-wealth-domain-calculators-walkthrough.md).
+- 2026-08-31: workspace-scoped application ports now orchestrate version-one
+  loan schedules, repeat payment allocation, investment trades, and valuation
+  snapshots over the pure calculators. See the [wealth application boundary walkthrough](../../reviews/2026-08-31-wealth-application-boundary-walkthrough.md).
+
+The phase remains open until context persistence, confirmed-ledger
+coordination, portfolio/loan APIs, and a provider-gated bank adapter pass their
+respective tests and security review.

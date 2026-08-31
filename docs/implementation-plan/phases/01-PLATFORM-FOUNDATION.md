@@ -1,6 +1,6 @@
 # Phase 1 — Platform foundation
 
-Status: In progress — runtime primitives and contract snapshot landed; generator/CI gate pending  
+Status: Boundary complete — runtime primitives and strengthened contract snapshot landed; official generator/CI freshness gate pending
 Depends on: [Phase 0](00-ROADMAP-AND-DECISIONS.md)  
 Unblocks: identity, ledger, and all feature modules
 
@@ -95,6 +95,37 @@ proves they contain no real data; then create a clearly named new baseline.
 Root script removal is allowed only for obsolete Flutter/duplicate install
 paths identified by the approved React Native migration, and must be a separate
 reviewable diff from feature work.
+
+## Delivered slices
+
+- 2026-08-31: runtime configuration is parsed once at startup with safe
+  development defaults, bounded ports, explicit CORS origins, and fail-closed
+  production requirements for database and Supabase JWT secrets. See the
+  [runtime configuration walkthrough](../../reviews/2026-08-31-runtime-config-walkthrough.md).
+- 2026-08-31: `@finwise/api-client` now exposes shared typed transport
+  operations for balance views, manual transactions, CSV, PATCH, and DELETE,
+  while keeping the official `typescript-fetch` generator as an explicit
+  follow-up gate. See the [shared API transport walkthrough](../../reviews/2026-08-31-shared-api-transport-walkthrough.md).
+- 2026-08-31: the OpenAPI check now validates canonical operation presence,
+  unique operation IDs, and idempotency-key coverage for financial commands;
+  opening-balance and void operations are represented in the contract snapshot.
+  See the [OpenAPI contract gate walkthrough](../../reviews/2026-08-31-openapi-contract-gate-walkthrough.md).
+- 2026-08-31: root pnpm now carries the reviewed dependency safety settings and
+  the lockfile includes the mobile workspace importer, so frozen installs no
+  longer fail on stale workspace metadata. See the
+  [root pnpm install-policy walkthrough](../../reviews/2026-08-31-pnpm-workspace-install-policy-walkthrough.md).
+- 2026-08-31: the root development runner now dispatches `pnpm.cmd` through the
+  Windows shell, removing the `spawn EINVAL` startup failure while preserving
+  direct Unix spawning. See the
+  [Windows development runner walkthrough](../../reviews/2026-08-31-windows-dev-runner-walkthrough.md).
+- 2026-08-31: root Jest wrappers no longer pass a literal `--` argument under
+  pnpm 11, so `pnpm test` and `pnpm test:e2e` forward `--runInBand` to Jest as
+  intended. See the
+  [root test-runner argument walkthrough](../../reviews/2026-08-31-root-test-runner-arguments-walkthrough.md).
+- 2026-08-31: the backend explicitly declares Nest's runtime validation
+  dependencies, allowing clean startup to load `ValidationPipe` and register
+  the `/v1` routes. See the
+  [Nest runtime validation dependencies walkthrough](../../reviews/2026-08-31-nest-runtime-validation-dependencies-walkthrough.md).
 
 ## Exit criteria
 

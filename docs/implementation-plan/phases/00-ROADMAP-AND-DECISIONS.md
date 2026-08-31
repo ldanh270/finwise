@@ -146,6 +146,14 @@ safe baseline replacement. Every migration has a rollback/recovery note,
 backup/restore verification, and a projection rebuild path. No phase may hard
 delete a posted journal or silently discard user data.
 
+## Delivered preflight tooling
+
+- 2026-08-31: `pnpm db:preflight` (or `node scripts/database-preflight.mjs`)
+  performs a read-only PostgreSQL metadata inspection, detects placeholder
+  credentials, reports whether estimated table data exists, and sanitizes
+  connection-failure diagnostics. It never migrates, resets, deletes, or
+  rebaselines a database. See the [database preflight walkthrough](../../reviews/2026-08-31-database-preflight-walkthrough.md).
+
 ## Exit criteria
 
 - Product owner decisions in the roadmap are reflected in implementation docs.

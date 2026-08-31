@@ -1,6 +1,6 @@
 # Phase 4 — Classification, budgets, and reporting
 
-Status: Ready after Phase 3  
+Status: Planning boundary complete — category/classification, budget projection, rollover calculation, and web planning slices landed; persistence/reporting gates remain
 Depends on: [Phase 3](03-LEDGER-ACCOUNTS-TRANSACTIONS.md), Phase 2 account policies  
 Unblocks: Group budget views and web MVP reporting
 
@@ -104,6 +104,17 @@ ambiguous parent/child relationships, and require an operator review. Build
 actuals from Phase 3 classification lines after ledger migration, then compare
 old/new totals before enabling reports.
 
+## Delivered slices
+
+- 2026-08-31: nested budget allocation now derives `BY_CHILDREN` parent
+  totals and prevents nested child constraints from being counted twice.
+  Fixed allocations are applied before recurring percentage guardrails, and
+  rollover remains outside the percentage base. See the [budget allocation
+  walkthrough](../../reviews/2026-08-31-budget-allocation-walkthrough.md).
+- 2026-08-31: the web dashboard now manages categories/tags, monthly budget
+  constraints, period selection, projection totals, and explicit close using
+  the existing scoped core endpoints. See the [web budget planning walkthrough](../../reviews/2026-08-31-web-budget-planning-walkthrough.md).
+
 ## Exit criteria
 
 - Split transactions classify one account movement exactly and feed reports and
@@ -112,3 +123,15 @@ old/new totals before enabling reports.
   no double counting.
 - Reports are rebuildable, scope-filtered, freshness-aware, and safe for partial
   visibility; goals clearly separate planning from balances.
+
+## First-slice evidence
+
+The in-memory core now enforces two-level category trees, archived category
+history, line-level tags, exact classification sums and leaf-category posting.
+It also supports one budget period per workspace/month with fixed and
+percentage allocations, descendant actuals filtered by account visibility,
+remaining totals and explicit close. A pure rollover calculator now covers
+`NONE`, `POSITIVE_ONLY`, and `FULL_BALANCE`; persisted rollover/reopen/carry
+adjustment, goal progress, and durable Prisma constraints remain. See the
+[classification and budget walkthrough](../../reviews/2026-08-30-classification-budget-walkthrough.md)
+and [rollover walkthrough](../../reviews/2026-08-31-budget-rollover-domain-walkthrough.md).

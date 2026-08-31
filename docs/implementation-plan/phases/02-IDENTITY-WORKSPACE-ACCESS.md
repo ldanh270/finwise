@@ -103,11 +103,13 @@ for malformed legacy memberships, never a request-time silent fix.
 
 ## First-slice evidence
 
-`backend/src/auth` now provides a development token boundary and
+`backend/src/auth` now provides a development token boundary with issuer and
+audience claim checks and
 `GET /v1/session/bootstrap` provisions one internal user plus one personal
 workspace through an in-memory adapter. The core slices also provide custom
 role CRUD, role assignment, account visibility policy/access preview,
 invitation lifecycle, member removal, owner transfer and owner-only archive.
 OTP UI, production Supabase JWKS validation, email delivery and durable
-authorization audit remain. See the [identity/RBAC walkthrough](../../reviews/2026-08-30-identity-rbac-account-scope-walkthrough.md)
-and [membership lifecycle walkthrough](../../reviews/2026-08-30-membership-lifecycle-walkthrough.md).
+authorization audit remain. See the [identity/RBAC walkthrough](../../reviews/2026-08-30-identity-rbac-account-scope-walkthrough.md),
+[membership lifecycle walkthrough](../../reviews/2026-08-30-membership-lifecycle-walkthrough.md),
+and [JWT claims walkthrough](../../reviews/2026-08-31-auth-jwt-claims-walkthrough.md).

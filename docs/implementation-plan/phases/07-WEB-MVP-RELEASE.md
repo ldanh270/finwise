@@ -1,6 +1,6 @@
 # Phase 7 — Web MVP hardening and pilot release
 
-Status: Ready after Phases 2–6  
+Status: MVP command boundary complete — ledger/group command surfaces delivered; auth, accessibility, and pilot gates remain
 Depends on: identity/access, ledger, planning/reporting, Group Treasury, ingestion  
 Unblocks: production pilot and Phase 8 mobile consumers
 
@@ -85,3 +85,28 @@ to the prior API/image while preserving additive migrations.
 - SMTP/rate limits/redaction/audit/metrics are configured and verified.
 - Backup/restore, ledger rebuild, migration, and rollback drills pass before
   pilot invitations.
+
+## Delivered slices
+
+- 2026-08-31: policy-filtered transaction CSV export is available at
+  `GET /v1/workspaces/:workspaceId/transactions/export`; the web dashboard
+  provides download progress, success, and retryable error states. See the
+  [change walkthrough](../../reviews/2026-08-31-web-mvp-hardening-walkthrough.md).
+- 2026-08-31: overview responses now expose a truthful server-computed
+  `hasPartialAccess` indicator for hidden account scopes. See the [partial
+  access walkthrough](../../reviews/2026-08-31-partial-access-indicator-walkthrough.md).
+- 2026-08-31: the web dashboard consumes the scoped balance endpoint and shows
+  ledger/cleared/reconciled detail per visible account with independent error
+  fallback. See the [web balance views walkthrough](../../reviews/2026-08-31-web-balance-views-walkthrough.md).
+- 2026-08-31: account creation, opening balances, and income/expense/transfer
+  commands are available through feature-owned web forms with refresh-after-
+  success and typed error states. See the [ledger command walkthrough](../../reviews/2026-08-31-web-ledger-command-walkthrough.md).
+- 2026-08-31: the Transactions screen now exposes an idempotent, reasoned Void
+  action that posts a reversal and renders server-provided `posted`/`voided`
+  status. See the [transaction correction walkthrough](../../reviews/2026-08-31-web-transaction-correction-walkthrough.md).
+- 2026-08-31: Group Treasury progress, separated report measures, and direct
+  expense posting are available in a workspace-scoped web section. See the
+  [Group Treasury web walkthrough](../../reviews/2026-08-31-group-treasury-web-walkthrough.md).
+
+The phase remains open until the full MVP workflows, operational controls,
+accessibility checks, and pilot recovery drills meet the exit criteria above.

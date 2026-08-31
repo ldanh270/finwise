@@ -1,6 +1,6 @@
 # Phase 6 — CSV ingestion and reconciliation
 
-Status: Ready after Phase 3; use after Phase 2 access policies  
+Status: MVP boundary complete — CSV inbox/review, confirmation decisions, bulk partial-failure results, reconciliation, and raw-delete guard slices are usable; durable persistence/object retention remain
 Depends on: [Phase 2](02-IDENTITY-WORKSPACE-ACCESS.md), [Phase 3](03-LEDGER-ACCOUNTS-TRANSACTIONS.md), Phase 1 object-storage/audit ports  
 Unblocks: full web MVP and future bank adapters
 
@@ -99,6 +99,16 @@ them as `NEEDS_REVIEW` with an original hash and migration source, then use the
 normal confirmation path. Preserve old statement references and produce a
 duplicate/reconciliation report before enabling automated imports.
 
+## Delivered slices
+
+- 2026-08-31: CSV dedup/match/confirm, bulk confirmation, source links, raw
+  retention guard, and workspace-scoped reconciliation checkpoint listing are
+  available in the in-memory vertical slice. See the [reconciliation list
+  walkthrough](../../reviews/2026-08-31-reconciliation-list-walkthrough.md).
+- 2026-08-31: The web dashboard now exposes import-session review, normalized
+  record confirm/ignore actions, CSV staging/upload, and reconciliation
+  checkpoint creation. See the [ingestion and reconciliation web walkthrough](../../reviews/2026-08-31-ingestion-reconciliation-web-walkthrough.md).
+
 ## Exit criteria
 
 - Re-importing a CSV does not create duplicate internal transactions.
@@ -106,3 +116,18 @@ duplicate/reconciliation report before enabling automated imports.
   link, and bulk errors do not roll back valid rows.
 - Reconciliation checkpoints and explicit adjustments rebuild correctly and raw
   data visibility/retention rules are enforced.
+
+## First-slice evidence
+
+`backend/src/ingestion` now validates and normalizes bounded CSV content into a
+private workspace inbox, hashes files for idempotent re-import, records
+fingerprint duplicate evidence, supports match-without-posting and terminal
+ignore/needs-attention decisions, and confirms exactly one income/expense
+journal per row. Reconciliation checkpoints capture ledger/external balances
+and resolve differences only through explicit adjustment journals. Object
+storage retention and durable audit tables remain. Bulk confirmation now
+returns independent row outcomes with stable retry keys, confirmed rows link to
+their journal provenance, and raw deletion is guarded by terminal session
+state. See the [ingestion walkthrough](../../reviews/2026-08-31-csv-reconciliation-walkthrough.md),
+[bulk-confirm walkthrough](../../reviews/2026-08-31-ingestion-bulk-confirm-walkthrough.md),
+and [retention walkthrough](../../reviews/2026-08-31-ingestion-retention-walkthrough.md).

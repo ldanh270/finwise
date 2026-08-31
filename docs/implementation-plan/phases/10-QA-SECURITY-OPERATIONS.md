@@ -90,3 +90,16 @@ account/report totals before enabling the next phase.
   worker, projection drift, leaked credential response, and rollback.
 - Pilot and subsequent releases have a named approver, monitored rollout, and
   auditable post-release review.
+
+## Delivered slices
+
+- 2026-08-31: liveness/readiness endpoints with safe 503 dependency handling,
+  build metadata, and allowlisted request correlation IDs. See the [change
+  walkthrough](../../reviews/2026-08-31-qa-health-correlation-walkthrough.md).
+- 2026-08-31: startup diagnostics now use a tested recursive redaction boundary
+  for credential-like keys and embedded sensitive error values. See the [safe
+  log redaction walkthrough](../../reviews/2026-08-31-safe-log-redaction-walkthrough.md).
+
+The continuous gate remains open until observability, security scanning,
+recovery drills, rate limits, and release evidence are attached to a pilot
+candidate.
