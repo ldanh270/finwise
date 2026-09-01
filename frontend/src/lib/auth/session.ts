@@ -1,9 +1,8 @@
 "use client";
 
-const API_URL = (process.env.NEXT_PUBLIC_FINWISE_API_URL ?? "").replace(
-  /\/$/,
-  "",
-);
+import { getClientApiUrl } from "../api/runtime-url";
+
+const API_URL = getClientApiUrl();
 
 export interface AuthUser {
   readonly id: string;

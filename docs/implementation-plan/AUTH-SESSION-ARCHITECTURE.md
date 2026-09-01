@@ -1,7 +1,7 @@
 # Finwise custom authentication and session architecture
 
 Status: Confirmed for PostgreSQL deployment
-Last updated: 2026-08-31
+Last updated: 2026-09-01
 
 ## Boundary and decisions
 
@@ -115,6 +115,13 @@ page validates the cookie against `GET /v1/auth/session`, so stale cookies do
 not grant access. The `/auth` page supports sign-in and account creation and
 redirects to the dashboard only after a successful API response. Sign-out calls
 the revoke endpoint and clears memory state.
+
+For local development, the web boundary defaults to `http://localhost:3001`
+when `NEXT_PUBLIC_FINWISE_API_URL` is absent. Production keeps the explicit
+configuration requirement and fails closed when the API URL is missing. Auth,
+server-session validation, and the shared API adapter all resolve the URL
+through the same runtime helper so a missing local `.env.local` cannot make
+only one part of the client report a false configuration failure.
 
 The generated API client receives a token callback. Safe reads may retry once
 after a single-flight refresh; financial commands keep the original body and

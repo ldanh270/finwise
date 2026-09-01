@@ -19,8 +19,13 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 ## Finwise authentication
 
 Copy `.env.example` to `.env.local` and set `NEXT_PUBLIC_FINWISE_API_URL` to
-your NestJS API. Finwise Auth handles email/password sign-in and registration;
+your NestJS API when it is not running on the default development port. Finwise
+Auth handles email/password sign-in and registration;
 the NestJS API then bootstraps the internal user and personal workspace.
+
+When `NODE_ENV` is development and the variable is absent, the frontend uses
+`http://localhost:3001` automatically. Production still requires an explicit
+API URL and fails closed when it is missing.
 
 ```powershell
 Copy-Item .env.example .env.local

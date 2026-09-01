@@ -107,6 +107,10 @@ to the prior API/image while preserving additive migrations.
 - 2026-08-31: Group Treasury progress, separated report measures, and direct
   expense posting are available in a workspace-scoped web section. See the
   [Group Treasury web walkthrough](../../reviews/2026-08-31-group-treasury-web-walkthrough.md).
+- 2026-09-01: dashboard typography now uses the loaded Geist UI family, the
+  Overview empty state is responsive and non-overlapping, Group Treasury
+  summary cards share the standard metric rhythm, and the shell has one
+  profile affordance. See the [web UI consistency walkthrough](../../reviews/2026-09-01-web-ui-consistency-walkthrough.md).
 
 The phase remains open until the full MVP workflows, operational controls,
 accessibility checks, and pilot recovery drills meet the exit criteria above.

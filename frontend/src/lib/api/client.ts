@@ -32,6 +32,7 @@ import {
   isRecord,
 } from "./contracts";
 import { getAccessToken } from "../auth/session";
+import { getClientApiUrl } from "./runtime-url";
 
 export type AccessTokenProvider = () => Promise<string | undefined>;
 
@@ -238,8 +239,7 @@ async function readJson(response: Response): Promise<unknown> {
 export function createHttpFinwiseApi(
   options: HttpFinwiseApiOptions = {},
 ): FinwiseApi {
-  const configuredBaseUrl =
-    options.baseUrl ?? process.env.NEXT_PUBLIC_FINWISE_API_URL;
+  const configuredBaseUrl = options.baseUrl ?? getClientApiUrl();
   const baseUrl = configuredBaseUrl
     ? normalizeBaseUrl(configuredBaseUrl)
     : undefined;

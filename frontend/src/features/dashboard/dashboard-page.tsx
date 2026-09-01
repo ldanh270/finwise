@@ -455,13 +455,6 @@ export default function DashboardPage() {
               <Icon name="bell" width={19} height={19} />
               <span className="notification-dot" />
             </button>
-            <button
-              className="topbar-avatar"
-              type="button"
-              aria-label="Open profile menu"
-            >
-              {getInitials(bootstrap?.user.displayName ?? "Finwise")}
-            </button>
           </div>
         </header>
 
@@ -667,7 +660,7 @@ function WorkspaceEmptyState({
           <Icon name="wallet" width={28} height={28} />
         </div>
       </div>
-      <div className="empty-copy">
+      <div className="empty-hero-copy">
         <span className="section-kicker">YOUR MONEY, YOUR VIEW</span>
         <h2>Start with your first account</h2>
         <p>

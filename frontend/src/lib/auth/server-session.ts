@@ -1,10 +1,7 @@
 import { cookies } from "next/headers";
+import { getServerApiUrl } from "../api/runtime-url";
 
-const API_URL = (
-  process.env.FINWISE_API_URL ??
-  process.env.NEXT_PUBLIC_FINWISE_API_URL ??
-  ""
-).replace(/\/$/, "");
+const API_URL = getServerApiUrl();
 
 export interface ServerAuthUser {
   readonly id: string;

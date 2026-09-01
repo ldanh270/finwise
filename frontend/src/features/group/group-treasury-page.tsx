@@ -314,9 +314,11 @@ function SummaryCard({
 }) {
   return (
     <article className="stat-card">
-      <span className="stat-label">{label}</span>
-      <strong>{value}</strong>
-      <small>{detail}</small>
+      <div className="stat-card-top">
+        <span>{label}</span>
+      </div>
+      <strong className="stat-amount">{value}</strong>
+      <small className="stat-helper">{detail}</small>
     </article>
   );
 }
