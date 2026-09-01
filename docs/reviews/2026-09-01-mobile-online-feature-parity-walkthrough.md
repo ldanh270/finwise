@@ -65,7 +65,15 @@ duplicate backend authorization rules.
 - `contracts/openapi.json`: optional mobile refresh-token field documented.
 - `mobile/package.json`, `mobile/app.json`, `pnpm-lock.yaml`: Expo SDK 53,
   development-client, SQLite, native document/file/share access, CNG, and
-  SDK-compatible navigation dependencies.
+  SDK-compatible navigation dependencies. Expo peer dependencies are declared
+  directly (`expo-constants`, `expo-linking`) and the SDK-compatible versions
+  are pinned so native builds do not silently auto-install mismatched peers.
+- `mobile/react-native.config.js`: project-level Expo 53 Android autolinking
+  override. It prevents the React Native package list from emitting the legacy
+  `expo.core.ExpoModulesPackage` import when the pnpm virtual store is used.
+- `pnpm-workspace.yaml`: explicitly allows the reviewed `unrs-resolver`
+  postinstall so pnpm 11 does not fail a clean install with an ignored-build
+  policy error.
 - `.github/workflows/ci.yml`: mobile unit tests and Android/iOS JavaScript
   exports are now part of the quality job, so web/backend green checks cannot
   silently skip the mobile bundle. A separate Ubuntu job generates the Android
@@ -179,16 +187,22 @@ keeps its notice generic and token-free.
   retryable-outbox recovery, API-error classification, exported-draft terminal
   state, and CSV escaping).
 - `pnpm dlx expo-doctor` — pass (18/18 checks).
-- `pnpm --filter mobile export:android` — pass (994 modules, Hermes bundle).
-- `pnpm --filter mobile export:ios` — pass (997 modules, Hermes bundle).
+- Expo Doctor was re-run after dependency normalization: pass (18/18 checks),
+  including direct peer dependencies and SDK versions (`expo-router` 5.1.11,
+  React Native 0.79.6, safe-area-context 5.4.0, TypeScript 5.8.3).
+- `pnpm --filter mobile export:android` — pass (974 modules, Hermes bundle).
+- `pnpm --filter mobile export:ios` — pass (977 modules, Hermes bundle).
 - `expo prebuild --no-install` — pass for Android CNG on Windows; iOS native
-  signing/build remains macOS-only.
-- `android/gradlew.bat app:assembleDebug` — CNG configuration and Java/Kotlin
-  compilation advanced successfully after setting `ANDROID_HOME`, then the
-  Windows build stopped at CMake's 260-character path limit inside the pnpm
-  symlink tree (`react-native-edge-to-edge` codegen path). This is an
-  environment/toolchain limitation; the generated `android/` directory was
-  removed after the check.
+  project generation is intentionally skipped by Expo on Windows, so iOS
+  native project generation and signing/build remain macOS-only.
+- `android/gradlew.bat app:assembleDebug` — pass after setting `ANDROID_HOME`,
+  regenerating autolinking with the project Expo override, and using a short
+  `C:\v` pnpm virtual-store path. All four ABIs, CMake, Kotlin/Java, packaging,
+  and signing validation completed; the generated debug APK was
+  `mobile/android/app/build/outputs/apk/debug/app-debug.apk` (160,705,700
+  bytes). A first default-path attempt did hit Windows' 260-character CMake
+  limit; the workaround is build-environment-only and generated native output
+  was removed after validation.
 - The new `mobile-android-native` CI job is configured to repeat this build on
   Ubuntu, where the pnpm path does not hit the Windows MAX_PATH limit. CI
   execution remains pending until the workflow runs on GitHub.
@@ -223,10 +237,10 @@ keeps its notice generic and token-free.
 ## Suggested commit message
 
 ```text
-feat(mobile): deliver Expo client with JWT, ledger features, and offline drafts
+fix(mobile): make Expo native builds reproducible
 
-Share the Nest API contract across mobile features, keep tokens in SecureStore,
-and persist user/workspace-scoped cache and idempotent manual drafts in SQLite.
-Add mobile auth transport headers while preserving web cookie sessions.
-Carry validated request correlation IDs through JSON/CSV calls and auth retry.
+Pin Expo peer dependencies, allow the reviewed native resolver postinstall, and
+override legacy Expo autolinking so CNG emits the Expo 53 package namespace.
+Verify clean Android CNG/Gradle packaging while preserving web and mobile
+JavaScript bundle contracts.
 ```

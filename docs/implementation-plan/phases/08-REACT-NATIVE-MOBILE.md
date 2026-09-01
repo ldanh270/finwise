@@ -15,6 +15,13 @@ controlled offline drafts without creating a second ledger.
 - Use Expo Router, development builds, Prebuild/CNG, and the New Architecture.
   Expo Go is not the primary verification runtime; generated native projects are
   not hand-edited.
+- Declare Expo peer dependencies directly and keep the SDK-compatible versions
+  pinned (`expo-constants`, `expo-linking`, Expo Router, React Native,
+  safe-area-context, TypeScript) so native autolinking cannot select an
+  incompatible peer version.
+- Keep the reviewed `unrs-resolver` postinstall enabled in the pnpm workspace;
+  clean pnpm 11 installs must not fail because the native/toolchain resolver
+  build was silently ignored.
 - Finwise Auth uses one SecureStore-backed adapter. Tokens never enter
   AsyncStorage, SQLite, query caches, logs, analytics, route params, or crash
   breadcrumbs. Biometric lock is local convenience only.
@@ -85,8 +92,9 @@ Perform the Expo migration separately from product feature work. Inspect Git
 history before replacing any superseded Flutter/Expo source; preserve user work
 and review the replacement diff. Establish dev/staging/production app IDs,
 deep-link domains, Auth/Storage resources, and runtime-version policy. Build an
-internal development build before device verification; iOS signing requires a
-macOS local or managed runner.
+internal development build before device verification; Expo intentionally skips
+iOS native project generation on Windows, and iOS signing requires a macOS local
+or managed runner.
 
 ## Delivered slices
 
@@ -157,12 +165,13 @@ debug APK from a short-path Linux workspace.
 The CI workflow also includes a macOS job that generates the iOS CNG project,
 installs CocoaPods, and builds an unsigned iOS Simulator target.
 
-An Android CNG debug build was also attempted with the local SDK/NDK. Expo
-configuration and Java/Kotlin compilation advanced, but Windows CMake stopped
-on the 260-character path limit inside the pnpm symlink tree. Generated native
-output was removed; the remaining native gate should run from a short-path or
-long-path-enabled Android CI workspace, followed by macOS/iOS development-build
-and signing verification.
+An Android CNG debug build now passes with the local SDK/NDK after the project
+level Expo 53 autolinking override and a short `C:\v` pnpm virtual-store path.
+All four ABIs and APK packaging complete successfully; generated native output
+is removed after validation. The first default-path attempt reproduced
+Windows' 260-character CMake limit, so the CI job remains configured to build
+from a short-path Linux workspace. iOS native compilation/signing and physical
+device verification remain macOS/operations gates.
 
 See the [mobile online feature parity walkthrough](../../reviews/2026-09-01-mobile-online-feature-parity-walkthrough.md)
 for affected files, verification results, and remaining device/native gates.

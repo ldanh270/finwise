@@ -20,6 +20,20 @@
   quality job, plus a separate Ubuntu Android CNG/debug-APK job so native
   Android compilation is checked outside Windows path limits. Added a macOS
   iOS simulator job that runs CNG, CocoaPods, and unsigned xcodebuild.
+- Normalized Expo SDK 53 peer dependencies and versions (`expo-constants`,
+  `expo-linking`, Expo Router, React Native, safe-area-context, TypeScript) and
+  verified Expo Doctor 18/18. Mobile formatting now declares its own Prettier
+  dependency instead of relying on a hoisted root binary.
+- Verified Android CNG generation again after dependency normalization. Expo
+  skips iOS native generation on Windows by design; the configured macOS CI job
+  remains the authoritative iOS simulator/native gate.
+- Fixed Expo 53 Android autolinking for pnpm by adding a project-level
+  `mobile/react-native.config.js` override and explicitly allowing the reviewed
+  `unrs-resolver` postinstall in `pnpm-workspace.yaml`. With a short `C:\v`
+  virtual store, `android/gradlew.bat app:assembleDebug` now passes all ABIs and
+  packages a 160,705,700-byte debug APK. Generated Android output and the
+  temporary virtual store are removed after validation; iOS native compilation
+  still requires macOS/Xcode.
 
 ## 2026-08-30
 
