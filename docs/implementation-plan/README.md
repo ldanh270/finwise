@@ -63,6 +63,7 @@ Prisma schema merely because a table already exists.
 - [Mobile inbox account gate walkthrough](../reviews/2026-09-01-mobile-inbox-account-gate-walkthrough.md)
 - [Mobile emulator API URL walkthrough](../reviews/2026-09-01-mobile-emulator-api-url-walkthrough.md)
 - [Mobile transaction search walkthrough](../reviews/2026-09-01-mobile-transaction-search-walkthrough.md)
+- [Mobile workspace switch isolation walkthrough](../reviews/2026-09-01-mobile-workspace-switch-isolation-walkthrough.md)
 - [Mobile Group account gate walkthrough](../reviews/2026-09-01-mobile-group-account-gate-walkthrough.md)
 - [Budget allocation walkthrough](../reviews/2026-08-31-budget-allocation-walkthrough.md)
 - [Web budget planning walkthrough](../reviews/2026-08-31-web-budget-planning-walkthrough.md)

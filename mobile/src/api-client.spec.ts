@@ -159,6 +159,31 @@ describe("shared mobile API client", () => {
     );
   });
 
+  it("aborts in-flight requests when a workspace scope is cancelled", async () => {
+    let requestSignal: AbortSignal | undefined;
+    const api = new FinwiseApiClient({
+      baseUrl: "https://api.finwise.test",
+      clientType: "mobile",
+      fetchImpl: async (_url, init) => {
+        requestSignal = init?.signal ?? undefined;
+        return new Promise<Response>((_resolve, reject) => {
+          requestSignal?.addEventListener("abort", () =>
+            reject(new Error("request aborted")),
+          );
+        });
+      },
+    });
+
+    const pending = api.get<{ ok: boolean }>(
+      "/v1/workspaces/workspace%2F1/overview",
+    );
+    await Promise.resolve();
+    api.cancelWorkspaceRequests("workspace/1");
+
+    await expect(pending).rejects.toThrow("request aborted");
+    expect(requestSignal?.aborted).toBe(true);
+  });
+
   it("covers import matching, raw cleanup, and reconciliation adjustment paths", async () => {
     const requests: Array<{ method: string; url: string; body?: string }> = [];
     const api = new FinwiseApiClient({

@@ -228,6 +228,16 @@ emulator host bridge (`10.0.2.2`) while keeping explicit LAN, staging, and
 production values authoritative. iOS simulator and web fall back to
 `localhost`. See the [emulator API URL walkthrough](../../reviews/2026-09-01-mobile-emulator-api-url-walkthrough.md).
 
+Workspace switching now changes the active scope immediately, cancels requests
+for the previous workspace, and removes only that workspace's query cache while
+preserving global bootstrap and new-scope requests. See the [workspace switch
+isolation walkthrough](../../reviews/2026-09-01-mobile-workspace-switch-isolation-walkthrough.md).
+
+The shared API client now tracks workspace-scoped transport requests and exposes
+an abort boundary used during switching, so cancellation reaches the underlying
+fetch rather than only hiding stale query results. See the [workspace switch
+isolation walkthrough](../../reviews/2026-09-01-mobile-workspace-switch-isolation-walkthrough.md).
+
 Transactions now have a local search over the already-authorized snapshot,
 matching description, type, status, date, ID, and exact VND minor-unit amount.
 The filter changes presentation only; server authorization and confirmed

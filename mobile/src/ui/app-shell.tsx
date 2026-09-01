@@ -15,6 +15,7 @@ import { useAuth } from "../auth/auth-context";
 import { useWorkspace } from "../app/providers";
 import { colors } from "./components";
 import { MobileOutboxRepository } from "../sync/mobile-outbox-repository";
+import { isWorkspaceQueryFor } from "../app/workspace-query-scope";
 
 export type MobileSection =
   | "overview"
@@ -86,11 +87,23 @@ export function AppShell({
     return () => subscription.remove();
   }, [syncPendingDrafts]);
 
-  function switchWorkspace(workspaceId: string) {
-    queryClient.removeQueries({
-      predicate: (query) => query.queryKey[0] !== "bootstrap",
-    });
-    selectWorkspace(workspaceId);
+  function switchWorkspace(nextWorkspaceId: string) {
+    const previousWorkspaceId = workspace?.id;
+    if (!previousWorkspaceId || previousWorkspaceId === nextWorkspaceId) {
+      selectWorkspace(nextWorkspaceId);
+      return;
+    }
+
+    // Change the active scope immediately so old workspace data is no longer
+    // renderable; abort transport and remove only the previous scope.
+    api.cancelWorkspaceRequests(previousWorkspaceId);
+    selectWorkspace(nextWorkspaceId);
+    const previousScope = (query: { queryKey: readonly unknown[] }) =>
+      isWorkspaceQueryFor(query.queryKey, previousWorkspaceId);
+    void queryClient.cancelQueries({ predicate: previousScope }).then(
+      () => queryClient.removeQueries({ predicate: previousScope }),
+      () => queryClient.removeQueries({ predicate: previousScope }),
+    );
   }
 
   return (

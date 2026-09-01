@@ -314,6 +314,10 @@ export class FinwiseApiClient {
   private readonly fetchImpl: typeof fetch;
   private readonly clientType: "web" | "mobile";
   private readonly refreshAccessToken?: FinwiseApiClientOptions["refreshAccessToken"];
+  private readonly workspaceRequests = new Map<
+    string,
+    Set<AbortController>
+  >();
 
   constructor(options: FinwiseApiClientOptions) {
     this.baseUrl = options.baseUrl.replace(/\/$/, "");
@@ -323,6 +327,14 @@ export class FinwiseApiClient {
     this.fetchImpl = options.fetchImpl ?? fetch;
     this.clientType = options.clientType ?? "web";
     this.refreshAccessToken = options.refreshAccessToken;
+  }
+
+  /** Abort transport requests currently reading or writing one workspace. */
+  cancelWorkspaceRequests(workspaceId: string): void {
+    const controllers = this.workspaceRequests.get(workspaceId);
+    if (!controllers) return;
+    for (const controller of controllers) controller.abort();
+    this.workspaceRequests.delete(workspaceId);
   }
 
   register(input: {
@@ -792,41 +804,48 @@ export class FinwiseApiClient {
     return this.request<T>("DELETE", path);
   }
   async getText(path: string): Promise<string> {
+    const requestScope = this.trackWorkspaceRequest(path);
     const requestId = this.requestId();
-    let response = await this.fetchResponse(
-      "GET",
-      path,
-      "text/csv",
-      undefined,
-      undefined,
-      {
-        "X-Request-Id": requestId,
-      },
-    );
-    let payload = await response.text();
-    if (
-      response.status === 401 &&
-      this.refreshAccessToken &&
-      !path.startsWith("/v1/auth/")
-    ) {
-      const refreshed = await this.refreshAccessToken();
-      if (refreshed) {
-        response = await this.fetchResponse(
-          "GET",
-          path,
-          "text/csv",
-          undefined,
-          undefined,
-          {
-            "X-Request-Id": requestId,
-          },
-        );
-        payload = await response.text();
+    try {
+      let response = await this.fetchResponse(
+        "GET",
+        path,
+        "text/csv",
+        undefined,
+        undefined,
+        {
+          "X-Request-Id": requestId,
+        },
+        requestScope?.signal,
+      );
+      let payload = await response.text();
+      if (
+        response.status === 401 &&
+        this.refreshAccessToken &&
+        !path.startsWith("/v1/auth/")
+      ) {
+        const refreshed = await this.refreshAccessToken();
+        if (refreshed) {
+          response = await this.fetchResponse(
+            "GET",
+            path,
+            "text/csv",
+            undefined,
+            undefined,
+            {
+              "X-Request-Id": requestId,
+            },
+            requestScope?.signal,
+          );
+          payload = await response.text();
+        }
       }
+      if (!response.ok)
+        throw new FinwiseApiError(response.status, errorEnvelope(payload));
+      return payload;
+    } finally {
+      requestScope?.dispose();
     }
-    if (!response.ok)
-      throw new FinwiseApiError(response.status, errorEnvelope(payload));
-    return payload;
   }
 
   private async request<T>(
@@ -836,46 +855,53 @@ export class FinwiseApiClient {
     idempotencyKey?: string,
     extraHeaders?: Record<string, string | undefined>,
   ): Promise<T> {
+    const requestScope = this.trackWorkspaceRequest(path);
     const requestId = this.requestId();
     const requestHeaders = {
       ...(extraHeaders ?? {}),
       "X-Request-Id": requestId,
     };
-    let response = await this.fetchResponse(
-      method,
-      path,
-      "application/json",
-      body,
-      idempotencyKey,
-      requestHeaders,
-    );
-    let payload: unknown = await response.json().catch(() => undefined);
-    if (
-      response.status === 401 &&
-      this.refreshAccessToken &&
-      !path.startsWith("/v1/auth/")
-    ) {
-      const refreshed = await this.refreshAccessToken();
-      if (refreshed) {
-        response = await this.fetchResponse(
-          method,
-          path,
-          "application/json",
-          body,
-          idempotencyKey,
-          requestHeaders,
-        );
-        payload = await response.json().catch(() => undefined);
-      }
-    }
-    if (!response.ok)
-      throw new FinwiseApiError(
-        response.status,
-        isErrorEnvelope(payload)
-          ? payload
-          : { code: "UNKNOWN_ERROR", message: "Finwise request failed." },
+    try {
+      let response = await this.fetchResponse(
+        method,
+        path,
+        "application/json",
+        body,
+        idempotencyKey,
+        requestHeaders,
+        requestScope?.signal,
       );
-    return payload as T;
+      let payload: unknown = await response.json().catch(() => undefined);
+      if (
+        response.status === 401 &&
+        this.refreshAccessToken &&
+        !path.startsWith("/v1/auth/")
+      ) {
+        const refreshed = await this.refreshAccessToken();
+        if (refreshed) {
+          response = await this.fetchResponse(
+            method,
+            path,
+            "application/json",
+            body,
+            idempotencyKey,
+            requestHeaders,
+            requestScope?.signal,
+          );
+          payload = await response.json().catch(() => undefined);
+        }
+      }
+      if (!response.ok)
+        throw new FinwiseApiError(
+          response.status,
+          isErrorEnvelope(payload)
+            ? payload
+            : { code: "UNKNOWN_ERROR", message: "Finwise request failed." },
+        );
+      return payload as T;
+    } finally {
+      requestScope?.dispose();
+    }
   }
 
   private async fetchResponse(
@@ -885,6 +911,7 @@ export class FinwiseApiClient {
     body?: unknown,
     idempotencyKey?: string,
     extraHeaders?: Record<string, string | undefined>,
+    signal?: AbortSignal,
   ): Promise<Response> {
     const token = await this.getAccessToken?.();
     const headers: Record<string, string> = {
@@ -901,7 +928,26 @@ export class FinwiseApiClient {
       credentials: "include",
       headers,
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      ...(signal ? { signal } : {}),
     });
+  }
+
+  private trackWorkspaceRequest(path: string): WorkspaceRequestScope | null {
+    const workspaceId = workspaceIdFromPath(path);
+    if (!workspaceId) return null;
+    const controller = new AbortController();
+    const requests = this.workspaceRequests.get(workspaceId) ?? new Set();
+    requests.add(controller);
+    this.workspaceRequests.set(workspaceId, requests);
+    return {
+      signal: controller.signal,
+      dispose: () => {
+        const current = this.workspaceRequests.get(workspaceId);
+        if (!current) return;
+        current.delete(controller);
+        if (current.size === 0) this.workspaceRequests.delete(workspaceId);
+      },
+    };
   }
 
   private requestId(): string {
@@ -909,6 +955,21 @@ export class FinwiseApiClient {
     return supplied && /^[A-Za-z0-9._:-]{1,100}$/.test(supplied)
       ? supplied
       : `finwise-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+  }
+}
+
+type WorkspaceRequestScope = {
+  readonly signal: AbortSignal;
+  readonly dispose: () => void;
+};
+
+function workspaceIdFromPath(path: string): string | null {
+  const match = /^\/v1\/workspaces\/([^/]+)(?:\/|$)/.exec(path);
+  if (!match?.[1]) return null;
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return null;
   }
 }
 
