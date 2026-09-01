@@ -111,6 +111,11 @@ to the prior API/image while preserving additive migrations.
   Overview empty state is responsive and non-overlapping, Group Treasury
   summary cards share the standard metric rhythm, and the shell has one
   profile affordance. See the [web UI consistency walkthrough](../../reviews/2026-09-01-web-ui-consistency-walkthrough.md).
+- 2026-09-01: empty workspaces now expose usable account and transaction
+  command forms instead of an inert empty-state action; the API journey is
+  covered end-to-end across ledger, planning, Group Treasury, CSV import, and
+  reconciliation, and the Overview budget call-to-action opens the Budgets
+  editor. See the [command journey fix walkthrough](../../reviews/2026-09-01-web-command-journey-fix-walkthrough.md).
 
 The phase remains open until the full MVP workflows, operational controls,
 accessibility checks, and pilot recovery drills meet the exit criteria above.

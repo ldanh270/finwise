@@ -206,6 +206,10 @@ export function IngestionPage({ workspaceId, accounts }: Props) {
                 required
               />
             </label>
+            <p className="form-help">
+              Required columns: date, amountMinorUnits, type. Optional:
+              description, sourceKey.
+            </p>
             {fileName ? (
               <p className="form-help">
                 {fileName} · {csvContent.length.toLocaleString()} bytes staged

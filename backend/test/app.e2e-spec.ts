@@ -186,4 +186,231 @@ describe('Finwise API (e2e)', () => {
       .set('x-finwise-user-id', 'e2e-invited-user')
       .expect(201);
   });
+
+  it('runs the account, transaction, planning, group, import and reconciliation journey', async () => {
+    const authHeader = { 'x-finwise-user-id': 'e2e-command-journey' };
+    const bootstrapResponse = await request(app.getHttpServer())
+      .get('/v1/session/bootstrap')
+      .set(authHeader)
+      .expect(200);
+    const bootstrap = bootstrapResponse.body as {
+      readonly suggestedWorkspaceId: string;
+    };
+    const workspaceId = bootstrap.suggestedWorkspaceId;
+
+    const membersResponse = await request(app.getHttpServer())
+      .get(`/v1/workspaces/${workspaceId}/members`)
+      .set(authHeader)
+      .expect(200);
+    const member = (
+      membersResponse.body as readonly { readonly id: string }[]
+    )[0];
+    expect(member).toBeDefined();
+
+    const accountResponse = await request(app.getHttpServer())
+      .post(`/v1/workspaces/${workspaceId}/accounts`)
+      .set(authHeader)
+      .send({ name: 'Journey cash', kind: 'cash' })
+      .expect(201);
+    const account = accountResponse.body as { readonly id: string };
+
+    const secondAccountResponse = await request(app.getHttpServer())
+      .post(`/v1/workspaces/${workspaceId}/accounts`)
+      .set(authHeader)
+      .send({ name: 'Journey bank', kind: 'bank' })
+      .expect(201);
+    const secondAccount = secondAccountResponse.body as { readonly id: string };
+
+    await request(app.getHttpServer())
+      .post(
+        `/v1/workspaces/${workspaceId}/accounts/${account.id}/opening-balance`,
+      )
+      .set(authHeader)
+      .set('Idempotency-Key', 'e2e-journey-opening')
+      .send({
+        amountMinorUnits: '100000',
+        effectiveDate: '2026-09-01',
+        description: 'Opening balance',
+      })
+      .expect(201);
+
+    const incomePayload = {
+      type: 'income',
+      amountMinorUnits: '25000',
+      accountId: account.id,
+      effectiveDate: '2026-09-01',
+      description: 'Salary',
+    };
+    const incomeResponse = await request(app.getHttpServer())
+      .post(`/v1/workspaces/${workspaceId}/transactions`)
+      .set(authHeader)
+      .set('Idempotency-Key', 'e2e-journey-income')
+      .send(incomePayload)
+      .expect(201);
+    const income = incomeResponse.body as { readonly id: string };
+    const replayResponse = await request(app.getHttpServer())
+      .post(`/v1/workspaces/${workspaceId}/transactions`)
+      .set(authHeader)
+      .set('Idempotency-Key', 'e2e-journey-income')
+      .send(incomePayload)
+      .expect(201);
+    expect((replayResponse.body as { readonly id: string }).id).toBe(income.id);
+
+    await request(app.getHttpServer())
+      .post(`/v1/workspaces/${workspaceId}/transactions`)
+      .set(authHeader)
+      .set('Idempotency-Key', 'e2e-journey-expense')
+      .send({
+        type: 'expense',
+        amountMinorUnits: '5000',
+        accountId: account.id,
+        effectiveDate: '2026-09-01',
+        description: 'Groceries',
+      })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post(`/v1/workspaces/${workspaceId}/transactions`)
+      .set(authHeader)
+      .set('Idempotency-Key', 'e2e-journey-transfer')
+      .send({
+        type: 'transfer',
+        amountMinorUnits: '10000',
+        accountId: account.id,
+        destinationAccountId: secondAccount.id,
+        effectiveDate: '2026-09-01',
+        description: 'Move to bank',
+      })
+      .expect(201);
+
+    const categoryResponse = await request(app.getHttpServer())
+      .post(`/v1/workspaces/${workspaceId}/categories`)
+      .set(authHeader)
+      .send({ name: 'Journey food' })
+      .expect(201);
+    const category = categoryResponse.body as { readonly id: string };
+    await request(app.getHttpServer())
+      .post(`/v1/workspaces/${workspaceId}/tags`)
+      .set(authHeader)
+      .send({ name: 'Journey tag' })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post(`/v1/workspaces/${workspaceId}/budgets`)
+      .set(authHeader)
+      .send({
+        month: '2026-09',
+        baseMinorUnits: '100000',
+        constraints: [
+          {
+            categoryId: category.id,
+            mode: 'SHARED_POOL',
+            fixedMinorUnits: '10000',
+            percentageBasisPoints: 0,
+            rolloverMode: 'NONE',
+          },
+        ],
+      })
+      .expect(201);
+    await request(app.getHttpServer())
+      .get(`/v1/workspaces/${workspaceId}/budgets/2026-09`)
+      .set(authHeader)
+      .expect(200);
+
+    const collectionResponse = await request(app.getHttpServer())
+      .post(`/v1/workspaces/${workspaceId}/group/collections`)
+      .set(authHeader)
+      .send({ name: 'Journey collection' })
+      .expect(201);
+    const collection = collectionResponse.body as { readonly id: string };
+    const participantResponse = await request(app.getHttpServer())
+      .post(`/v1/workspaces/${workspaceId}/group/participants`)
+      .set(authHeader)
+      .send({ memberId: member?.id, displayName: 'Journey owner' })
+      .expect(201);
+    const participant = participantResponse.body as { readonly id: string };
+    await request(app.getHttpServer())
+      .post(
+        `/v1/workspaces/${workspaceId}/group/collections/${collection.id}/obligations`,
+      )
+      .set(authHeader)
+      .send({ participantId: participant.id, amountMinorUnits: '3000' })
+      .expect(201);
+    const submissionResponse = await request(app.getHttpServer())
+      .post(
+        `/v1/workspaces/${workspaceId}/group/collections/${collection.id}/submissions`,
+      )
+      .set(authHeader)
+      .send({
+        participantId: participant.id,
+        accountId: account.id,
+        amountMinorUnits: '3000',
+      })
+      .expect(201);
+    const submission = submissionResponse.body as { readonly id: string };
+    await request(app.getHttpServer())
+      .post(
+        `/v1/workspaces/${workspaceId}/group/submissions/${submission.id}/verify`,
+      )
+      .set(authHeader)
+      .send({ effectiveDate: '2026-09-01' })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post(`/v1/workspaces/${workspaceId}/group/expenses`)
+      .set(authHeader)
+      .set('Idempotency-Key', 'e2e-journey-group-expense')
+      .send({
+        accountId: account.id,
+        amountMinorUnits: '7000',
+        description: 'Journey treasury expense',
+        effectiveDate: '2026-09-01',
+      })
+      .expect(201);
+
+    const importResponse = await request(app.getHttpServer())
+      .post(`/v1/workspaces/${workspaceId}/imports`)
+      .set(authHeader)
+      .send({
+        accountId: account.id,
+        fileName: 'journey.csv',
+        csvContent:
+          'date,amountMinorUnits,type,description,sourceKey\n2026-09-01,7000,expense,Imported expense,journey-row-1',
+      })
+      .expect(201);
+    const importSession = importResponse.body as { readonly id: string };
+    const recordsResponse = await request(app.getHttpServer())
+      .get(`/v1/workspaces/${workspaceId}/imports/${importSession.id}/records`)
+      .set(authHeader)
+      .expect(200);
+    const record = (
+      recordsResponse.body as readonly { readonly id: string }[]
+    )[0];
+    expect(record).toBeDefined();
+    await request(app.getHttpServer())
+      .post(
+        `/v1/workspaces/${workspaceId}/imports/records/${record?.id}/confirm`,
+      )
+      .set(authHeader)
+      .set('Idempotency-Key', 'e2e-journey-import-confirm')
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post(`/v1/workspaces/${workspaceId}/reconciliations`)
+      .set(authHeader)
+      .send({
+        accountId: account.id,
+        statementDate: '2026-09-01',
+        externalBalanceMinorUnits: '99000',
+      })
+      .expect(201);
+
+    const overviewResponse = await request(app.getHttpServer())
+      .get(`/v1/workspaces/${workspaceId}/overview`)
+      .set(authHeader)
+      .expect(200);
+    const overview = overviewResponse.body as {
+      readonly accounts: readonly unknown[];
+      readonly recentTransactions: readonly unknown[];
+    };
+    expect(overview.accounts).toHaveLength(2);
+    expect(overview.recentTransactions.length).toBeGreaterThanOrEqual(6);
+  });
 });

@@ -740,7 +740,10 @@ function OverviewData({
         />
       </section>
       <div className="content-grid">
-        <SpendingPanel budgets={overview.budgets} />
+        <SpendingPanel
+          budgets={overview.budgets}
+          onSetupBudget={() => onSectionChange("budgets")}
+        />
         <RecentTransactions
           transactions={overview.recentTransactions}
           onViewAll={() => onSectionChange("transactions")}
@@ -813,7 +816,13 @@ function MoneyStat({
   );
 }
 
-function SpendingPanel({ budgets }: { budgets: BudgetSummary[] }) {
+function SpendingPanel({
+  budgets,
+  onSetupBudget,
+}: {
+  budgets: BudgetSummary[];
+  onSetupBudget: () => void;
+}) {
   return (
     <section className="panel spending-panel">
       <div className="panel-heading">
@@ -839,7 +848,7 @@ function SpendingPanel({ budgets }: { budgets: BudgetSummary[] }) {
             Create a monthly category plan to compare what you intended to spend
             with what actually moved.
           </p>
-          <button className="text-button" type="button">
+          <button className="text-button" type="button" onClick={onSetupBudget}>
             Set up a budget{" "}
             <Icon name="arrow-up-right" width={14} height={14} />
           </button>
@@ -1228,6 +1237,10 @@ function ResourceSection({
     bootstrapState.status === "forbidden" ||
     overviewState.status === "error" ||
     overviewState.status === "forbidden";
+  const canRenderLedgerActions =
+    (section === "accounts" || section === "transactions") &&
+    overviewState.status === "empty" &&
+    workspaceId !== null;
 
   return (
     <>
@@ -1273,14 +1286,17 @@ function ResourceSection({
       bootstrapState.status === "loading" ? (
         <LoadingOverview />
       ) : null}
-      {!shouldShowError && !overview && overviewState.status !== "loading" ? (
+      {!shouldShowError &&
+      !overview &&
+      overviewState.status !== "loading" &&
+      !canRenderLedgerActions ? (
         <ResourceEmpty section={section} onSectionChange={onSectionChange} />
       ) : null}
-      {overview && !shouldShowError ? (
+      {(overview || canRenderLedgerActions) && !shouldShowError ? (
         <ResourceContent
           section={section}
           workspaceId={workspaceId}
-          accounts={overview.accounts}
+          accounts={overview?.accounts ?? []}
           items={items}
           exportState={exportState}
           onRefresh={onRetry}

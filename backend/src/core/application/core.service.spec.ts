@@ -127,6 +127,7 @@ describe('CoreService', () => {
       name: 'Daily spending',
       kind: 'cash',
     });
+    const effectiveDate = `${new Date().toISOString().slice(0, 7)}-01`;
 
     service.createTransaction(
       actor,
@@ -135,7 +136,7 @@ describe('CoreService', () => {
         type: 'income',
         accountId: account.id,
         amountMinorUnits: '1000000',
-        effectiveDate: '2026-08-30',
+        effectiveDate,
       },
       'cmd-overview-income',
     );
@@ -146,7 +147,7 @@ describe('CoreService', () => {
         type: 'expense',
         accountId: account.id,
         amountMinorUnits: '250000',
-        effectiveDate: '2026-08-30',
+        effectiveDate,
       },
       'cmd-overview-expense',
     );

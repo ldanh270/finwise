@@ -733,20 +733,23 @@ function readAllocations(
     );
   }
   return value.map((entry, index) => {
-    if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
+    if (!isObjectRecord(entry)) {
       throw FinwiseError.validation('Each allocation must be an object.', {
         field: `allocations[${index}]`,
       });
     }
-    const allocation = Object.fromEntries(Object.entries(entry));
     return {
-      participantId: requiredString(allocation, 'participantId', 1, 100),
+      participantId: requiredString(entry, 'participantId', 1, 100),
       amountMinorUnits: requiredPositiveMinorUnits(
-        allocation.amountMinorUnits,
+        entry.amountMinorUnits,
         `allocations[${index}].amountMinorUnits`,
       ),
     };
   });
+}
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function contributionResolution(value: unknown): ContributionResolution {
