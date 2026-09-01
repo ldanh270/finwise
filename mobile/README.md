@@ -25,7 +25,9 @@ pnpm --filter mobile android   # or ios on macOS
 ```
 
 Copy `.env.example` to `.env` and set `EXPO_PUBLIC_FINWISE_API_URL` to a
-reachable Nest base URL before starting an emulator/device. Never place
+reachable Nest base URL before starting a physical device. An Android emulator
+without this override uses the host bridge at `http://10.0.2.2:3001`; an iOS
+simulator or web runtime falls back to `http://localhost:3001`. Never place
 access/refresh tokens in AsyncStorage, SQLite, query caches, route params, logs,
 or crash breadcrumbs. Receipt staging is local
 metadata only until a server upload contract exists. Offline drafts must be

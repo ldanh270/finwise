@@ -222,3 +222,8 @@ Group claim and direct-expense commands now expose an explicit active-account
 prerequisite and remain disabled until a visible active account is available.
 Collection and participant setup are unaffected. See the [Group account gate
 walkthrough](../../reviews/2026-09-01-mobile-group-account-gate-walkthrough.md).
+
+The mobile API URL boundary now resolves an unset local URL to the Android
+emulator host bridge (`10.0.2.2`) while keeping explicit LAN, staging, and
+production values authoritative. iOS simulator and web fall back to
+`localhost`. See the [emulator API URL walkthrough](../../reviews/2026-09-01-mobile-emulator-api-url-walkthrough.md).

@@ -18,6 +18,8 @@ import {
   type SessionStorage,
   type StoredSession,
 } from "./session-storage";
+import { Platform } from "react-native";
+import { resolveMobileApiUrl } from "../config/runtime-url";
 
 type AuthStatus = "restoring" | "signed_out" | "authenticated";
 
@@ -58,10 +60,10 @@ export function AuthProvider({
   const [session, setSession] = useState<StoredSession | null>(null);
   const [error, setError] = useState<string | null>(null);
   const refreshPromiseRef = useRef<Promise<boolean> | null>(null);
-  const baseUrl =
-    apiBaseUrl ??
-    process.env.EXPO_PUBLIC_FINWISE_API_URL ??
-    "http://localhost:3001";
+  const baseUrl = resolveMobileApiUrl(
+    apiBaseUrl ?? process.env.EXPO_PUBLIC_FINWISE_API_URL,
+    Platform.OS,
+  );
 
   const api = useMemo(
     () =>

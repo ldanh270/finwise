@@ -61,6 +61,7 @@ Prisma schema merely because a table already exists.
 - [Mobile/web surface parity walkthrough](../reviews/2026-09-01-mobile-web-surface-parity-walkthrough.md)
 - [Mobile balance and Group state walkthrough](../reviews/2026-09-01-mobile-balance-group-state-walkthrough.md)
 - [Mobile inbox account gate walkthrough](../reviews/2026-09-01-mobile-inbox-account-gate-walkthrough.md)
+- [Mobile emulator API URL walkthrough](../reviews/2026-09-01-mobile-emulator-api-url-walkthrough.md)
 - [Mobile Group account gate walkthrough](../reviews/2026-09-01-mobile-group-account-gate-walkthrough.md)
 - [Budget allocation walkthrough](../reviews/2026-08-31-budget-allocation-walkthrough.md)
 - [Web budget planning walkthrough](../reviews/2026-08-31-web-budget-planning-walkthrough.md)
