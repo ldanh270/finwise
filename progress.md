@@ -191,3 +191,29 @@
   nested pnpm/Next/Nest processes instead of leaving ports 3000/3001 occupied.
 - Added platform-specific process-tree tests and `pnpm test:dev-runner`.
 - Verified backend/frontend builds and a clean `pnpm dev` startup.
+
+## 2026-09-01 — Mobile bootstrap readiness
+
+- Protected Expo routes now wait for authenticated `GET /v1/session/bootstrap`
+  before mounting workspace-scoped queries and caches.
+- Added explicit loading, empty-workspace, retryable-error gates and four
+  readiness classifier cases.
+- Verified 28 mobile tests, mobile typecheck/format, Android export (976
+  modules) and iOS export (979 modules).
+
+## 2026-09-01 — Mobile inbox data states
+
+- Inbox and reconciliation reads now show explicit loading, unavailable,
+  stale-data, and retryable error states instead of misleading blank cards.
+- Normalized imported rows and reconciliation checkpoints have local retry
+  actions while cached account/session data remains visible with a warning.
+- Verified full typecheck, format, backend/mobile/API tests, e2e, OpenAPI
+  freshness, web/backend build, and Android/iOS JavaScript exports.
+
+## 2026-09-01 — Mobile transaction account states
+
+- Record movement now gates on account availability: loading, retryable error,
+  stale cached accounts, and no-active-account states are explicit.
+- Users cannot submit a movement form without a visible active account and can
+  navigate directly to account management when the list is empty.
+- Verified mobile typecheck and all 28 mobile tests.

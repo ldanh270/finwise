@@ -9,6 +9,7 @@ import {
   PrimaryButton,
   ScrollScreen,
   SelectField,
+  StatePanel,
   TextField,
 } from "../../../src/ui/components";
 import { useAuth } from "../../../src/auth/auth-context";
@@ -162,59 +163,82 @@ export default function NewTransactionRoute() {
           title="Record movement"
           subtitle="Transfers and corrections stay online-only; the server confirms balances."
         />
-        <Card>
-          {accountsQuery.isError && cachedAccounts.length > 0 ? (
-            <InlineError message="Showing cached accounts. The draft can sync when the connection returns." />
-          ) : null}
-          <SelectField
-            label="Type"
-            value={kind}
-            onChange={(value) => setKind(value as TransactionKind)}
-            options={[
-              { label: "Expense", value: "expense" },
-              { label: "Income", value: "income" },
-              { label: "Transfer", value: "transfer" },
-            ]}
-          />
-          <SelectField
-            label={kind === "transfer" ? "From account" : "Account"}
-            value={accountId}
-            onChange={setAccountId}
-            options={accountOptions}
-          />
-          {kind === "transfer" ? (
-            <SelectField
-              label="To account"
-              value={destinationAccountId}
-              onChange={setDestinationAccountId}
-              options={accountOptions.filter(
-                (option) => option.value !== accountId,
-              )}
-            />
-          ) : null}
-          <TextField
-            label="Amount (VND minor units)"
-            value={amount}
-            onChangeText={setAmount}
-            keyboardType="number-pad"
-            placeholder="125000"
-          />
-          <TextField
-            label="Description (optional)"
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Lunch"
-          />
-          {feedback ? <InlineError message={feedback} /> : null}
-          <PrimaryButton
-            label={mutation.isPending ? "Posting…" : "Post transaction"}
-            disabled={
-              mutation.isPending ||
-              (accountsQuery.isPending && accountOptions.length === 0)
+        {accountsQuery.isPending && accountOptions.length === 0 ? (
+          <StatePanel title="Loading accounts…" />
+        ) : accountsQuery.isError && accountOptions.length === 0 ? (
+          <StatePanel
+            title="Accounts could not load"
+            description={
+              accountsQuery.error instanceof Error
+                ? accountsQuery.error.message
+                : "Retry when the API is available."
             }
-            onPress={submit}
+            action={{
+              label: "Retry",
+              onPress: () => void accountsQuery.refetch(),
+            }}
           />
-        </Card>
+        ) : accountOptions.length === 0 ? (
+          <StatePanel
+            title="Add an account first"
+            description="A visible active account is required before recording income, expense, or transfer movement."
+            action={{
+              label: "Manage accounts",
+              onPress: () => router.push("/(app)/accounts"),
+            }}
+          />
+        ) : (
+          <Card>
+            {accountsQuery.isError ? (
+              <InlineError message="Showing cached accounts. The draft can sync when the connection returns." />
+            ) : null}
+            <SelectField
+              label="Type"
+              value={kind}
+              onChange={(value) => setKind(value as TransactionKind)}
+              options={[
+                { label: "Expense", value: "expense" },
+                { label: "Income", value: "income" },
+                { label: "Transfer", value: "transfer" },
+              ]}
+            />
+            <SelectField
+              label={kind === "transfer" ? "From account" : "Account"}
+              value={accountId}
+              onChange={setAccountId}
+              options={accountOptions}
+            />
+            {kind === "transfer" ? (
+              <SelectField
+                label="To account"
+                value={destinationAccountId}
+                onChange={setDestinationAccountId}
+                options={accountOptions.filter(
+                  (option) => option.value !== accountId,
+                )}
+              />
+            ) : null}
+            <TextField
+              label="Amount (VND minor units)"
+              value={amount}
+              onChangeText={setAmount}
+              keyboardType="number-pad"
+              placeholder="125000"
+            />
+            <TextField
+              label="Description (optional)"
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Lunch"
+            />
+            {feedback ? <InlineError message={feedback} /> : null}
+            <PrimaryButton
+              label={mutation.isPending ? "Posting…" : "Post transaction"}
+              disabled={mutation.isPending}
+              onPress={submit}
+            />
+          </Card>
+        )}
       </ScrollScreen>
     </AppShell>
   );

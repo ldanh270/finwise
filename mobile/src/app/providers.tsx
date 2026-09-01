@@ -14,6 +14,10 @@ import {
 } from "react";
 import type { BootstrapResponse, WorkspaceSummary } from "@finwise/api-client";
 import { AuthProvider, useAuth } from "../auth/auth-context";
+import {
+  getWorkspaceBootstrapStatus,
+  type WorkspaceBootstrapStatus,
+} from "./workspace-bootstrap";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 15_000, retry: 1 } },
@@ -21,6 +25,9 @@ const queryClient = new QueryClient({
 
 type WorkspaceContextValue = {
   readonly bootstrap: BootstrapResponse | undefined;
+  readonly bootstrapStatus: WorkspaceBootstrapStatus;
+  readonly bootstrapError: unknown;
+  readonly retryBootstrap: () => Promise<unknown>;
   readonly workspace: WorkspaceSummary | undefined;
   readonly workspaceId: string | undefined;
   readonly selectWorkspace: (workspaceId: string) => void;
@@ -55,7 +62,16 @@ function WorkspaceProvider({ children }: PropsWithChildren) {
     }),
     [api, status],
   );
-  const { data: bootstrap } = useQuery(bootstrapQuery);
+  const {
+    data: bootstrap,
+    error: bootstrapError,
+    isError: hasBootstrapError,
+    refetch: retryBootstrap,
+  } = useQuery(bootstrapQuery);
+  const bootstrapStatus = getWorkspaceBootstrapStatus(
+    bootstrap,
+    hasBootstrapError,
+  );
   const workspaceId =
     selectedWorkspaceId ??
     bootstrap?.suggestedWorkspaceId ??
@@ -66,12 +82,22 @@ function WorkspaceProvider({ children }: PropsWithChildren) {
   const value = useMemo(
     () => ({
       bootstrap,
+      bootstrapError,
+      bootstrapStatus,
+      retryBootstrap: async () => retryBootstrap(),
       workspace,
       workspaceId,
       selectWorkspace: (nextWorkspaceId: string) =>
         setSelectedWorkspaceId(nextWorkspaceId),
     }),
-    [bootstrap, workspace, workspaceId],
+    [
+      bootstrap,
+      bootstrapError,
+      bootstrapStatus,
+      retryBootstrap,
+      workspace,
+      workspaceId,
+    ],
   );
   return (
     <WorkspaceContext.Provider value={value}>

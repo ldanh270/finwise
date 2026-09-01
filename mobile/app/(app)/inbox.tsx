@@ -14,6 +14,7 @@ import {
   SecondaryButton,
   ScrollScreen,
   SelectField,
+  StatePanel,
   TextField,
   colors,
 } from "../../src/ui/components";
@@ -178,6 +179,35 @@ export default function InboxRoute() {
     }
     reconcileMutation.mutate();
   }
+  const primaryQueriesUnavailable =
+    (accountsQuery.isError && !accountsQuery.data) ||
+    (sessionsQuery.isError && !sessionsQuery.data) ||
+    (reconciliationsQuery.isError && !reconciliationsQuery.data);
+  const primaryQueriesLoading =
+    (accountsQuery.isPending && !accountsQuery.data) ||
+    (sessionsQuery.isPending && !sessionsQuery.data) ||
+    (reconciliationsQuery.isPending && !reconciliationsQuery.data);
+  function retryInboxReads() {
+    void Promise.all([
+      accountsQuery.refetch(),
+      sessionsQuery.refetch(),
+      transactionsQuery.refetch(),
+      reconciliationsQuery.refetch(),
+      ...(sessionId ? [recordsQuery.refetch()] : []),
+    ]);
+  }
+  if (primaryQueriesLoading) {
+    return <InboxGate title="Loading inbox and reconciliation data…" />;
+  }
+  if (primaryQueriesUnavailable) {
+    return (
+      <InboxGate
+        title="Inbox data could not load"
+        description="Your account, import, or reconciliation data is unavailable."
+        onRetry={retryInboxReads}
+      />
+    );
+  }
   return (
     <AppShell active="inbox">
       <ScrollScreen>
@@ -186,6 +216,12 @@ export default function InboxRoute() {
           title="Imports & reconciliation"
           subtitle="Review evidence before it changes the immutable ledger."
         />
+        {accountsQuery.isError && accountsQuery.data ? (
+          <InlineError message="Showing the last account list. Retry before submitting a new import or checkpoint." />
+        ) : null}
+        {transactionsQuery.isError ? (
+          <InlineError message="Existing transactions could not load, so matching imported rows is temporarily unavailable." />
+        ) : null}
         <Card>
           <Header eyebrow="CSV INBOX" title="Review a CSV" />
           <SelectField
@@ -211,7 +247,15 @@ export default function InboxRoute() {
             disabled={importMutation.isPending}
             onPress={importCsv}
           />
-          {sessionsQuery.data?.length ? (
+          {sessionsQuery.isError ? (
+            <View style={{ gap: 8 }}>
+              <InlineError message="Import sessions could not load." />
+              <SecondaryButton
+                label="Retry sessions"
+                onPress={retryInboxReads}
+              />
+            </View>
+          ) : sessionsQuery.data?.length ? (
             <View style={{ gap: 8 }}>
               <Text style={{ color: colors.muted, fontSize: 12 }}>
                 {sessionsQuery.data.length} import session
@@ -269,6 +313,14 @@ export default function InboxRoute() {
           <Header eyebrow="NORMALIZED RECORDS" title="Confirm one time" />
           {recordsQuery.isPending ? (
             <Text style={{ color: colors.muted }}>Loading rows…</Text>
+          ) : recordsQuery.isError ? (
+            <View style={{ gap: 8 }}>
+              <InlineError message="Normalized rows could not load." />
+              <SecondaryButton
+                label="Retry rows"
+                onPress={() => void recordsQuery.refetch()}
+              />
+            </View>
           ) : !recordsQuery.data?.length ? (
             <Text style={{ color: colors.muted }}>
               Select or create an import session to review rows.
@@ -326,27 +378,64 @@ export default function InboxRoute() {
             disabled={reconcileMutation.isPending}
             onPress={startCheckpoint}
           />
-          {reconciliationsQuery.data?.map((checkpoint) => (
-            <ReconciliationRow
-              key={checkpoint.id}
-              workspaceId={workspaceId as string}
-              checkpoint={checkpoint}
-              api={api}
-              onChanged={() => {
-                void queryClient.invalidateQueries({
-                  queryKey: ["reconciliations", workspaceId],
-                });
-                void queryClient.invalidateQueries({
-                  queryKey: ["overview", workspaceId],
-                });
-                void queryClient.invalidateQueries({
-                  queryKey: ["accounts", workspaceId],
-                });
-              }}
-            />
-          ))}
+          {reconciliationsQuery.isError ? (
+            <View style={{ gap: 8 }}>
+              <InlineError message="Reconciliation checkpoints could not load." />
+              <SecondaryButton
+                label="Retry checkpoints"
+                onPress={retryInboxReads}
+              />
+            </View>
+          ) : (
+            reconciliationsQuery.data?.map((checkpoint) => (
+              <ReconciliationRow
+                key={checkpoint.id}
+                workspaceId={workspaceId as string}
+                checkpoint={checkpoint}
+                api={api}
+                onChanged={() => {
+                  void queryClient.invalidateQueries({
+                    queryKey: ["reconciliations", workspaceId],
+                  });
+                  void queryClient.invalidateQueries({
+                    queryKey: ["overview", workspaceId],
+                  });
+                  void queryClient.invalidateQueries({
+                    queryKey: ["accounts", workspaceId],
+                  });
+                }}
+              />
+            ))
+          )}
         </Card>
         {feedback ? <InlineError message={feedback} /> : null}
+      </ScrollScreen>
+    </AppShell>
+  );
+}
+
+function InboxGate({
+  title,
+  description,
+  onRetry,
+}: {
+  title: string;
+  description?: string;
+  onRetry?: () => void;
+}) {
+  return (
+    <AppShell active="inbox">
+      <ScrollScreen>
+        <Header
+          eyebrow="INBOX & CONTROL"
+          title="Imports & reconciliation"
+          subtitle="Review evidence before it changes the immutable ledger."
+        />
+        <StatePanel
+          title={title}
+          description={description}
+          action={onRetry ? { label: "Retry", onPress: onRetry } : undefined}
+        />
       </ScrollScreen>
     </AppShell>
   );

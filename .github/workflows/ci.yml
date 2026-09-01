@@ -27,6 +27,7 @@ jobs:
       - run: pnpm --filter @finwise/api-client typecheck
       - run: pnpm contracts:check
       - run: pnpm test
+      - run: pnpm test:dev-runner
       - run: pnpm test:mobile
       - run: pnpm test:e2e
       - run: pnpm build

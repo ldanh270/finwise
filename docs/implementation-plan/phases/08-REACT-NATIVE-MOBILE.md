@@ -175,3 +175,20 @@ device verification remain macOS/operations gates.
 
 See the [mobile online feature parity walkthrough](../../reviews/2026-09-01-mobile-online-feature-parity-walkthrough.md)
 for affected files, verification results, and remaining device/native gates.
+
+The protected Expo stack now waits for an authenticated workspace bootstrap
+before composing scoped feature routes. Loading, empty, and retryable error
+states are explicit and covered by a pure status classifier test. See the
+[bootstrap readiness walkthrough](../../reviews/2026-09-01-mobile-bootstrap-readiness-walkthrough.md).
+
+The mobile Imports & reconciliation screen now makes primary read failures
+explicit. Account/import/reconciliation loading is gated, unavailable reads
+show a retryable state, stale cached lists carry a warning, and normalized-row
+or checkpoint failures have local retry actions instead of silently rendering
+blank cards. See the [inbox data-state walkthrough](../../reviews/2026-09-01-mobile-inbox-state-walkthrough.md).
+
+The mobile Record movement screen now gates on a usable active-account list.
+Loading and unavailable account reads have explicit panels and retry, an empty
+or fully archived list links to account management, and stale cached accounts
+remain usable only with a visible warning. See the [transaction account-state
+walkthrough](../../reviews/2026-09-01-mobile-transaction-account-state-walkthrough.md).
