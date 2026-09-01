@@ -66,6 +66,7 @@ export default function NewTransactionRoute() {
   const [destinationAccountId, setDestinationAccountId] = useState("");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
+  const [effectiveDate, setEffectiveDate] = useState(today());
   const [feedback, setFeedback] = useState<string | null>(null);
   const commandRef = useRef<StableCommandKeyState | undefined>(undefined);
   const mutation = useMutation({
@@ -133,7 +134,7 @@ export default function NewTransactionRoute() {
       accountId,
       ...(kind === "transfer" ? { destinationAccountId } : {}),
       amountMinorUnits: amount.trim(),
-      effectiveDate: today(),
+      effectiveDate,
       ...(description.trim() ? { description: description.trim() } : {}),
     });
     if (
@@ -235,6 +236,12 @@ export default function NewTransactionRoute() {
               value={description}
               onChangeText={setDescription}
               placeholder="Lunch"
+            />
+            <TextField
+              label="Effective date (YYYY-MM-DD)"
+              value={effectiveDate}
+              onChangeText={setEffectiveDate}
+              placeholder="2026-09-01"
             />
             {feedback ? <InlineError message={feedback} /> : null}
             <PrimaryButton

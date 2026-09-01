@@ -246,3 +246,13 @@
 - Visible account rows now include ledger, cleared, and reconciled balances
   without deriving or exposing hidden accounts.
 - Verified mobile typecheck, tests, and formatting.
+
+## 2026-09-01 — Mobile/web surface parity
+
+- Added the web-matching Reports placeholder to the mobile tool navigation;
+  it makes the missing backend reporting contract explicit instead of showing
+  fabricated metrics.
+- Transaction capture now accepts and preserves a user-selected effective date
+  for online commands and offline manual income/expense drafts.
+- Recorded the parity boundary and remaining native/device gates in the
+  walkthrough and Phase 8 plan.

@@ -10,7 +10,7 @@ balances, income/expense/transfer capture, budgets, Group Treasury
 participants/collections/contributions/claims/reimbursements, CSV inbox with
 session selection, row matching, needs-attention decisions and raw-data
 cleanup, reconciliation checkpoints with explicit adjustments, transaction CSV
-export, settings, and an offline manual income/expense outbox. Confirmed balances remain server-owned. Access
+export, settings, a web-matching Reports placeholder, and an offline manual income/expense outbox. Transaction capture preserves a user-selected effective date while confirmed balances remain server-owned. Access
 and refresh tokens are stored only in `expo-secure-store`; cache and outbox
 snapshots use a user/workspace-partitioned SQLite key/value boundary. If the
 process stops while a draft is syncing, the next restore re-queues that draft

@@ -202,3 +202,8 @@ request paths, payloads, idempotency, and UI behavior remain unchanged. See the
 Overview now surfaces the server's partial-access indicator and renders ledger,
 cleared, and reconciled balance views for each visible account, matching the
 web permission-aware presentation. See the [partial-access balance walkthrough](../../reviews/2026-09-01-mobile-partial-access-walkthrough.md).
+
+The navigation now exposes the same Reports surface as web (with an explicit
+placeholder until a reporting API exists), and manual movement capture accepts
+an ISO effective date that is preserved through online posting and offline
+income/expense drafts. See the [surface parity walkthrough](../../reviews/2026-09-01-mobile-web-surface-parity-walkthrough.md).

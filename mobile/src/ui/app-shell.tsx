@@ -3,6 +3,7 @@ import {
   AppState,
   Pressable,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -19,6 +20,7 @@ export type MobileSection =
   | "overview"
   | "transactions"
   | "budgets"
+  | "reports"
   | "group"
   | "inbox"
   | "accounts"
@@ -140,13 +142,19 @@ export function AppShell({
         </View>
       ) : null}
       <View style={styles.body}>{children}</View>
-      <View style={styles.nav}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.navContent}
+        style={styles.nav}
+      >
         {(
           [
             "overview",
             "accounts",
             "transactions",
             "budgets",
+            "reports",
             "group",
             "inbox",
           ] as MobileSection[]
@@ -178,7 +186,7 @@ export function AppShell({
             </Text>
           </Pressable>
         ))}
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -200,6 +208,7 @@ function navGlyph(section: MobileSection): string {
       overview: "◈",
       transactions: "↗",
       budgets: "▥",
+      reports: "▤",
       group: "◎",
       inbox: "⌁",
       accounts: "▣",
@@ -267,11 +276,15 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
     backgroundColor: colors.surface,
+  },
+  navContent: {
+    flexGrow: 1,
+    minWidth: "100%",
     flexDirection: "row",
     justifyContent: "space-around",
     paddingTop: 8,
   },
-  navItem: { alignItems: "center", gap: 3, minWidth: 55 },
+  navItem: { alignItems: "center", gap: 3, minWidth: 62, paddingHorizontal: 6 },
   navIcon: { color: "#90a39f", fontSize: 20, lineHeight: 22 },
   navLabel: { color: "#809490", fontSize: 10, fontWeight: "700" },
   navActive: { color: colors.teal },
