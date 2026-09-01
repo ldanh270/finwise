@@ -107,12 +107,17 @@ category has no named case in its phase document.
    recurring transactions, multi-currency, billing, and Splitwise settlement do
    not block web MVP.
 
-## Current preflight evidence (2026-08-30)
+## Current preflight evidence (2026-09-01)
 
-- The repository contains no configured `DATABASE_URL` in the checked-in
-  environment, so no database environment was mutated or treated as empty.
-- The legacy Prisma migration is intentionally preserved. A baseline replacement
-  is blocked until an owner supplies a read-only database inspection result.
+- The configured CockroachDB Cloud target was inspected read-only. Its schema
+  contains the two approved migrations, one demo user, one personal workspace,
+  one owner membership, and no financial account.
+- The target was not reset or rebaselined. `pnpm db:deploy` verifies both
+  migration checksums and reports the target up to date; `pnpm db:seed` is
+  idempotent.
+- Preflight now performs exact row-presence checks because Cockroach-compatible
+  `reltuples` statistics can remain zero after inserts. Any detected row marks
+  the database as containing data and blocks an unsafe fresh baseline decision.
 - Requirements traceability is recorded in
   [`../REQUIREMENTS-TRACEABILITY.md`](../REQUIREMENTS-TRACEABILITY.md).
 - The approved release boundary and decisions are reflected in this phase pack;

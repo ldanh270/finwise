@@ -49,18 +49,27 @@ export async function runDatabasePreflight(environment = process.env) {
          AND n.nspname IN ('public', 'finwise')
        ORDER BY n.nspname, c.relname`,
     );
+    const rows = [];
+    for (const table of tables.rows) {
+      const schemaName = quoteIdentifier(String(table.schema));
+      const tableName = quoteIdentifier(String(table.table_name));
+      const presence = await client.query(
+        `SELECT EXISTS (SELECT 1 FROM ${schemaName}.${tableName} LIMIT 1) AS has_rows`,
+      );
+      rows.push({
+        schema: String(table.schema),
+        table: String(table.table_name),
+        estimatedRows: Number(table.estimated_rows),
+        hasRows: Boolean(presence.rows[0]?.has_rows),
+      });
+    }
     await client.query("ROLLBACK");
-    const rows = tables.rows.map((row) => ({
-      schema: String(row.schema),
-      table: String(row.table_name),
-      estimatedRows: Number(row.estimated_rows),
-    }));
     return {
       status: "READY",
       database: String(identity.rows[0]?.database ?? "unknown"),
       schema: String(identity.rows[0]?.schema ?? "unknown"),
       tables: rows,
-      estimatedDataPresent: rows.some((row) => row.estimatedRows > 0),
+      estimatedDataPresent: rows.some((row) => row.hasRows),
       message:
         "Read-only metadata inspection completed; choose fresh baseline versus preserving migration from the evidence.",
     };
@@ -77,6 +86,10 @@ export async function runDatabasePreflight(environment = process.env) {
   } finally {
     await client.end().catch(() => undefined);
   }
+}
+
+function quoteIdentifier(identifier) {
+  return `"${identifier.replaceAll('"', '""')}"`;
 }
 
 export function safeDatabaseFailureMessage(error) {

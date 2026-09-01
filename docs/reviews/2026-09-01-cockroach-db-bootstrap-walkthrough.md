@@ -7,10 +7,10 @@ with the CockroachDB Cloud endpoint currently configured in `backend/.env`,
 then bootstraps that empty database and runs the demo seed. It also fixes the
 Nest dependency-injection failure discovered during the live smoke test.
 
-It does not change financial business rules, add a financial account seed, or
-replace Prisma Migrate with a permanent custom migration runner. The one-off
-`pg` bootstrap was used only because Prisma 7's Windows schema engine could not
-complete the TLS handshake against this CockroachDB Cloud endpoint.
+It does not change financial business rules or add a financial account seed.
+The follow-up [database deploy runner walkthrough](2026-09-01-database-deploy-runner-walkthrough.md)
+documents the repeatable checked-in `pg` deploy path for Windows; this file
+records the original baseline bootstrap and its preservation boundary.
 
 ## Affected files and modules
 
@@ -55,9 +55,8 @@ already applied the old migrations must not run this rebaseline; it needs a
 separate preservation/mapping migration.
 
 The baseline SQL was applied as one reviewed bootstrap operation through Node
-`pg`, and its checksum was recorded in `finwise._prisma_migrations` so a Linux
-Prisma deployment can recognize it as applied. No application data was
-deleted.
+`pg`, and its checksum was recorded in `finwise._prisma_migrations`. No
+application data was deleted.
 
 ## Public/runtime behavior
 
@@ -76,15 +75,15 @@ startup successfully after the verifier injection fix.
 - Baseline SQL: applied successfully to the configured CockroachDB database.
 - Seed: `pnpm db:seed` passed.
 - Database counts after seed: 1 user, 1 workspace, 1 member, 1 role, 0
-  financial accounts, 1 recorded migration.
+  financial accounts, 2 recorded migrations.
 - Backend typecheck and test command: passed.
 - Live backend startup: passed after DI fix.
 - Login/session/bootstrap smoke tests: passed.
 
-`pnpm db:deploy` still cannot be verified from this Windows host because the
-Prisma 7 native schema engine fails the CockroachDB Cloud TLS handshake. Run
-that command in Linux CI/deployment with the provider CA certificate; do not
-work around the error by disabling TLS.
+The underlying Prisma 7 native schema engine still cannot be verified from
+this Windows host because of the CockroachDB Cloud TLS handshake. The
+checked-in `pnpm db:deploy` wrapper now uses the already working `pg` TLS
+runtime locally; `pnpm db:deploy:prisma` remains the Linux/CI command.
 
 ## Known gaps and follow-up
 

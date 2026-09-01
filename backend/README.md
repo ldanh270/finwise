@@ -45,6 +45,12 @@ pnpm db:validate
 pnpm db:deploy
 ```
 
+`pnpm db:deploy` applies the checked-in SQL migrations through the configured
+TLS connection and is safe on Windows/CockroachDB Cloud. It verifies migration
+checksums and commits each SQL file together with its `_prisma_migrations`
+metadata. Linux CI can run `pnpm db:deploy:prisma` with the CockroachDB CA when
+the native Prisma migration engine is available.
+
 For a new local schema change, use `pnpm db:migrate --name <migration_name>`
 and commit the generated migration.
 
@@ -61,11 +67,9 @@ The current empty-database baseline is
 `.env.example` before using register/login.
 
 CockroachDB Cloud requires TLS. Prisma 7's Windows schema engine can fail to
-open the cloud TLS connection even when the Node `pg` runtime connects; run
-Prisma migrations in a Linux CI/deployment environment with the CA certificate
-from CockroachDB Cloud. This development database was bootstrapped once with
-the reviewed baseline SQL through Node `pg`; do not disable TLS in shared or
-production environments.
+open the cloud TLS connection even when the Node `pg` runtime connects; keep
+TLS enabled and use the checked-in deploy runner locally. Do not disable TLS in
+shared or production environments.
 
 ## Compile and run the project
 

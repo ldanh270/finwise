@@ -46,6 +46,7 @@
     "db:migrate": "pnpm --filter backend db:migrate",
     "db:migrate:create": "pnpm --filter backend db:migrate:create",
     "db:deploy": "pnpm --filter backend db:deploy",
+    "db:deploy:prisma": "pnpm --filter backend db:deploy:prisma",
     "db:migrate:deploy": "pnpm db:deploy",
     "db:status": "pnpm --filter backend db:status",
     "db:preflight": "node scripts/database-preflight.mjs",

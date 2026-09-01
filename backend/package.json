@@ -7,7 +7,8 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
-    "db:deploy": "prisma migrate deploy",
+    "db:deploy": "node ../scripts/database-deploy.mjs",
+    "db:deploy:prisma": "prisma migrate deploy",
     "db:generate": "prisma generate",
     "db:format": "prisma format",
     "db:pull": "prisma db pull",
