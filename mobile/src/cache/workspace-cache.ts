@@ -1,11 +1,16 @@
 import type {
   AccountSummary,
   BalanceViewSummary,
+  BudgetOverviewSummary,
+  BudgetPeriodSummary,
+  CategorySummary,
   OverviewResponse,
+  TagSummary,
   TransactionSummary,
 } from "@finwise/api-client";
 import { createCachePartition } from "../session/cache-partition";
 import { sqliteJsonStorage } from "../sync/sqlite-storage";
+import type { JsonStorage } from "../sync/outbox-persistence";
 
 export type WorkspaceCachedReads = {
   readonly savedAt: string;
@@ -13,17 +18,31 @@ export type WorkspaceCachedReads = {
   readonly accounts?: readonly AccountSummary[];
   readonly transactions?: readonly TransactionSummary[];
   readonly balances?: readonly BalanceViewSummary[];
+  readonly budgetPeriods?: readonly BudgetPeriodSummary[];
+  readonly categories?: readonly CategorySummary[];
+  readonly tags?: readonly TagSummary[];
+  readonly budgetOverviews?: readonly BudgetOverviewCache[];
+};
+
+export type BudgetOverviewCache = {
+  readonly month: string;
+  readonly value: BudgetOverviewSummary;
 };
 
 export class WorkspaceCache {
   private readonly key: string;
+  private writeQueue: Promise<void> = Promise.resolve();
 
-  constructor(userId: string, workspaceId: string) {
+  constructor(
+    userId: string,
+    workspaceId: string,
+    private readonly storage: JsonStorage = sqliteJsonStorage,
+  ) {
     this.key = `${createCachePartition(userId, workspaceId).key}:reads`;
   }
 
   async read(): Promise<WorkspaceCachedReads | null> {
-    const raw = await sqliteJsonStorage.getItem(this.key);
+    const raw = await this.storage.getItem(this.key);
     if (!raw) return null;
     try {
       const value: unknown = JSON.parse(raw);
@@ -35,19 +54,25 @@ export class WorkspaceCache {
   }
 
   async write(patch: Omit<WorkspaceCachedReads, "savedAt">): Promise<void> {
-    const current = await this.read();
-    await sqliteJsonStorage.setItem(
-      this.key,
-      JSON.stringify({
-        ...current,
-        ...patch,
-        savedAt: new Date().toISOString(),
-      }),
-    );
+    const nextWrite = this.writeQueue
+      .catch(() => undefined)
+      .then(async () => {
+        const current = await this.read();
+        await this.storage.setItem(
+          this.key,
+          JSON.stringify({
+            ...current,
+            ...patch,
+            savedAt: new Date().toISOString(),
+          }),
+        );
+      });
+    this.writeQueue = nextWrite;
+    return nextWrite;
   }
 
   clear(): Promise<void> {
-    return sqliteJsonStorage.removeItem(this.key);
+    return this.storage.removeItem(this.key);
   }
 }
 

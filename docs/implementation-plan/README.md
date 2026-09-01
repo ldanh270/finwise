@@ -64,6 +64,8 @@ Prisma schema merely because a table already exists.
 - [Mobile emulator API URL walkthrough](../reviews/2026-09-01-mobile-emulator-api-url-walkthrough.md)
 - [Mobile transaction search walkthrough](../reviews/2026-09-01-mobile-transaction-search-walkthrough.md)
 - [Mobile workspace switch isolation walkthrough](../reviews/2026-09-01-mobile-workspace-switch-isolation-walkthrough.md)
+- [Mobile budget cache walkthrough](../reviews/2026-09-01-mobile-budget-cache-walkthrough.md)
+- [Mobile cache read race walkthrough](../reviews/2026-09-01-mobile-cache-read-race-walkthrough.md)
 - [Mobile Group account gate walkthrough](../reviews/2026-09-01-mobile-group-account-gate-walkthrough.md)
 - [Budget allocation walkthrough](../reviews/2026-08-31-budget-allocation-walkthrough.md)
 - [Web budget planning walkthrough](../reviews/2026-08-31-web-budget-planning-walkthrough.md)

@@ -242,3 +242,14 @@ Transactions now have a local search over the already-authorized snapshot,
 matching description, type, status, date, ID, and exact VND minor-unit amount.
 The filter changes presentation only; server authorization and confirmed
 ledger data remain unchanged. See the [transaction search walkthrough](../../reviews/2026-09-01-mobile-transaction-search-walkthrough.md).
+
+Budget periods, categories, tags, and the selected monthly overview now use the
+same user/workspace-partitioned SQLite read cache. When the API is unavailable,
+the mobile budget screen keeps an authorized snapshot visible with an explicit
+stale warning; mutations remain online-only and confirmed balances never come
+from the cache. See the [budget cache walkthrough](../../reviews/2026-09-01-mobile-budget-cache-walkthrough.md).
+
+Workspace-scoped cache reads now ignore completions from an unmounted or
+superseded workspace effect. This keeps an older SQLite read from replacing the
+new workspace's local snapshot during a fast switch, while the server remains
+the authorization boundary. See the [cache read race walkthrough](../../reviews/2026-09-01-mobile-cache-read-race-walkthrough.md).

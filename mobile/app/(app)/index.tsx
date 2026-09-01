@@ -43,13 +43,18 @@ export default function OverviewRoute() {
   >([]);
   useEffect(() => {
     if (!session?.user.id || !workspaceId) return;
+    let active = true;
     setCachedOverview(undefined);
     setCachedBalances([]);
     const cache = new WorkspaceCache(session.user.id, workspaceId);
     void cache.read().then((snapshot) => {
+      if (!active) return;
       if (snapshot?.overview) setCachedOverview(snapshot.overview);
       if (snapshot?.balances) setCachedBalances(snapshot.balances);
     });
+    return () => {
+      active = false;
+    };
   }, [session?.user.id, workspaceId]);
   useEffect(() => {
     if (!session?.user.id || !workspaceId || !overviewQuery.data) return;

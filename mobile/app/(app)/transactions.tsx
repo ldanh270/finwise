@@ -42,13 +42,18 @@ export default function TransactionsRoute() {
   >([]);
   useEffect(() => {
     if (!session?.user.id || !workspaceId) return;
+    let active = true;
     setCachedTransactions([]);
     void new WorkspaceCache(session.user.id, workspaceId)
       .read()
       .then((snapshot) => {
+        if (!active) return;
         if (snapshot?.transactions)
           setCachedTransactions(snapshot.transactions);
       });
+    return () => {
+      active = false;
+    };
   }, [session?.user.id, workspaceId]);
   useEffect(() => {
     if (!session?.user.id || !workspaceId || !query.data) return;
