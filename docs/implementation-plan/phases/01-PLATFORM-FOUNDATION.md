@@ -126,6 +126,10 @@ reviewable diff from feature work.
   dependencies, allowing clean startup to load `ValidationPipe` and register
   the `/v1` routes. See the
   [Nest runtime validation dependencies walkthrough](../../reviews/2026-08-31-nest-runtime-validation-dependencies-walkthrough.md).
+- 2026-09-01: the Windows development runner now terminates the complete
+  pnpm/Next/Nest process tree when a sibling exits, preventing stale port
+  listeners and opaque follow-up `ELIFECYCLE` failures. See the
+  [process-tree cleanup walkthrough](../../reviews/2026-09-01-windows-dev-runner-process-tree-walkthrough.md).
 
 ## Exit criteria
 

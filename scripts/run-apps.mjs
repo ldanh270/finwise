@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import process from 'node:process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { stopProcessTree } from './process-tree.mjs';
 
 const mode = process.argv[2];
 
@@ -39,7 +40,7 @@ function stopApplications(exitCode) {
 
   isShuttingDown = true;
   for (const child of children) {
-    child.kill();
+    stopProcessTree(child);
   }
 
   setTimeout(() => process.exit(exitCode), 1000).unref();

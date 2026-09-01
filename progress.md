@@ -184,3 +184,10 @@
   that block unchanged.
 - Added root `AGENTS.md` with shared SOLID, Clean Code, Clean/Hexagonal
   Architecture, design-pattern, financial-domain, testing, and delivery rules.
+
+## 2026-09-01 — Windows dev runner cleanup
+
+- Fixed root `pnpm dev` shutdown on Windows: `taskkill /T /F` now terminates
+  nested pnpm/Next/Nest processes instead of leaving ports 3000/3001 occupied.
+- Added platform-specific process-tree tests and `pnpm test:dev-runner`.
+- Verified backend/frontend builds and a clean `pnpm dev` startup.
