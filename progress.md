@@ -256,3 +256,10 @@
   for online commands and offline manual income/expense drafts.
 - Recorded the parity boundary and remaining native/device gates in the
   walkthrough and Phase 8 plan.
+
+## 2026-09-01 — Mobile balance/group state parity
+
+- Overview no longer leaves the balance detail area blank while the server
+  balance view is loading.
+- Group direct expenses now preserve a validated user-selected effective date,
+  matching the web form instead of silently using today's date.

@@ -114,6 +114,7 @@ export default function GroupRoute() {
   const [accountId, setAccountId] = useState("");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
+  const [effectiveDate, setEffectiveDate] = useState(today());
   const [claimantId, setClaimantId] = useState("");
   const [claimAmount, setClaimAmount] = useState("");
   const [claimDescription, setClaimDescription] = useState("");
@@ -406,7 +407,8 @@ export default function GroupRoute() {
       !accountId ||
       !description.trim() ||
       !/^\d+$/.test(amount.trim()) ||
-      BigInt(amount.trim()) <= 0n
+      BigInt(amount.trim()) <= 0n ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(effectiveDate)
     ) {
       setFeedback(
         "Choose an account and enter a positive amount and description.",
@@ -417,7 +419,7 @@ export default function GroupRoute() {
       accountId,
       amountMinorUnits: amount.trim(),
       description: description.trim(),
-      effectiveDate: today(),
+      effectiveDate,
     };
     const commandKey = stableCommandKey(
       directExpenseCommandKey.current,
@@ -1005,6 +1007,12 @@ export default function GroupRoute() {
                 value={description}
                 onChangeText={setDescription}
                 placeholder="Groceries"
+              />
+              <TextField
+                label="Effective date (YYYY-MM-DD)"
+                value={effectiveDate}
+                onChangeText={setEffectiveDate}
+                placeholder="2026-09-01"
               />
               <PrimaryButton
                 label={postExpense.isPending ? "Posting…" : "Post expense"}

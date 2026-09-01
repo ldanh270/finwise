@@ -207,3 +207,8 @@ The navigation now exposes the same Reports surface as web (with an explicit
 placeholder until a reporting API exists), and manual movement capture accepts
 an ISO effective date that is preserved through online posting and offline
 income/expense drafts. See the [surface parity walkthrough](../../reviews/2026-09-01-mobile-web-surface-parity-walkthrough.md).
+
+Overview now renders an explicit loading state while balance detail is being
+fetched, and Group direct-expense capture accepts the same user-selected
+effective date as web. The date is validated at the mobile boundary and sent
+to the server unchanged. See the [balance and Group state walkthrough](../../reviews/2026-09-01-mobile-balance-group-state-walkthrough.md).

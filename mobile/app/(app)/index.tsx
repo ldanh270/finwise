@@ -142,7 +142,11 @@ export default function OverviewRoute() {
               <TextMuted
                 text={`${overview.accounts.length} visible account${overview.accounts.length === 1 ? "" : "s"}`}
               />
-              {balanceQuery.isError && cachedBalances.length === 0 ? (
+              {balanceQuery.isPending &&
+              !balanceQuery.data &&
+              cachedBalances.length === 0 ? (
+                <TextMuted text="Loading balance detail…" />
+              ) : balanceQuery.isError && cachedBalances.length === 0 ? (
                 <InlineError message="Balance detail is temporarily unavailable." />
               ) : (
                 (balanceQuery.data ?? cachedBalances)
