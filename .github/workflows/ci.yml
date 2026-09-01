@@ -27,5 +27,54 @@ jobs:
       - run: pnpm --filter @finwise/api-client typecheck
       - run: pnpm contracts:check
       - run: pnpm test
+      - run: pnpm test:mobile
       - run: pnpm test:e2e
       - run: pnpm build
+      - run: pnpm --filter mobile export:android
+      - run: pnpm --filter mobile export:ios
+
+  mobile-android-native:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools" "cmake;3.22.1" "ndk;27.1.12297006"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter mobile prebuild -- --platform android --no-install
+      - run: ./gradlew app:assembleDebug
+        working-directory: mobile/android
+
+  mobile-ios-native:
+    runs-on: macos-14
+    env:
+      COCOAPODS_DISABLE_STATS: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter mobile prebuild -- --platform ios --no-install
+      - run: pod install
+        working-directory: mobile/ios
+      - run: >-
+          xcodebuild -workspace Finwise.xcworkspace -scheme Finwise
+          -sdk iphonesimulator -configuration Debug
+          -destination 'generic/platform=iOS Simulator'
+          CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+        working-directory: mobile/ios

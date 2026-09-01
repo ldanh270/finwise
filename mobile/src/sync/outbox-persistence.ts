@@ -26,7 +26,11 @@ export class PersistentOutboxSnapshot {
     return records.length;
   }
 
-  async save(store: OutboxStore, userId: string, workspaceId: string): Promise<void> {
+  async save(
+    store: OutboxStore,
+    userId: string,
+    workspaceId: string,
+  ): Promise<void> {
     const records = store.list(userId, workspaceId);
     await this.storage.setItem(this.key, serializeRecords(records));
   }

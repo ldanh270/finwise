@@ -1,7 +1,4 @@
-import type {
-  ManualDraftCommand,
-  ManualDraftSyncPort,
-} from "./outbox";
+import type { ManualDraftCommand, ManualDraftSyncPort } from "./outbox";
 
 /**
  * Minimal shape implemented by the generated API client. Keeping this port

@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   HttpCode,
   Post,
   Req,
@@ -22,6 +23,7 @@ export class AuthController {
   async register(
     @Body() body: unknown,
     @Req() request: Request,
+    @Headers('x-finwise-client') clientType: string | undefined,
     @Res({ passthrough: true }) response: Response,
   ) {
     const displayName = readField(body, 'displayName');
@@ -35,7 +37,7 @@ export class AuthController {
     );
     const { refreshToken, ...publicSession } = result;
     setRefreshCookie(response, refreshToken);
-    return publicSession;
+    return sessionResponse(publicSession, refreshToken, clientType);
   }
 
   @Post('login')
@@ -43,6 +45,7 @@ export class AuthController {
   async login(
     @Body() body: unknown,
     @Req() request: Request,
+    @Headers('x-finwise-client') clientType: string | undefined,
     @Res({ passthrough: true }) response: Response,
   ) {
     const result = await this.authService.login(
@@ -54,16 +57,18 @@ export class AuthController {
     );
     const { refreshToken, ...publicSession } = result;
     setRefreshCookie(response, refreshToken);
-    return publicSession;
+    return sessionResponse(publicSession, refreshToken, clientType);
   }
 
   @Post('refresh')
   @HttpCode(200)
   async refresh(
     @Req() request: Request,
+    @Headers('x-finwise-client') clientType: string | undefined,
+    @Headers('x-finwise-refresh-token') mobileRefreshToken: string | undefined,
     @Res({ passthrough: true }) response: Response,
   ) {
-    const refreshToken = readCookie(request, REFRESH_COOKIE);
+    const refreshToken = readRefreshToken(request, mobileRefreshToken);
     try {
       const result = await this.authService.refresh(
         refreshToken,
@@ -71,7 +76,7 @@ export class AuthController {
       );
       const { refreshToken: nextRefreshToken, ...publicSession } = result;
       setRefreshCookie(response, nextRefreshToken);
-      return publicSession;
+      return sessionResponse(publicSession, nextRefreshToken, clientType);
     } catch (error: unknown) {
       clearRefreshCookie(response);
       throw error;
@@ -82,9 +87,12 @@ export class AuthController {
   @HttpCode(204)
   async logout(
     @Req() request: Request,
+    @Headers('x-finwise-refresh-token') mobileRefreshToken: string | undefined,
     @Res({ passthrough: true }) response: Response,
   ): Promise<void> {
-    await this.authService.logout(readCookie(request, REFRESH_COOKIE));
+    await this.authService.logout(
+      readRefreshToken(request, mobileRefreshToken),
+    );
     clearRefreshCookie(response);
   }
 
@@ -133,6 +141,23 @@ function readCookie(request: Request, name: string): string | undefined {
     }
   }
   return undefined;
+}
+
+function readRefreshToken(
+  request: Request,
+  mobileRefreshToken: string | undefined,
+): string | undefined {
+  return mobileRefreshToken?.trim() || readCookie(request, REFRESH_COOKIE);
+}
+
+function sessionResponse<T extends object>(
+  publicSession: T,
+  refreshToken: string,
+  clientType: string | undefined,
+): T & { readonly refreshToken?: string } {
+  return clientType?.trim().toLowerCase() === 'mobile'
+    ? { ...publicSession, refreshToken }
+    : publicSession;
 }
 
 function setRefreshCookie(response: Response, refreshToken: string): void {

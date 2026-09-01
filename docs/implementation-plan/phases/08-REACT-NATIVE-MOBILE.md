@@ -1,6 +1,6 @@
 # Phase 8 — React Native mobile
 
-Status: Outbox boundary complete — Expo/outbox scaffold, generated-client adapter, and restart snapshots delivered; native adapters remain
+Status: Online feature parity slice complete — Expo/CNG app, JWT/SecureStore boundary, shared API client, SQLite cache/outbox, and mobile feature routes delivered; native device sign-off remains
 Depends on: [Phase 7](07-WEB-MVP-RELEASE.md), generated OpenAPI client, [auth/session architecture](../AUTH-SESSION-ARCHITECTURE.md)  
 Unblocks: first-class iOS/Android daily capture
 
@@ -25,8 +25,10 @@ controlled offline drafts without creating a second ledger.
   Transfer, correction, approval, import, reconciliation, and confirmed
   balance changes require an online server response.
 - Draft outbox state is `LOCAL_DRAFT → QUEUED → SYNCING → SYNCED`, with
-  `RETRYABLE_FAILURE` and `NEEDS_USER_ACTION`. A stable `clientCommandId` is
-  reused for every retry; queued drafts never change confirmed balances.
+  `RETRYABLE_FAILURE`, `NEEDS_USER_ACTION`, and terminal `EXPORTED`. A stable
+  `clientCommandId` is reused for every retry; queued drafts never change
+  confirmed balances. Export marks a local copy only after a successful file
+  write/share and never posts a journal.
 - Normal logout is blocked until queued/failed financial drafts are synced,
   exported, or explicitly discarded. A new user must never see old partitions.
 
@@ -51,8 +53,11 @@ and workflow state, never authoritative financial records.
 
 Use generated API operations for bootstrap, workspace/accounts,
 income/expense creation, transaction history, balances, budgets, and Group
-submission. Every command passes exact Money DTOs, token callback, request ID,
-and stable idempotency key. Do not duplicate backend domain entities.
+participant/collection/contribution/claim/reimbursement operations. Every
+command passes exact Money DTOs, token callback, request ID, and stable
+idempotency key. Receipt staging remains user/workspace-partitioned local
+metadata until the server upload contract is delivered. Do not duplicate
+backend domain entities.
 
 ## Client behavior
 
@@ -112,3 +117,52 @@ macOS local or managed runner.
 
 The phase remains open until SecureStore, SQLite, generated API screens,
 process-death recovery, and Android/iOS development-build verification pass.
+
+## 2026-09-01 implementation update
+
+The online and controlled-offline client slice is now implemented. Mobile uses
+the custom Finwise JWT service (not Supabase), receives rotated refresh tokens
+only through the explicit `X-Finwise-Client: mobile` transport, and shares the
+Nest API client for overview, accounts, transactions, budgets, full Group
+Treasury workflows, CSV inbox matching/raw cleanup, reconciliation adjustment,
+and settings. Exact VND
+minor-unit strings are used throughout; offline manual income/expense drafts
+are queued in a
+user/workspace-partitioned SQLite boundary and synchronized with one stable
+idempotency key. Import rows can be matched to an existing transaction
+without posting, raw CSV data can be deleted while normalized evidence remains,
+and open reconciliation checkpoints can post one exact-difference adjustment
+through the ledger. Online command forms capture their payload and retain one
+idempotency key across retries; editing the payload starts a new command.
+Interrupted `SYNCING` drafts are re-queued after process restart, and
+workspace switching clears old query/cache reads before loading the new scope;
+logout checks pending drafts across every workspace available to the user.
+Retryable network failures are re-queued before the next foreground sync while
+retaining the original idempotency key.
+API error envelopes are classified at the sync boundary so permission and
+conflict failures move to `NEEDS_USER_ACTION` instead of retrying indefinitely.
+The app shell retries queued drafts when the app becomes active again and
+surfaces a generic token-free sync notice when local persistence or transport
+is unavailable.
+Settings can export unresolved drafts as a CSV and then unlock logout by moving
+those records to `EXPORTED`; this is local evidence only and does not alter the
+confirmed ledger.
+The shared transport now emits a validated `X-Request-Id` on JSON and CSV
+requests and preserves a caller-supplied ID across access-token refresh retry,
+which keeps mobile diagnostics correlated with backend request logs.
+The repository CI quality job runs mobile unit tests plus Android and iOS
+JavaScript exports alongside backend/frontend gates.
+An additional Ubuntu CI job generates the Android CNG project and assembles a
+debug APK from a short-path Linux workspace.
+The CI workflow also includes a macOS job that generates the iOS CNG project,
+installs CocoaPods, and builds an unsigned iOS Simulator target.
+
+An Android CNG debug build was also attempted with the local SDK/NDK. Expo
+configuration and Java/Kotlin compilation advanced, but Windows CMake stopped
+on the 260-character path limit inside the pnpm symlink tree. Generated native
+output was removed; the remaining native gate should run from a short-path or
+long-path-enabled Android CI workspace, followed by macOS/iOS development-build
+and signing verification.
+
+See the [mobile online feature parity walkthrough](../../reviews/2026-09-01-mobile-online-feature-parity-walkthrough.md)
+for affected files, verification results, and remaining device/native gates.

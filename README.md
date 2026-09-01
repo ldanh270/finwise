@@ -1,7 +1,7 @@
 # Finwise
 
 Finwise is a VND-first, multi-workspace money-management application. The
-Next.js web client and future React Native client use the NestJS `/v1` API;
+Next.js web client and Expo React Native client use the NestJS `/v1` API;
 financial truth and authorization never live in the clients.
 
 The repository is organized as a pnpm workspace. `backend/` owns the modular
@@ -9,14 +9,14 @@ NestJS API, `frontend/` owns the Next.js web experience, `packages/` contains
 transport-only shared packages, and `docs/` is the product/domain source of
 truth.
 
-The current implementation slice covers development-auth bootstrap, personal
-and shared-workspace boundaries, VND exact-money accounts, opening balances,
-income/expense/transfer journals, idempotent commands, void-by-reversal, audit
-history, custom RBAC/account scope, and a responsive web dashboard shell. The
-remaining MVP contexts (workspace persistence, password recovery/MFA,
-budgets,
-Group Treasury, CSV reconciliation, and the pilot hardening gate) remain
-tracked in [`docs/implementation-plan/README.md`](docs/implementation-plan/README.md).
+The current implementation covers custom JWT authentication, personal/shared
+workspaces, VND exact-money accounts and immutable journals, budgets, Group
+Treasury, CSV ingestion/reconciliation, permission-aware web screens, and a
+mobile online path with SecureStore sessions, workspace-scoped SQLite cache,
+and controlled offline income/expense drafts. The remaining release gates are
+provider/device operations (especially iOS signing and physical-device tests),
+not a second mobile feature implementation. The roadmap remains tracked in
+[`docs/implementation-plan/README.md`](docs/implementation-plan/README.md).
 
 ## Setup
 

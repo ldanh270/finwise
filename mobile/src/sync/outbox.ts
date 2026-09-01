@@ -6,6 +6,7 @@ export type OutboxState =
   | "SYNCING"
   | "SYNCED"
   | "DISCARDED"
+  | "EXPORTED"
   | "RETRYABLE_FAILURE"
   | "NEEDS_USER_ACTION";
 
@@ -46,7 +47,8 @@ export interface ManualDraftSyncPort {
 }
 
 type SyncFailure = {
-  readonly code?: string;
+  readonly code?: unknown;
+  readonly envelope?: { readonly code?: unknown };
 };
 
 export class InMemoryOutboxStore implements OutboxStore {
@@ -103,6 +105,13 @@ export class ManualDraftOutbox {
   beginSync(clientCommandId: string): OutboxRecord {
     return this.transition(clientCommandId, ["QUEUED"], {
       state: "SYNCING",
+    });
+  }
+
+  recoverInterruptedSync(clientCommandId: string): OutboxRecord {
+    return this.transition(clientCommandId, ["SYNCING"], {
+      state: "QUEUED",
+      lastErrorCode: undefined,
     });
   }
 
@@ -164,11 +173,22 @@ export class ManualDraftOutbox {
     return next;
   }
 
+  export(clientCommandId: string): OutboxRecord {
+    return this.transition(
+      clientCommandId,
+      ["LOCAL_DRAFT", "QUEUED", "RETRYABLE_FAILURE", "NEEDS_USER_ACTION"],
+      { state: "EXPORTED", lastErrorCode: undefined },
+    );
+  }
+
   canLogout(userId: string, workspaceId: string): boolean {
     return this.store
       .list(userId, workspaceId)
       .every(
-        (record) => record.state === "SYNCED" || record.state === "DISCARDED",
+        (record) =>
+          record.state === "SYNCED" ||
+          record.state === "DISCARDED" ||
+          record.state === "EXPORTED",
       );
   }
 
@@ -176,7 +196,10 @@ export class ManualDraftOutbox {
     return this.store
       .list(userId, workspaceId)
       .filter(
-        (record) => record.state !== "SYNCED" && record.state !== "DISCARDED",
+        (record) =>
+          record.state !== "SYNCED" &&
+          record.state !== "DISCARDED" &&
+          record.state !== "EXPORTED",
       ).length;
   }
 
@@ -269,13 +292,16 @@ function sameCommand(left: OutboxRecord, right: ManualDraftCommand): boolean {
 }
 
 function failureCode(error: unknown): string {
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    typeof (error as SyncFailure).code === "string" &&
-    (error as SyncFailure).code?.trim()
-  ) {
-    return (error as SyncFailure).code?.trim() ?? "SYNC_FAILED";
+  if (typeof error === "object" && error !== null) {
+    const failure = error as SyncFailure;
+    if (typeof failure.code === "string" && failure.code.trim())
+      return failure.code.trim();
+    if (
+      typeof failure.envelope?.code === "string" &&
+      failure.envelope.code.trim()
+    ) {
+      return failure.envelope.code.trim();
+    }
   }
   return "NETWORK_ERROR";
 }

@@ -2330,6 +2330,10 @@
         "properties": {
           "accessToken": { "type": "string" },
           "accessTokenExpiresAt": { "type": "string", "format": "date-time" },
+          "refreshToken": {
+            "type": "string",
+            "description": "Returned only when the X-Finwise-Client: mobile header is present; web clients receive an HttpOnly cookie."
+          },
           "user": { "$ref": "#/components/schemas/AuthUser" }
         }
       },

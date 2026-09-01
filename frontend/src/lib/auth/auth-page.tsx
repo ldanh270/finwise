@@ -4,10 +4,14 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { login, register } from "./session";
 
-type AuthMode = "login" | "register";
+export type AuthMode = "login" | "register";
 
-export default function AuthPage() {
-  const [mode, setMode] = useState<AuthMode>("login");
+export default function AuthPage({
+  initialMode = "login",
+}: {
+  readonly initialMode?: AuthMode;
+}) {
+  const [mode, setMode] = useState<AuthMode>(initialMode);
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -47,6 +51,7 @@ export default function AuthPage() {
   function switchMode(nextMode: AuthMode) {
     setMode(nextMode);
     setStatus({ kind: "idle" });
+    router.push(nextMode === "login" ? "/login" : "/signup");
   }
 
   return (

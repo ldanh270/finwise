@@ -24,13 +24,16 @@ product discussions.
 | 6. Flutter and shared-backend architecture | superseded | Historical Flutter decision; platform-neutral backend, API, security, and offline boundaries remain valid |
 | 7. Flutter source scaffold migration | superseded | Historical investigation stopped as active direction when React Native was selected |
 | 8. React Native architecture supersession | complete | Confirm React Native/TypeScript; record Expo/CNG, pnpm consolidation, authentication/session, and offline behavior as proposals; retain NestJS as the single business boundary |
-| 9. React Native source migration | pending | Audit current mobile state, replace only the superseded target with an Expo TypeScript scaffold, migrate root scripts/workspace configuration, and verify Android plus iOS CI smoke builds |
+| 9. React Native source migration | complete (native sign-off pending) | Expo TypeScript app, shared API transport, online web-parity routes, SecureStore sessions, SQLite cache/outbox, and Android/iOS JS exports; physical development-build verification remains an operations gate |
 
 ## Next step
 
-Review the requested decisions in `AUTH-SESSION-ARCHITECTURE.md`, especially
-Supabase Auth, email OTP, custom SMTP, logout with drafts, and personal-workspace
-creation. Then confirm Expo/CNG before opening the separate phase 9 migration.
+Review the remaining native release gates in
+`docs/implementation-plan/phases/08-REACT-NATIVE-MOBILE.md`: run development
+builds on physical Android and iOS devices, verify process death/weak network,
+let the Ubuntu Android and macOS iOS native jobs run, and establish signing
+profiles in CI. Do not treat JavaScript export success as native-device
+sign-off.
 
 ## Phase 7 historical implementation notes
 

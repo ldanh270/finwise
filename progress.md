@@ -1,5 +1,26 @@
 # Progress log
 
+## 2026-09-01
+
+- Delivered the Expo React Native online feature-parity slice across Android
+  and iOS routes: custom JWT auth, workspace switching, accounts, ledger
+  capture/history, budgets, Group Treasury, CSV inbox/reconciliation, export,
+  settings, receipt staging, and controlled offline manual drafts.
+- Added request correlation IDs, retryable-outbox recovery, structured API
+  error classification, server-derived overview labels, and a blank import
+  inbox default so the client never presents demo financial data as real data.
+- Verified format, lint, typecheck, contracts, backend/mobile tests (24 mobile
+  tests), backend/frontend build, Expo Doctor, and Android/iOS JavaScript
+  exports. Physical-device/native signing remains the documented gate.
+- Generated the Android CNG project and ran a native debug build with the local
+  SDK/NDK; configuration and Java/Kotlin compilation advanced, but CMake hit
+  Windows' 260-character path limit in the pnpm symlink tree. Removed generated
+  native output; short-path or long-path-enabled Android CI is the next gate.
+- Added mobile tests and both Expo platform exports to the shared GitHub CI
+  quality job, plus a separate Ubuntu Android CNG/debug-APK job so native
+  Android compilation is checked outside Windows path limits. Added a macOS
+  iOS simulator job that runs CNG, CocoaPods, and unsigned xcodebuild.
+
 ## 2026-08-30
 
 - Continued React Native architecture discovery with the authentication/session

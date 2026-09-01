@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export default async function Home() {
   const user = await getFinwiseServerSession();
   if (!user) {
-    redirect("/auth");
+    redirect("/login");
   }
   return <DashboardPage />;
 }

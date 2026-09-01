@@ -122,6 +122,9 @@ to the prior API/image while preserving additive migrations.
 - 2026-09-01: summary metrics, top-level panels, and matching loading states
   now share the `--radius-panel` token, keeping the visual language consistent
   across loaded and empty states. See the [summary radius consistency walkthrough](../../reviews/2026-09-01-summary-radius-consistency-walkthrough.md).
+- 2026-09-01: public authentication routes are now `/login` and `/signup`;
+  `/auth` remains a legacy redirect, and unauthenticated protected routes
+  redirect to `/login`. See the [auth route walkthrough](../../reviews/2026-09-01-auth-route-walkthrough.md).
 
 The phase remains open until the full MVP workflows, operational controls,
 accessibility checks, and pilot recovery drills meet the exit criteria above.

@@ -11,7 +11,7 @@ export function SignOutButton() {
   async function signOut() {
     setIsSigningOut(true);
     await logout();
-    router.push("/auth");
+    router.push("/login");
     router.refresh();
   }
 

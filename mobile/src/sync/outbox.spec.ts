@@ -4,7 +4,11 @@ import {
   idempotencyKeyFor,
 } from "./outbox";
 import { ApiManualDraftSync } from "./online-sync";
-import { PersistentOutboxSnapshot, type JsonStorage } from "./outbox-persistence";
+import { draftExportCsv } from "./draft-export";
+import {
+  PersistentOutboxSnapshot,
+  type JsonStorage,
+} from "./outbox-persistence";
 
 describe("ManualDraftOutbox", () => {
   function createDraft() {
@@ -35,6 +39,16 @@ describe("ManualDraftOutbox", () => {
     outbox.beginSync("client-1");
     outbox.markSynced("client-1", "server-1");
     expect(outbox.canLogout("user-1", "workspace-1")).toBe(true);
+  });
+
+  it("requeues a draft interrupted during process death", () => {
+    const outbox = new ManualDraftOutbox(new InMemoryOutboxStore());
+    outbox.create(createDraft());
+    outbox.queue("client-1");
+    outbox.beginSync("client-1");
+
+    expect(outbox.recoverInterruptedSync("client-1").state).toBe("QUEUED");
+    expect(outbox.canLogout("user-1", "workspace-1")).toBe(false);
   });
 
   it("rejects a different command reusing an existing client id", () => {
@@ -94,6 +108,46 @@ describe("ManualDraftOutbox", () => {
     expect(actionable.lastErrorCode).toBe("CONFLICT");
   });
 
+  it("allows an exported draft to unlock logout without posting it", () => {
+    const outbox = new ManualDraftOutbox(new InMemoryOutboxStore());
+    outbox.create(createDraft());
+    outbox.queue("client-1");
+
+    const exported = outbox.export("client-1");
+
+    expect(exported.state).toBe("EXPORTED");
+    expect(exported.serverTransactionId).toBeUndefined();
+    expect(outbox.pendingCount("user-1", "workspace-1")).toBe(0);
+    expect(outbox.canLogout("user-1", "workspace-1")).toBe(true);
+  });
+
+  it("exports draft values as escaped CSV without token or server fields", () => {
+    const draft = {
+      ...createDraft(),
+      description: 'Lunch, "team"',
+    };
+    expect(draftExportCsv([{ ...draft, state: "QUEUED", attempts: 0 }])).toBe(
+      [
+        "clientCommandId,accountId,kind,amountMinorUnits,effectiveDate,description,state",
+        'client-1,account-1,expense,125000,2026-08-31,"Lunch, ""team""",QUEUED',
+      ].join("\n"),
+    );
+  });
+
+  it("classifies API error envelopes as actionable failures", async () => {
+    const outbox = new ManualDraftOutbox(new InMemoryOutboxStore());
+    outbox.create(createDraft());
+    outbox.queue("client-1");
+    const result = await outbox.sync("client-1", {
+      async postManualTransaction() {
+        throw { envelope: { code: "PERMISSION_DENIED" } };
+      },
+    });
+
+    expect(result.state).toBe("NEEDS_USER_ACTION");
+    expect(result.lastErrorCode).toBe("PERMISSION_DENIED");
+  });
+
   it("adapts the generated client shape without changing the draft contract", async () => {
     const calls: unknown[] = [];
     const sync = new ApiManualDraftSync({
@@ -102,7 +156,9 @@ describe("ManualDraftOutbox", () => {
         return { id: "server-2" };
       },
     });
-    await expect(sync.postManualTransaction(createDraft(), "client-1")).resolves.toEqual({
+    await expect(
+      sync.postManualTransaction(createDraft(), "client-1"),
+    ).resolves.toEqual({
       transactionId: "server-2",
     });
     expect(calls).toEqual([
