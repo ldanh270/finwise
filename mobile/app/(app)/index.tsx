@@ -12,6 +12,7 @@ import {
   StatePanel,
   colors,
   Divider,
+  formatVnd,
 } from "../../src/ui/components";
 import { useAuth } from "../../src/auth/auth-context";
 import { useWorkspace } from "../../src/app/providers";
@@ -88,6 +89,7 @@ export default function OverviewRoute() {
             {overviewQuery.isError ? (
               <InlineError message="Showing the last cached overview. Pull to retry when online." />
             ) : null}
+            {overview.hasPartialAccess ? <PartialAccessNotice /> : null}
             <ViewCards overview={overview} />
             <Card>
               <View
@@ -149,18 +151,36 @@ export default function OverviewRoute() {
                     <View
                       key={balance.accountId}
                       style={{
-                        flexDirection: "row",
-                        justifyContent: "space-between",
+                        gap: 3,
                       }}
                     >
-                      <TextMuted
-                        text={
-                          overview.accounts.find(
-                            (account) => account.id === balance.accountId,
-                          )?.name ?? "Visible account"
-                        }
-                      />
-                      <Money value={balance.ledger} compact />
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <TextMuted
+                          text={
+                            overview.accounts.find(
+                              (account) => account.id === balance.accountId,
+                            )?.name ?? "Visible account"
+                          }
+                        />
+                        <Money value={balance.ledger} compact />
+                      </View>
+                      <Text
+                        style={{
+                          color: colors.muted,
+                          fontSize: 11,
+                          lineHeight: 16,
+                        }}
+                      >
+                        Ledger {formatVnd(balance.ledger.minorUnits)} · Cleared{" "}
+                        {formatVnd(balance.cleared.minorUnits)} · Reconciled{" "}
+                        {formatVnd(balance.reconciled.minorUnits)} ₫
+                      </Text>
+                      <Divider />
                     </View>
                   ))
               )}
@@ -218,6 +238,24 @@ function ViewCards({
     </View>
   );
 }
+
+function PartialAccessNotice() {
+  return (
+    <View
+      accessibilityLiveRegion="polite"
+      style={{
+        backgroundColor: "#fff8e8",
+        borderRadius: 12,
+        padding: 12,
+      }}
+    >
+      <Text style={{ color: colors.amber, fontSize: 12, lineHeight: 18 }}>
+        Some account data is hidden based on your workspace permissions.
+      </Text>
+    </View>
+  );
+}
+
 function TextMuted({ text }: { text: string }) {
   return (
     <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 19 }}>

@@ -198,3 +198,7 @@ for overview, ledger, planning, Group Treasury, and ingestion. Expo routes own
 presentation state and navigation while services wrap the shared API client;
 request paths, payloads, idempotency, and UI behavior remain unchanged. See the
 [feature-service boundary walkthrough](../../reviews/2026-09-01-mobile-feature-service-boundary-walkthrough.md).
+
+Overview now surfaces the server's partial-access indicator and renders ledger,
+cleared, and reconciled balance views for each visible account, matching the
+web permission-aware presentation. See the [partial-access balance walkthrough](../../reviews/2026-09-01-mobile-partial-access-walkthrough.md).

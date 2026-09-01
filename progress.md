@@ -238,3 +238,11 @@
   `/v1` paths, exact money values, stable idempotency keys, and cache behavior.
 - Verified lint, typecheck, mobile tests, e2e, web/backend build, and platform
   JavaScript exports.
+
+## 2026-09-01 — Mobile partial-access balance views
+
+- Overview now shows an accessible permission-scoped notice when the server
+  reports partial account access.
+- Visible account rows now include ledger, cleared, and reconciled balances
+  without deriving or exposing hidden accounts.
+- Verified mobile typecheck, tests, and formatting.
