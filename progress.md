@@ -263,3 +263,17 @@
   balance view is loading.
 - Group direct expenses now preserve a validated user-selected effective date,
   matching the web form instead of silently using today's date.
+
+## 2026-09-01 — Mobile inbox account prerequisite
+
+- CSV import and reconciliation now show an explicit setup state when the
+  workspace has no visible active account.
+- The setup state links directly to account management instead of presenting
+  unusable empty selectors.
+
+## 2026-09-01 — Mobile Group account prerequisite
+
+- Group claim submission and direct treasury expense posting are disabled when
+  no visible active account exists.
+- The UI explains the prerequisite while keeping collection and participant
+  setup available.

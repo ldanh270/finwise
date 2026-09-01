@@ -212,3 +212,13 @@ Overview now renders an explicit loading state while balance detail is being
 fetched, and Group direct-expense capture accepts the same user-selected
 effective date as web. The date is validated at the mobile boundary and sent
 to the server unchanged. See the [balance and Group state walkthrough](../../reviews/2026-09-01-mobile-balance-group-state-walkthrough.md).
+
+Inbox and reconciliation now stop at an explicit account-setup state when no
+visible active account is available, with a direct Accounts navigation action.
+Archived or hidden accounts never become selectable. See the [inbox account
+gate walkthrough](../../reviews/2026-09-01-mobile-inbox-account-gate-walkthrough.md).
+
+Group claim and direct-expense commands now expose an explicit active-account
+prerequisite and remain disabled until a visible active account is available.
+Collection and participant setup are unaffected. See the [Group account gate
+walkthrough](../../reviews/2026-09-01-mobile-group-account-gate-walkthrough.md).

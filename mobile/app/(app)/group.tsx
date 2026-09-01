@@ -847,7 +847,11 @@ export default function GroupRoute() {
               ) : null}
               <PrimaryButton
                 label={createClaim.isPending ? "Submitting…" : "Submit claim"}
-                disabled={createClaim.isPending || !participantOptions.length}
+                disabled={
+                  createClaim.isPending ||
+                  !participantOptions.length ||
+                  !activeAccounts.length
+                }
                 onPress={() => {
                   if (
                     !claimantId ||
@@ -864,6 +868,12 @@ export default function GroupRoute() {
                   createClaim.mutate();
                 }}
               />
+              {!activeAccounts.length ? (
+                <Text style={{ color: colors.muted, fontSize: 12 }}>
+                  Add a visible active account before submitting or reimbursing
+                  a claim.
+                </Text>
+              ) : null}
               {claimsQuery.isError ? (
                 <InlineError message="Claims could not load." />
               ) : claimsQuery.data?.length ? (
@@ -1016,9 +1026,15 @@ export default function GroupRoute() {
               />
               <PrimaryButton
                 label={postExpense.isPending ? "Posting…" : "Post expense"}
-                disabled={postExpense.isPending}
+                disabled={postExpense.isPending || !activeAccounts.length}
                 onPress={post}
               />
+              {!activeAccounts.length ? (
+                <Text style={{ color: colors.muted, fontSize: 12 }}>
+                  Add a visible active account before posting a treasury
+                  expense.
+                </Text>
+              ) : null}
               {directExpensesQuery.isError ? (
                 <InlineError message="Direct expenses could not load." />
               ) : directExpensesQuery.data?.length ? (

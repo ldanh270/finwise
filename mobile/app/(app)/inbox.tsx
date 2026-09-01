@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as DocumentPicker from "expo-document-picker";
@@ -224,6 +225,18 @@ export default function InboxRoute() {
       />
     );
   }
+  if (accountOptions.length === 0) {
+    return (
+      <InboxGate
+        title="Add an account before using the inbox"
+        description="CSV imports and reconciliation checkpoints need a visible active account."
+        action={{
+          label: "Manage accounts",
+          onPress: () => router.replace("/(app)/accounts"),
+        }}
+      />
+    );
+  }
   return (
     <AppShell active="inbox">
       <ScrollScreen>
@@ -433,10 +446,12 @@ export default function InboxRoute() {
 function InboxGate({
   title,
   description,
+  action,
   onRetry,
 }: {
   title: string;
   description?: string;
+  action?: { label: string; onPress: () => void };
   onRetry?: () => void;
 }) {
   return (
@@ -450,7 +465,10 @@ function InboxGate({
         <StatePanel
           title={title}
           description={description}
-          action={onRetry ? { label: "Retry", onPress: onRetry } : undefined}
+          action={
+            action ??
+            (onRetry ? { label: "Retry", onPress: onRetry } : undefined)
+          }
         />
       </ScrollScreen>
     </AppShell>
