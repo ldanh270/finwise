@@ -18,6 +18,10 @@ import { FinwiseApiError } from "@finwise/api-client";
 import { MobileOutboxRepository } from "../../../src/sync/mobile-outbox-repository";
 import { manualTransactionSchema } from "../../../src/validation/forms";
 import { WorkspaceCache } from "../../../src/cache/workspace-cache";
+import {
+  createTransaction,
+  listAccounts,
+} from "../../../src/features/ledger/ledger-service";
 import type { ManualTransactionForm } from "../../../src/validation/forms";
 import {
   stableCommandKey,
@@ -36,7 +40,7 @@ export default function NewTransactionRoute() {
   const queryClient = useQueryClient();
   const accountsQuery = useQuery({
     queryKey: ["accounts", workspaceId],
-    queryFn: () => api.getAccounts(workspaceId as string),
+    queryFn: () => listAccounts(api, workspaceId as string),
     enabled: Boolean(workspaceId),
   });
   const [cachedAccounts, setCachedAccounts] = useState<
@@ -66,7 +70,8 @@ export default function NewTransactionRoute() {
   const commandRef = useRef<StableCommandKeyState | undefined>(undefined);
   const mutation = useMutation({
     mutationFn: (command: OnlineTransactionCommand) =>
-      api.createTransaction(
+      createTransaction(
+        api,
         workspaceId as string,
         command.input,
         command.clientCommandId,

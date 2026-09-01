@@ -229,3 +229,12 @@
   and bank beta remain future roadmap work.
 - Recorded native-device and macOS iOS compilation gates explicitly in the
   parity walkthrough and implementation-plan index.
+
+## 2026-09-01 — Mobile feature-service boundary
+
+- Moved overview, ledger, planning, Group Treasury, and ingestion API calls
+  from Expo routes into bounded-context services under `mobile/src/features`.
+- Routes now compose UI/query state and navigation while preserving shared
+  `/v1` paths, exact money values, stable idempotency keys, and cache behavior.
+- Verified lint, typecheck, mobile tests, e2e, web/backend build, and platform
+  JavaScript exports.

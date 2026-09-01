@@ -20,6 +20,22 @@ import {
 } from "../../src/ui/components";
 import { useAuth } from "../../src/auth/auth-context";
 import { useWorkspace } from "../../src/app/providers";
+import {
+  adjustReconciliation,
+  confirmImportedRecord,
+  createImportSession,
+  decideImportedRecord,
+  deleteImportRaw,
+  getImportedRecords,
+  getImportSessions,
+  getReconciliations,
+  matchImportedRecord,
+  startReconciliation,
+} from "../../src/features/ingestion/ingestion-service";
+import {
+  listAccounts,
+  listTransactions,
+} from "../../src/features/ledger/ledger-service";
 
 export default function InboxRoute() {
   const { api } = useAuth();
@@ -27,22 +43,22 @@ export default function InboxRoute() {
   const queryClient = useQueryClient();
   const accountsQuery = useQuery({
     queryKey: ["accounts", workspaceId],
-    queryFn: () => api.getAccounts(workspaceId as string),
+    queryFn: () => listAccounts(api, workspaceId as string),
     enabled: Boolean(workspaceId),
   });
   const sessionsQuery = useQuery({
     queryKey: ["imports", workspaceId],
-    queryFn: () => api.getImportSessions(workspaceId as string),
+    queryFn: () => getImportSessions(api, workspaceId as string),
     enabled: Boolean(workspaceId),
   });
   const transactionsQuery = useQuery({
     queryKey: ["transactions", workspaceId],
-    queryFn: () => api.getTransactions(workspaceId as string),
+    queryFn: () => listTransactions(api, workspaceId as string),
     enabled: Boolean(workspaceId),
   });
   const reconciliationsQuery = useQuery({
     queryKey: ["reconciliations", workspaceId],
-    queryFn: () => api.getReconciliations(workspaceId as string),
+    queryFn: () => getReconciliations(api, workspaceId as string),
     enabled: Boolean(workspaceId),
   });
   const [selectedSessionId, setSelectedSessionId] = useState<string>();
@@ -50,7 +66,7 @@ export default function InboxRoute() {
   const recordsQuery = useQuery({
     queryKey: ["import-records", workspaceId, sessionId],
     queryFn: () =>
-      api.getImportedRecords(workspaceId as string, sessionId as string),
+      getImportedRecords(api, workspaceId as string, sessionId as string),
     enabled: Boolean(workspaceId && sessionId),
   });
   const [accountId, setAccountId] = useState("");
@@ -75,7 +91,7 @@ export default function InboxRoute() {
   }, [selectedSessionId, sessionsQuery.data]);
   const importMutation = useMutation({
     mutationFn: () =>
-      api.createImportSession(workspaceId as string, {
+      createImportSession(api, workspaceId as string, {
         accountId,
         fileName,
         csvContent,
@@ -96,7 +112,7 @@ export default function InboxRoute() {
   });
   const reconcileMutation = useMutation({
     mutationFn: () =>
-      api.startReconciliation(workspaceId as string, {
+      startReconciliation(api, workspaceId as string, {
         accountId,
         statementDate,
         externalBalanceMinorUnits: externalBalance.trim(),
@@ -111,7 +127,7 @@ export default function InboxRoute() {
   });
   const deleteRawMutation = useMutation({
     mutationFn: (sessionToDelete: string) =>
-      api.deleteImportRaw(workspaceId as string, sessionToDelete),
+      deleteImportRaw(api, workspaceId as string, sessionToDelete),
     onSuccess: async () => {
       setFeedback("Raw CSV data deleted. Normalized evidence is retained.");
       await queryClient.invalidateQueries({
@@ -460,7 +476,8 @@ function RecordRow({
   );
   const confirm = useMutation({
     mutationFn: () =>
-      api.confirmImportedRecord(
+      confirmImportedRecord(
+        api,
         workspaceId,
         record.id,
         `mobile-import-${record.id}`,
@@ -470,7 +487,8 @@ function RecordRow({
   });
   const ignore = useMutation({
     mutationFn: () =>
-      api.decideImportedRecord(
+      decideImportedRecord(
+        api,
         workspaceId,
         record.id,
         "ignore",
@@ -481,13 +499,14 @@ function RecordRow({
   });
   const match = useMutation({
     mutationFn: () =>
-      api.matchImportedRecord(workspaceId, record.id, transactionId),
+      matchImportedRecord(api, workspaceId, record.id, transactionId),
     onSuccess: onChanged,
     onError: (value: Error) => setError(value.message),
   });
   const attention = useMutation({
     mutationFn: () =>
-      api.decideImportedRecord(
+      decideImportedRecord(
+        api,
         workspaceId,
         record.id,
         "needs-attention",
@@ -578,7 +597,7 @@ function ReconciliationRow({
   const [error, setError] = useState<string | null>(null);
   const adjust = useMutation({
     mutationFn: () =>
-      api.adjustReconciliation(workspaceId, checkpoint.id, {
+      adjustReconciliation(api, workspaceId, checkpoint.id, {
         amountMinorUnits: absoluteMinorUnits(checkpoint.difference.minorUnits),
         reason: reason.trim(),
         effectiveDate,

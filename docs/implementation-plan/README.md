@@ -56,6 +56,7 @@ Prisma schema merely because a table already exists.
 - [Mobile bootstrap readiness walkthrough](../reviews/2026-09-01-mobile-bootstrap-readiness-walkthrough.md)
 - [Mobile inbox data-state walkthrough](../reviews/2026-09-01-mobile-inbox-state-walkthrough.md)
 - [Mobile transaction account-state walkthrough](../reviews/2026-09-01-mobile-transaction-account-state-walkthrough.md)
+- [Mobile feature-service boundary walkthrough](../reviews/2026-09-01-mobile-feature-service-boundary-walkthrough.md)
 - [Budget allocation walkthrough](../reviews/2026-08-31-budget-allocation-walkthrough.md)
 - [Web budget planning walkthrough](../reviews/2026-08-31-web-budget-planning-walkthrough.md)
 - [Reconciliation list walkthrough](../reviews/2026-08-31-reconciliation-list-walkthrough.md)

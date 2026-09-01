@@ -18,6 +18,16 @@ import {
 } from "../../src/ui/components";
 import { useAuth } from "../../src/auth/auth-context";
 import { useWorkspace } from "../../src/app/providers";
+import {
+  closeBudgetPeriod,
+  createBudgetPeriod,
+  createCategory,
+  createTag,
+  getBudgetOverview,
+  getBudgetPeriods,
+  getCategories,
+  getTags,
+} from "../../src/features/planning/budget-service";
 
 export default function BudgetsRoute() {
   const { api } = useAuth();
@@ -25,17 +35,17 @@ export default function BudgetsRoute() {
   const queryClient = useQueryClient();
   const periodsQuery = useQuery({
     queryKey: ["budget-periods", workspaceId],
-    queryFn: () => api.getBudgetPeriods(workspaceId as string),
+    queryFn: () => getBudgetPeriods(api, workspaceId as string),
     enabled: Boolean(workspaceId),
   });
   const categoriesQuery = useQuery({
     queryKey: ["categories", workspaceId],
-    queryFn: () => api.getCategories(workspaceId as string),
+    queryFn: () => getCategories(api, workspaceId as string),
     enabled: Boolean(workspaceId),
   });
   const tagsQuery = useQuery({
     queryKey: ["tags", workspaceId],
-    queryFn: () => api.getTags(workspaceId as string),
+    queryFn: () => getTags(api, workspaceId as string),
     enabled: Boolean(workspaceId),
   });
   const [selectedMonth, setSelectedMonth] = useState<string>("");
@@ -55,7 +65,7 @@ export default function BudgetsRoute() {
   }, [periodsQuery.data, selectedMonth]);
   const overviewQuery = useQuery({
     queryKey: ["budget-overview", workspaceId, month],
-    queryFn: () => api.getBudgetOverview(workspaceId as string, month),
+    queryFn: () => getBudgetOverview(api, workspaceId as string, month),
     enabled: Boolean(workspaceId && month),
   });
   const [newMonth, setNewMonth] = useState(todayMonth());
@@ -75,7 +85,7 @@ export default function BudgetsRoute() {
   const [feedback, setFeedback] = useState<string | null>(null);
   const createMutation = useMutation({
     mutationFn: () =>
-      api.createBudgetPeriod(workspaceId as string, {
+      createBudgetPeriod(api, workspaceId as string, {
         month: newMonth.trim(),
         baseMinorUnits: base.trim(),
         constraints: categoryId
@@ -100,7 +110,7 @@ export default function BudgetsRoute() {
   });
   const createCategoryMutation = useMutation({
     mutationFn: () =>
-      api.createCategory(workspaceId as string, {
+      createCategory(api, workspaceId as string, {
         name: categoryName.trim(),
         ...(parentCategoryId ? { parentId: parentCategoryId } : {}),
       }),
@@ -115,7 +125,7 @@ export default function BudgetsRoute() {
   });
   const createTagMutation = useMutation({
     mutationFn: () =>
-      api.createTag(workspaceId as string, { name: tagName.trim() }),
+      createTag(api, workspaceId as string, { name: tagName.trim() }),
     onSuccess: async () => {
       setTagName("");
       await queryClient.invalidateQueries({ queryKey: ["tags", workspaceId] });
@@ -123,7 +133,7 @@ export default function BudgetsRoute() {
     onError: (error: Error) => setFeedback(error.message),
   });
   const closeMutation = useMutation({
-    mutationFn: () => api.closeBudgetPeriod(workspaceId as string, month),
+    mutationFn: () => closeBudgetPeriod(api, workspaceId as string, month),
     onSuccess: async () => {
       setFeedback("Budget period closed.");
       await queryClient.invalidateQueries({

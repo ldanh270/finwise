@@ -192,3 +192,9 @@ Loading and unavailable account reads have explicit panels and retry, an empty
 or fully archived list links to account management, and stale cached accounts
 remain usable only with a visible warning. See the [transaction account-state
 walkthrough](../../reviews/2026-09-01-mobile-transaction-account-state-walkthrough.md).
+
+Mobile transport orchestration is now isolated under bounded-context services
+for overview, ledger, planning, Group Treasury, and ingestion. Expo routes own
+presentation state and navigation while services wrap the shared API client;
+request paths, payloads, idempotency, and UI behavior remain unchanged. See the
+[feature-service boundary walkthrough](../../reviews/2026-09-01-mobile-feature-service-boundary-walkthrough.md).

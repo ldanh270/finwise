@@ -20,6 +20,11 @@ import {
 import { useAuth } from "../../src/auth/auth-context";
 import { useWorkspace } from "../../src/app/providers";
 import { WorkspaceCache } from "../../src/cache/workspace-cache";
+import {
+  exportTransactions as exportTransactionsCsv,
+  listTransactions,
+  voidTransaction,
+} from "../../src/features/ledger/ledger-service";
 
 export default function TransactionsRoute() {
   const { api, session } = useAuth();
@@ -27,7 +32,7 @@ export default function TransactionsRoute() {
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: ["transactions", workspaceId],
-    queryFn: () => api.getTransactions(workspaceId as string),
+    queryFn: () => listTransactions(api, workspaceId as string),
     enabled: Boolean(workspaceId),
   });
   const [cachedTransactions, setCachedTransactions] = useState<
@@ -54,7 +59,7 @@ export default function TransactionsRoute() {
     if (!workspaceId) return;
     setExporting(true);
     try {
-      const csv = await api.exportTransactions(workspaceId);
+      const csv = await exportTransactionsCsv(api, workspaceId);
       const directory =
         FileSystem.documentDirectory ?? FileSystem.cacheDirectory;
       if (!directory)
@@ -167,13 +172,13 @@ function TransactionRow({
   function voidEntry() {
     const submit = (reason: string) => {
       setBusy(true);
-      void api
-        .voidTransaction(
-          workspaceId,
-          transaction.id,
-          { reason, effectiveDate: new Date().toISOString().slice(0, 10) },
-          `mobile-void-${transaction.id}`,
-        )
+      void voidTransaction(
+        api,
+        workspaceId,
+        transaction.id,
+        { reason, effectiveDate: new Date().toISOString().slice(0, 10) },
+        `mobile-void-${transaction.id}`,
+      )
         .then(onVoided)
         .catch((error: unknown) =>
           Alert.alert(

@@ -17,18 +17,22 @@ import { useAuth } from "../../src/auth/auth-context";
 import { useWorkspace } from "../../src/app/providers";
 import { useEffect, useState } from "react";
 import { WorkspaceCache } from "../../src/cache/workspace-cache";
+import {
+  getBalanceViews,
+  getOverview,
+} from "../../src/features/overview/overview-service";
 
 export default function OverviewRoute() {
   const { api, session } = useAuth();
   const { workspaceId } = useWorkspace();
   const overviewQuery = useQuery({
     queryKey: ["overview", workspaceId],
-    queryFn: () => api.getOverview(workspaceId as string),
+    queryFn: () => getOverview(api, workspaceId as string),
     enabled: Boolean(workspaceId),
   });
   const balanceQuery = useQuery({
     queryKey: ["balances", workspaceId],
-    queryFn: () => api.getBalanceViews(workspaceId as string),
+    queryFn: () => getBalanceViews(api, workspaceId as string),
     enabled: Boolean(workspaceId),
   });
   const [cachedOverview, setCachedOverview] =

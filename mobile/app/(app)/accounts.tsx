@@ -19,6 +19,11 @@ import { useAuth } from "../../src/auth/auth-context";
 import { useWorkspace } from "../../src/app/providers";
 import { WorkspaceCache } from "../../src/cache/workspace-cache";
 import {
+  createAccount as createAccountRequest,
+  listAccounts,
+  postOpeningBalance,
+} from "../../src/features/ledger/ledger-service";
+import {
   stableCommandKey,
   type StableCommandKeyState,
 } from "../../src/sync/stable-command-key";
@@ -29,7 +34,7 @@ export default function AccountsRoute() {
   const queryClient = useQueryClient();
   const accountsQuery = useQuery({
     queryKey: ["accounts", workspaceId],
-    queryFn: () => api.getAccounts(workspaceId as string),
+    queryFn: () => listAccounts(api, workspaceId as string),
     enabled: Boolean(workspaceId),
   });
   const [cachedAccounts, setCachedAccounts] = useState<
@@ -62,7 +67,10 @@ export default function AccountsRoute() {
   );
   const createMutation = useMutation({
     mutationFn: () =>
-      api.createAccount(workspaceId as string, { name: name.trim(), kind }),
+      createAccountRequest(api, workspaceId as string, {
+        name: name.trim(),
+        kind,
+      }),
     onSuccess: async () => {
       setName("");
       setFeedback("Account created.");
@@ -82,7 +90,8 @@ export default function AccountsRoute() {
       effectiveDate: string;
       idempotencyKey: string;
     }) =>
-      api.postOpeningBalance(
+      postOpeningBalance(
+        api,
         workspaceId as string,
         command.accountId,
         {

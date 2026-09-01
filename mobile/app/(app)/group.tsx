@@ -28,6 +28,31 @@ import {
   stableCommandKey,
   type StableCommandKeyState,
 } from "../../src/sync/stable-command-key";
+import {
+  addObligation as addObligationRequest,
+  approveClaim,
+  createClaim as createClaimRequest,
+  createCollection as createCollectionRequest,
+  createParticipant as createParticipantRequest,
+  createSponsoredExpense as createSponsoredExpenseRequest,
+  createSubmission as createSubmissionRequest,
+  getClaims,
+  getCollectionProgress,
+  getCollections,
+  getDirectExpenses,
+  getObligations,
+  getParticipants,
+  getPayables,
+  getReportSummary,
+  getSponsoredExpenses,
+  getSubmissions,
+  getWorkspaceMembers,
+  postDirectExpense,
+  reimburseClaim,
+  resolveOverpayment,
+  verifySubmission,
+} from "../../src/features/group/group-service";
+import { listAccounts } from "../../src/features/ledger/ledger-service";
 
 export default function GroupRoute() {
   const { api, session } = useAuth();
@@ -35,47 +60,47 @@ export default function GroupRoute() {
   const queryClient = useQueryClient();
   const collectionsQuery = useQuery({
     queryKey: ["group-collections", workspaceId],
-    queryFn: () => api.getGroupCollections(workspaceId as string),
+    queryFn: () => getCollections(api, workspaceId as string),
     enabled: Boolean(workspaceId),
   });
   const reportQuery = useQuery({
     queryKey: ["group-report", workspaceId],
-    queryFn: () => api.getGroupReportSummary(workspaceId as string),
+    queryFn: () => getReportSummary(api, workspaceId as string),
     enabled: Boolean(workspaceId),
   });
   const accountsQuery = useQuery({
     queryKey: ["accounts", workspaceId],
-    queryFn: () => api.getAccounts(workspaceId as string),
+    queryFn: () => listAccounts(api, workspaceId as string),
     enabled: Boolean(workspaceId),
   });
   const participantsQuery = useQuery({
     queryKey: ["group-participants", workspaceId],
-    queryFn: () => api.getGroupParticipants(workspaceId as string),
+    queryFn: () => getParticipants(api, workspaceId as string),
     enabled: Boolean(workspaceId),
   });
   const membersQuery = useQuery({
     queryKey: ["workspace-members", workspaceId],
-    queryFn: () => api.getWorkspaceMembers(workspaceId as string),
+    queryFn: () => getWorkspaceMembers(api, workspaceId as string),
     enabled: Boolean(workspaceId),
   });
   const claimsQuery = useQuery({
     queryKey: ["group-claims", workspaceId],
-    queryFn: () => api.getGroupClaims(workspaceId as string),
+    queryFn: () => getClaims(api, workspaceId as string),
     enabled: Boolean(workspaceId),
   });
   const payablesQuery = useQuery({
     queryKey: ["group-payables", workspaceId],
-    queryFn: () => api.getGroupPayables(workspaceId as string),
+    queryFn: () => getPayables(api, workspaceId as string),
     enabled: Boolean(workspaceId),
   });
   const sponsoredQuery = useQuery({
     queryKey: ["group-sponsored", workspaceId],
-    queryFn: () => api.getGroupSponsoredExpenses(workspaceId as string),
+    queryFn: () => getSponsoredExpenses(api, workspaceId as string),
     enabled: Boolean(workspaceId),
   });
   const directExpensesQuery = useQuery({
     queryKey: ["group-expenses", workspaceId],
-    queryFn: () => api.getGroupDirectExpenses(workspaceId as string),
+    queryFn: () => getDirectExpenses(api, workspaceId as string),
     enabled: Boolean(workspaceId),
   });
   const [collectionName, setCollectionName] = useState("");
@@ -113,13 +138,13 @@ export default function GroupRoute() {
   const obligationsQuery = useQuery({
     queryKey: ["group-obligations", workspaceId, selectedCollectionIdValue],
     queryFn: () =>
-      api.getGroupObligations(workspaceId as string, selectedCollectionIdValue),
+      getObligations(api, workspaceId as string, selectedCollectionIdValue),
     enabled: Boolean(workspaceId && selectedCollectionIdValue),
   });
   const submissionsQuery = useQuery({
     queryKey: ["group-submissions", workspaceId, selectedCollectionIdValue],
     queryFn: () =>
-      api.getGroupSubmissions(workspaceId as string, selectedCollectionIdValue),
+      getSubmissions(api, workspaceId as string, selectedCollectionIdValue),
     enabled: Boolean(workspaceId && selectedCollectionIdValue),
   });
   async function loadStagedReceipts() {
@@ -162,7 +187,7 @@ export default function GroupRoute() {
   }
   const createCollection = useMutation({
     mutationFn: () =>
-      api.createGroupCollection(workspaceId as string, {
+      createCollectionRequest(api, workspaceId as string, {
         name: collectionName.trim(),
       }),
     onSuccess: async () => {
@@ -176,7 +201,7 @@ export default function GroupRoute() {
   });
   const createParticipant = useMutation({
     mutationFn: () =>
-      api.createGroupParticipant(workspaceId as string, {
+      createParticipantRequest(api, workspaceId as string, {
         memberId: participantMemberId,
         displayName: participantName.trim(),
       }),
@@ -192,10 +217,15 @@ export default function GroupRoute() {
   });
   const createObligation = useMutation({
     mutationFn: () =>
-      api.addGroupObligation(workspaceId as string, selectedCollectionIdValue, {
-        participantId: obligationParticipantId,
-        amountMinorUnits: obligationAmount.trim(),
-      }),
+      addObligationRequest(
+        api,
+        workspaceId as string,
+        selectedCollectionIdValue,
+        {
+          participantId: obligationParticipantId,
+          amountMinorUnits: obligationAmount.trim(),
+        },
+      ),
     onSuccess: async () => {
       setObligationAmount("");
       setFeedback("Collection obligation added.");
@@ -213,7 +243,8 @@ export default function GroupRoute() {
   });
   const createSubmission = useMutation({
     mutationFn: () =>
-      api.createGroupSubmission(
+      createSubmissionRequest(
+        api,
         workspaceId as string,
         selectedCollectionIdValue,
         {
@@ -236,7 +267,7 @@ export default function GroupRoute() {
   });
   const createSponsored = useMutation({
     mutationFn: () =>
-      api.createGroupSponsoredExpense(workspaceId as string, {
+      createSponsoredExpenseRequest(api, workspaceId as string, {
         amountMinorUnits: sponsoredAmount.trim(),
         description: sponsoredDescription.trim(),
       }),
@@ -261,7 +292,8 @@ export default function GroupRoute() {
       effectiveDate: string;
       idempotencyKey: string;
     }) =>
-      api.createDirectGroupExpense(
+      postDirectExpense(
+        api,
         workspaceId as string,
         {
           accountId: command.accountId,
@@ -287,7 +319,7 @@ export default function GroupRoute() {
   });
   const createClaim = useMutation({
     mutationFn: () =>
-      api.createGroupClaim(workspaceId as string, {
+      createClaimRequest(api, workspaceId as string, {
         claimantParticipantId: claimantId,
         accountId,
         amountMinorUnits: claimAmount.trim(),
@@ -1027,7 +1059,7 @@ function CollectionRow({
 }) {
   const progressQuery = useQuery({
     queryKey: ["group-progress", workspaceId, collection.id],
-    queryFn: () => api.getGroupCollectionProgress(workspaceId, collection.id),
+    queryFn: () => getCollectionProgress(api, workspaceId, collection.id),
   });
   return (
     <View style={{ gap: 6 }}>
@@ -1074,7 +1106,7 @@ function SubmissionRow({
   const { api } = useAuth();
   const verify = useMutation({
     mutationFn: () =>
-      api.verifyGroupSubmission(workspaceId, submission.id, {
+      verifySubmission(api, workspaceId, submission.id, {
         effectiveDate: today(),
       }),
     onSuccess: onChanged,
@@ -1082,7 +1114,7 @@ function SubmissionRow({
   });
   const resolve = useMutation({
     mutationFn: (resolution: "apply_credit" | "adjust_obligation" | "refund") =>
-      api.resolveGroupOverpayment(workspaceId, submission.id, resolution),
+      resolveOverpayment(api, workspaceId, submission.id, resolution),
     onSuccess: onChanged,
     onError: (error: Error) =>
       Alert.alert("Could not resolve overpayment", error.message),
@@ -1158,7 +1190,7 @@ function ClaimRow({
     undefined,
   );
   const approve = useMutation({
-    mutationFn: () => api.approveGroupClaim(workspaceId, claim.id),
+    mutationFn: () => approveClaim(api, workspaceId, claim.id),
     onSuccess: onChanged,
     onError: (error: Error) => Alert.alert("Could not approve", error.message),
   });
@@ -1169,7 +1201,8 @@ function ClaimRow({
       effectiveDate: string;
       idempotencyKey: string;
     }) =>
-      api.reimburseGroupClaim(
+      reimburseClaim(
+        api,
         workspaceId,
         claim.id,
         {
