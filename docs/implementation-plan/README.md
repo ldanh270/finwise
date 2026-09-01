@@ -2,7 +2,7 @@
 
 Status: Implementation roadmap actively executing; MVP boundaries are shipped
 where marked below and production gates remain explicit
-Last updated: 2026-08-31
+Last updated: 2026-09-01
 
 The previous database schema is not an approved source of domain truth. Phase 0
 preflight determines whether Phase 1+ can establish a fresh baseline or must
@@ -52,6 +52,10 @@ Prisma schema merely because a table already exists.
 - [Balance views walkthrough](../reviews/2026-08-31-balance-views-walkthrough.md)
 - [Mobile outbox sync walkthrough](../reviews/2026-08-31-mobile-outbox-sync-walkthrough.md)
 - [Mobile outbox persistence adapter walkthrough](../reviews/2026-08-31-mobile-outbox-persistence-adapter-walkthrough.md)
+- [Mobile/web parity audit walkthrough](../reviews/2026-09-01-mobile-web-parity-audit-walkthrough.md)
+- [Mobile bootstrap readiness walkthrough](../reviews/2026-09-01-mobile-bootstrap-readiness-walkthrough.md)
+- [Mobile inbox data-state walkthrough](../reviews/2026-09-01-mobile-inbox-state-walkthrough.md)
+- [Mobile transaction account-state walkthrough](../reviews/2026-09-01-mobile-transaction-account-state-walkthrough.md)
 - [Budget allocation walkthrough](../reviews/2026-08-31-budget-allocation-walkthrough.md)
 - [Web budget planning walkthrough](../reviews/2026-08-31-web-budget-planning-walkthrough.md)
 - [Reconciliation list walkthrough](../reviews/2026-08-31-reconciliation-list-walkthrough.md)
@@ -87,7 +91,7 @@ behavior, test matrix, migration notes, and exit criteria.
 | [05. Group Treasury](phases/05-GROUP-TREASURY.md) | MVP boundary complete | Core application + web progress/report slice works; production persistence and advanced workflow gates remain |
 | [06. Ingestion/reconciliation](phases/06-INGESTION-RECONCILIATION.md) | MVP boundary complete | Web CSV review/confirm/ignore and reconciliation checkpoints work; durable persistence, object retention, adjustment UI, and bank adapters remain |
 | [07. Web MVP release](phases/07-WEB-MVP-RELEASE.md) | MVP command boundary complete | Ledger/group web commands work; auth, accessibility, operations and pilot gates remain |
-| [08. React Native mobile](phases/08-REACT-NATIVE-MOBILE.md) | Outbox boundary complete | Provider-neutral sync/persistence contracts work; native/auth/device gates remain |
+| [08. React Native mobile](phases/08-REACT-NATIVE-MOBILE.md) | Online feature parity complete | Web-used capabilities are implemented in Expo; native iOS/Android device gates remain |
 | [09. Wealth/bank beta](phases/09-WEALTH-AND-BANK-BETA.md) | Application boundary complete | Loan/investment application semantics work in-memory; APIs, persistence, and provider gates remain |
 | [10. QA/security/operations](phases/10-QA-SECURITY-OPERATIONS.md) | Continuous boundary work | Health, correlation, and redaction slices work; recovery, rate limits, metrics, and pilot evidence remain |
 

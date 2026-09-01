@@ -217,3 +217,15 @@
 - Users cannot submit a movement form without a visible active account and can
   navigate directly to account management when the list is empty.
 - Verified mobile typecheck and all 28 mobile tests.
+
+## 2026-09-01 — Mobile/web parity audit
+
+- Audited all implemented web capabilities against the Expo route tree and
+  shared API client: auth, workspace switching, overview, accounts, ledger,
+  budgets, Group Treasury, CSV/reconciliation, export, and settings behavior
+  are covered on mobile.
+- Reports and workspace administration remain intentionally absent from the
+  mobile navigation because the current web sections are placeholders; wealth
+  and bank beta remain future roadmap work.
+- Recorded native-device and macOS iOS compilation gates explicitly in the
+  parity walkthrough and implementation-plan index.
