@@ -1,6 +1,6 @@
 # Phase 5 — Group Treasury MVP
 
-Status: MVP boundary complete — application + web progress/report slice is shipped in-memory; production persistence gates remain
+Status: MVP boundary complete — application + web progress/report slice is durable through the runtime-store adapter; normalized group persistence gates remain
 Depends on: [Phase 2](02-IDENTITY-WORKSPACE-ACCESS.md), [Phase 3](03-LEDGER-ACCOUNTS-TRANSACTIONS.md), [Phase 4](04-CLASSIFICATION-BUDGETING-REPORTING.md)  
 Unblocks: group-facing web MVP and future mobile group flows
 
@@ -125,3 +125,9 @@ and Prisma constraints remain. See the
 [collection progress walkthrough](../../reviews/2026-08-31-group-collection-progress-walkthrough.md),
 [web walkthrough](../../reviews/2026-08-31-group-treasury-web-walkthrough.md),
 and [MVP phase walkthrough](../../reviews/2026-08-31-group-treasury-mvp-phase-walkthrough.md).
+
+The 2026-09-01 persistence slice hydrates and persists participant, collection,
+obligation, submission, claim, payable, reimbursement, sponsored-expense, and
+group idempotency state through the PostgreSQL-backed `group` runtime snapshot.
+Ledger postings continue to use the Core port, so a restarted backend sees the
+same group workflow records and the same ledger workspace.

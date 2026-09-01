@@ -1,6 +1,6 @@
 # Phase 3 — Accounts and immutable ledger
 
-Status: In progress — in-memory immutable-ledger slice landed; Prisma adapter/full account workflows pending  
+Status: In progress — durable runtime-store adapter landed; normalized Prisma repositories/full account workflows pending
 Depends on: [Phase 2](02-IDENTITY-WORKSPACE-ACCESS.md), Phase 1 money/UoW ports  
 Unblocks: budgets, reports, Group Treasury, ingestion, wealth modules
 
@@ -127,3 +127,9 @@ checkpoints, and durable source-link constraints remain before this phase can
 exit. See the [ledger correction walkthrough](../../reviews/2026-08-30-ledger-correction-projection-walkthrough.md),
 [balance views walkthrough](../../reviews/2026-08-31-balance-views-walkthrough.md),
 and [source-link walkthrough](../../reviews/2026-08-31-ledger-source-links-walkthrough.md).
+
+The 2026-09-01 persistence slice now hydrates the Core store from the
+PostgreSQL-backed `finwise_runtime_snapshots` table and writes every command
+result back through a serialized, versioned adapter. This closes the data-loss
+gap across backend restarts while the synchronous application ports are
+incrementally replaced with normalized async Prisma repositories.

@@ -5,6 +5,10 @@ import { IngestionService } from './application/ingestion.service';
 import { InMemoryImportStore } from './infrastructure/in-memory-import.store';
 import { IngestionController } from './presentation/ingestion.controller';
 import { InMemoryFinwiseStore } from '../core/infrastructure/in-memory-finwise.store';
+import {
+  createPersistentStore,
+  PrismaRuntimeSnapshotRepository,
+} from '../shared/infrastructure/prisma-runtime-snapshot.repository';
 
 @Module({
   imports: [CoreModule, AuthModule],
@@ -12,9 +16,15 @@ import { InMemoryFinwiseStore } from '../core/infrastructure/in-memory-finwise.s
   providers: [
     {
       provide: InMemoryImportStore,
-      inject: [InMemoryFinwiseStore],
-      useFactory: (ledger: InMemoryFinwiseStore) =>
-        new InMemoryImportStore(ledger),
+      inject: [InMemoryFinwiseStore, PrismaRuntimeSnapshotRepository],
+      useFactory: async (
+        ledger: InMemoryFinwiseStore,
+        snapshots: PrismaRuntimeSnapshotRepository,
+      ) => {
+        const store = new InMemoryImportStore(ledger);
+        await snapshots.hydrate('ingestion', store);
+        return createPersistentStore(store, snapshots, 'ingestion');
+      },
     },
     {
       provide: IngestionService,

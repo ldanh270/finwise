@@ -371,3 +371,23 @@ model IdempotencyKey {
   @@map("idempotency_keys")
   @@schema("finwise")
 }
+
+/// Transitional persistence boundary for the application stores.
+///
+/// The domain stores currently expose synchronous application ports. Until
+/// those ports are migrated to async Prisma repositories, the production
+/// adapter persists their complete, versioned state here. The state is
+/// encoded with explicit bigint/date/map/set markers and is never exposed via
+/// the API. This table is additive and can be removed after normalized domain
+/// repositories replace the adapters.
+model FinwiseRuntimeSnapshot {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  namespace String   @unique
+  version   Int      @default(1)
+  state     Json
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("finwise_runtime_snapshots")
+  @@schema("finwise")
+}

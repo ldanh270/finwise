@@ -116,6 +116,12 @@ to the prior API/image while preserving additive migrations.
   covered end-to-end across ledger, planning, Group Treasury, CSV import, and
   reconciliation, and the Overview budget call-to-action opens the Budgets
   editor. See the [command journey fix walkthrough](../../reviews/2026-09-01-web-command-journey-fix-walkthrough.md).
+- 2026-09-01: dashboard and Group Treasury summary metrics now use flat,
+  softly tinted surfaces without outlined boxes or colored top rules. See the
+  [summary card flatness walkthrough](../../reviews/2026-09-01-stat-card-flatness-walkthrough.md).
+- 2026-09-01: summary metrics, top-level panels, and matching loading states
+  now share the `--radius-panel` token, keeping the visual language consistent
+  across loaded and empty states. See the [summary radius consistency walkthrough](../../reviews/2026-09-01-summary-radius-consistency-walkthrough.md).
 
 The phase remains open until the full MVP workflows, operational controls,
 accessibility checks, and pilot recovery drills meet the exit criteria above.

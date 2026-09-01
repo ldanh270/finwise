@@ -1,6 +1,6 @@
 # Phase 6 — CSV ingestion and reconciliation
 
-Status: MVP boundary complete — CSV inbox/review, confirmation decisions, bulk partial-failure results, reconciliation, and raw-delete guard slices are usable; durable persistence/object retention remain
+Status: MVP boundary complete — CSV inbox/review, confirmation decisions, bulk partial-failure results, reconciliation, and raw-delete guard slices are durable through the runtime-store adapter; object retention remains
 Depends on: [Phase 2](02-IDENTITY-WORKSPACE-ACCESS.md), [Phase 3](03-LEDGER-ACCOUNTS-TRANSACTIONS.md), Phase 1 object-storage/audit ports  
 Unblocks: full web MVP and future bank adapters
 
@@ -131,3 +131,9 @@ their journal provenance, and raw deletion is guarded by terminal session
 state. See the [ingestion walkthrough](../../reviews/2026-08-31-csv-reconciliation-walkthrough.md),
 [bulk-confirm walkthrough](../../reviews/2026-08-31-ingestion-bulk-confirm-walkthrough.md),
 and [retention walkthrough](../../reviews/2026-08-31-ingestion-retention-walkthrough.md).
+
+The 2026-09-01 persistence slice hydrates and persists import sessions,
+normalized records, reconciliation checkpoints, and confirmation idempotency
+through the PostgreSQL-backed `ingestion` runtime snapshot. Raw file bytes are
+still intentionally not retained in this snapshot; the object-storage adapter
+and 30-day retention worker remain a later hardening step.

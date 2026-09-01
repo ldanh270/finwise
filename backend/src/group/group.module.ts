@@ -5,6 +5,10 @@ import { InMemoryFinwiseStore } from '../core/infrastructure/in-memory-finwise.s
 import { GroupService } from './application/group.service';
 import { InMemoryGroupStore } from './infrastructure/in-memory-group.store';
 import { GroupController } from './presentation/group.controller';
+import {
+  createPersistentStore,
+  PrismaRuntimeSnapshotRepository,
+} from '../shared/infrastructure/prisma-runtime-snapshot.repository';
 
 @Module({
   imports: [CoreModule, AuthModule],
@@ -12,9 +16,15 @@ import { GroupController } from './presentation/group.controller';
   providers: [
     {
       provide: InMemoryGroupStore,
-      inject: [InMemoryFinwiseStore],
-      useFactory: (ledger: InMemoryFinwiseStore) =>
-        new InMemoryGroupStore(ledger),
+      inject: [InMemoryFinwiseStore, PrismaRuntimeSnapshotRepository],
+      useFactory: async (
+        ledger: InMemoryFinwiseStore,
+        snapshots: PrismaRuntimeSnapshotRepository,
+      ) => {
+        const store = new InMemoryGroupStore(ledger);
+        await snapshots.hydrate('group', store);
+        return createPersistentStore(store, snapshots, 'group');
+      },
     },
     {
       provide: GroupService,
