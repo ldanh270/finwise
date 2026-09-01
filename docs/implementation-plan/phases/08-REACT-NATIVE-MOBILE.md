@@ -227,3 +227,8 @@ The mobile API URL boundary now resolves an unset local URL to the Android
 emulator host bridge (`10.0.2.2`) while keeping explicit LAN, staging, and
 production values authoritative. iOS simulator and web fall back to
 `localhost`. See the [emulator API URL walkthrough](../../reviews/2026-09-01-mobile-emulator-api-url-walkthrough.md).
+
+Transactions now have a local search over the already-authorized snapshot,
+matching description, type, status, date, ID, and exact VND minor-unit amount.
+The filter changes presentation only; server authorization and confirmed
+ledger data remain unchanged. See the [transaction search walkthrough](../../reviews/2026-09-01-mobile-transaction-search-walkthrough.md).

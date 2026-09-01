@@ -15,6 +15,7 @@ import {
   ScrollScreen,
   SecondaryButton,
   StatePanel,
+  TextField,
   colors,
 } from "../../src/ui/components";
 import { useAuth } from "../../src/auth/auth-context";
@@ -25,6 +26,7 @@ import {
   listTransactions,
   voidTransaction,
 } from "../../src/features/ledger/ledger-service";
+import { filterTransactions } from "../../src/features/ledger/transaction-search";
 
 export default function TransactionsRoute() {
   const { api, session } = useAuth();
@@ -55,6 +57,7 @@ export default function TransactionsRoute() {
     });
   }, [query.data, session?.user.id, workspaceId]);
   const [exporting, setExporting] = useState(false);
+  const [search, setSearch] = useState("");
   async function exportTransactions() {
     if (!workspaceId) return;
     setExporting(true);
@@ -86,6 +89,8 @@ export default function TransactionsRoute() {
       setExporting(false);
     }
   }
+  const allTransactions = query.data ?? cachedTransactions;
+  const visibleTransactions = filterTransactions(allTransactions, search);
   return (
     <AppShell active="transactions">
       <ScrollScreen>
@@ -102,6 +107,15 @@ export default function TransactionsRoute() {
           label={exporting ? "Preparing CSV…" : "Export transactions"}
           disabled={exporting || !workspaceId}
           onPress={() => void exportTransactions()}
+        />
+        <TextField
+          label="Search transactions"
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Description, type, date, or amount"
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="search"
         />
         {query.isPending && cachedTransactions.length === 0 ? (
           <StatePanel title="Loading transactions…" />
@@ -123,15 +137,27 @@ export default function TransactionsRoute() {
             <Card>
               <Header
                 eyebrow="RECENT ACTIVITY"
-                title={`${(query.data ?? cachedTransactions).length} entries`}
+                title={
+                  search.trim()
+                    ? `${visibleTransactions.length} of ${allTransactions.length} entries`
+                    : `${allTransactions.length} entries`
+                }
               />
-              {!(query.data ?? cachedTransactions).length ? (
+              {!visibleTransactions.length ? (
                 <StatePanel
-                  title="No transactions yet"
-                  description="Income, expense, transfer, and opening balance entries will appear here."
+                  title={
+                    search.trim()
+                      ? "No matching transactions"
+                      : "No transactions yet"
+                  }
+                  description={
+                    search.trim()
+                      ? "Try a different description, type, date, or amount."
+                      : "Income, expense, transfer, and opening balance entries will appear here."
+                  }
                 />
               ) : (
-                (query.data ?? cachedTransactions).map((transaction) => (
+                visibleTransactions.map((transaction) => (
                   <TransactionRow
                     key={transaction.id}
                     transaction={transaction}
