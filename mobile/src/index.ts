@@ -7,5 +7,6 @@ export * from "./sync/mobile-outbox-repository";
 export * from "./sync/stable-command-key";
 export * from "./sync/draft-export";
 export * from "./cache/receipt-staging";
+export * from "./navigation/deep-link";
 export * from "./validation/forms";
 export * from "./app/workspace-query-scope";

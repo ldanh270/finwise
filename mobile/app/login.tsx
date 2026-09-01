@@ -1,4 +1,4 @@
-import { Link, router } from "expo-router";
+import { Link, router, useLocalSearchParams } from "expo-router";
 import { useState, type ComponentProps, type ReactNode } from "react";
 import {
   ActivityIndicator,
@@ -12,9 +12,11 @@ import {
   View,
 } from "react-native";
 import { useAuth } from "../src/auth/auth-context";
+import { resolvePostAuthPath } from "../src/navigation/deep-link";
 
 export default function LoginRoute() {
   const { signIn, error } = useAuth();
+  const { redirectPath } = useLocalSearchParams<{ redirectPath?: string }>();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [saving, setSaving] = useState(false);
@@ -29,7 +31,7 @@ export default function LoginRoute() {
     setFormError(null);
     try {
       await signIn(email.trim(), password);
-      router.replace("/(app)");
+      router.replace(resolvePostAuthPath(redirectPath));
     } catch (submitError: unknown) {
       setFormError(
         submitError instanceof Error
@@ -48,7 +50,14 @@ export default function LoginRoute() {
       footer={
         <Text style={styles.footer}>
           New to Finwise?{" "}
-          <Link href="/signup" style={styles.link}>
+          <Link
+            href={
+              redirectPath
+                ? { pathname: "/signup", params: { redirectPath } }
+                : "/signup"
+            }
+            style={styles.link}
+          >
             Create an account
           </Link>
         </Text>

@@ -16,6 +16,9 @@ snapshots use a user/workspace-partitioned SQLite key/value boundary. If the
 process stops while a draft is syncing, the next restore re-queues that draft
 with the same idempotency key.
 
+Protected deep links are restored after authentication only for whitelisted
+internal routes; external redirect values fall back to Overview.
+
 ## Local workflow
 
 ```text

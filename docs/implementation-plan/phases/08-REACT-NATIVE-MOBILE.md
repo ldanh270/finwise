@@ -253,3 +253,8 @@ Workspace-scoped cache reads now ignore completions from an unmounted or
 superseded workspace effect. This keeps an older SQLite read from replacing the
 new workspace's local snapshot during a fast switch, while the server remains
 the authorization boundary. See the [cache read race walkthrough](../../reviews/2026-09-01-mobile-cache-read-race-walkthrough.md).
+
+Protected deep links now carry a whitelisted internal route through Login or
+Signup and restore that route after authentication. External, malformed, and
+unknown redirect values always fall back to the authenticated Overview. See
+the [deep-link reauthorization walkthrough](../../reviews/2026-09-01-mobile-deep-link-reauthorization-walkthrough.md).

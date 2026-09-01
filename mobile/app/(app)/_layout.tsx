@@ -1,4 +1,4 @@
-import { Redirect, Stack } from "expo-router";
+import { Redirect, Stack, usePathname } from "expo-router";
 import {
   ActivityIndicator,
   SafeAreaView,
@@ -8,12 +8,21 @@ import {
 import { useAuth } from "../../src/auth/auth-context";
 import { useWorkspace } from "../../src/app/providers";
 import { PrimaryButton, colors } from "../../src/ui/components";
+import { protectedPathForLogin } from "../../src/navigation/deep-link";
 
 export default function AuthenticatedLayout() {
   const { status } = useAuth();
   const { bootstrapStatus, bootstrapError, retryBootstrap } = useWorkspace();
+  const pathname = usePathname();
   if (status === "restoring") return null;
-  if (status !== "authenticated") return <Redirect href="/login" />;
+  if (status !== "authenticated") {
+    const redirectPath = protectedPathForLogin(pathname);
+    return redirectPath ? (
+      <Redirect href={{ pathname: "/login", params: { redirectPath } }} />
+    ) : (
+      <Redirect href="/login" />
+    );
+  }
   if (bootstrapStatus === "loading") return <BootstrapGate kind="loading" />;
   if (bootstrapStatus === "empty") return <BootstrapGate kind="empty" />;
   if (bootstrapStatus === "error") {

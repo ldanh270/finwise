@@ -1,11 +1,13 @@
-import { Link, router } from "expo-router";
+import { Link, router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Text } from "react-native";
 import { useAuth } from "../src/auth/auth-context";
 import { AuthFrame, Field, PrimaryButton } from "./login";
+import { resolvePostAuthPath } from "../src/navigation/deep-link";
 
 export default function SignupRoute() {
   const { signUp, error } = useAuth();
+  const { redirectPath } = useLocalSearchParams<{ redirectPath?: string }>();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,7 +25,7 @@ export default function SignupRoute() {
     setFormError(null);
     try {
       await signUp(displayName.trim(), email.trim(), password);
-      router.replace("/(app)");
+      router.replace(resolvePostAuthPath(redirectPath));
     } catch (submitError: unknown) {
       setFormError(
         submitError instanceof Error
@@ -49,7 +51,14 @@ export default function SignupRoute() {
           }}
         >
           Already a member?{" "}
-          <Link href="/login" style={{ color: "#087f78", fontWeight: "700" }}>
+          <Link
+            href={
+              redirectPath
+                ? { pathname: "/login", params: { redirectPath } }
+                : "/login"
+            }
+            style={{ color: "#087f78", fontWeight: "700" }}
+          >
             Sign in
           </Link>
         </Text>
