@@ -195,6 +195,12 @@ allows logout. A storage failure keeps the session active and asks the user to
 retry, avoiding a false security guarantee. See the [logout data cleanup
 walkthrough](../../reviews/2026-09-02-mobile-logout-data-cleanup-walkthrough.md).
 
+Workspace selection now resolves only against the latest authorized bootstrap
+list. If membership is revoked or a workspace is archived while the app is
+open, the mobile scope falls back to the server-suggested authorized workspace
+instead of issuing reads for a stale id. See the [workspace authorization
+fallback walkthrough](../../reviews/2026-09-02-mobile-workspace-authorization-fallback-walkthrough.md).
+
 The mobile Imports & reconciliation screen now makes primary read failures
 explicit. Account/import/reconciliation loading is gated, unavailable reads
 show a retryable state, stale cached lists carry a warning, and normalized-row

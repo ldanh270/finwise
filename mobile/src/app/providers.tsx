@@ -17,6 +17,7 @@ import { AuthProvider, useAuth } from "../auth/auth-context";
 import { AppLockProvider, useAppLock } from "../auth/app-lock-context";
 import {
   getWorkspaceBootstrapStatus,
+  resolveWorkspaceId,
   type WorkspaceBootstrapStatus,
 } from "./workspace-bootstrap";
 
@@ -76,10 +77,7 @@ function WorkspaceProvider({ children }: PropsWithChildren) {
     bootstrap,
     hasBootstrapError,
   );
-  const workspaceId =
-    selectedWorkspaceId ??
-    bootstrap?.suggestedWorkspaceId ??
-    bootstrap?.workspaces[0]?.id;
+  const workspaceId = resolveWorkspaceId(bootstrap, selectedWorkspaceId);
   const workspace = bootstrap?.workspaces.find(
     (candidate) => candidate.id === workspaceId,
   );

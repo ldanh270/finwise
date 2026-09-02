@@ -1,6 +1,7 @@
 import type { BootstrapResponse } from "@finwise/api-client";
 import {
   getWorkspaceBootstrapStatus,
+  resolveWorkspaceId,
   type WorkspaceBootstrapStatus,
 } from "./workspace-bootstrap";
 
@@ -36,4 +37,17 @@ describe("workspace bootstrap readiness", () => {
       expect(getWorkspaceBootstrapStatus(response, hasError)).toBe(expected);
     },
   );
+
+  it("falls back to an authorized workspace when the selected scope is stale", () => {
+    const response = bootstrap([
+      { id: "workspace-1", name: "Personal", intent: "PERSONAL" },
+      { id: "workspace-2", name: "Shared", intent: "SHARED" },
+    ]);
+
+    expect(resolveWorkspaceId(response, "workspace-2")).toBe("workspace-2");
+    expect(resolveWorkspaceId(response, "revoked-workspace")).toBe(
+      "workspace-1",
+    );
+    expect(resolveWorkspaceId(undefined, "workspace-2")).toBeUndefined();
+  });
 });
