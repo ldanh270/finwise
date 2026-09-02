@@ -32,6 +32,20 @@ pnpm --filter mobile prebuild
 pnpm --filter mobile android   # or ios on macOS
 ```
 
+EAS build profiles are checked in for the three release lanes:
+
+```text
+eas build --profile development --platform all
+eas build --profile preview --platform all
+eas build --profile production --platform all
+```
+
+Development builds are internal distribution builds and include the Expo
+development client. Preview builds are suitable for QA distribution. The
+production profile enables EAS version auto-increment; credentials and the
+EAS project identifier remain deployment-owned configuration and are not
+committed here.
+
 Copy `.env.example` to `.env` and set `EXPO_PUBLIC_FINWISE_API_URL` to a
 reachable Nest base URL before starting a physical device. An Android emulator
 without this override uses the host bridge at `http://10.0.2.2:3001`; an iOS

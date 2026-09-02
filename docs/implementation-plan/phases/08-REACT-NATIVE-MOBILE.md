@@ -152,6 +152,11 @@ conflict failures move to `NEEDS_USER_ACTION` instead of retrying indefinitely.
 The app shell retries queued drafts when the app becomes active again and
 surfaces a generic token-free sync notice when local persistence or transport
 is unavailable.
+EAS development, preview, and production build profiles are now checked in
+under `mobile/eas.json`. Development builds use internal distribution and the
+Expo development client, preview builds provide an internal QA lane, and
+production enables version auto-increment. EAS credentials, project identity,
+and store submission metadata remain deployment-owned secrets/configuration.
 Settings can export unresolved drafts as a CSV and then unlock logout by moving
 those records to `EXPORTED`; this is local evidence only and does not alter the
 confirmed ledger.
