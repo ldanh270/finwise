@@ -1,6 +1,6 @@
 # Phase 4 — Classification, budgets, and reporting
 
-Status: Planning boundary complete — category/classification, budget projection, rollover calculation, and web planning slices landed; persistence/reporting gates remain
+Status: Report projection complete — category/classification, budget projection, rollover calculation, and permission-filtered web/mobile reports are implemented; persistence and chart/export polish remain
 Depends on: [Phase 3](03-LEDGER-ACCOUNTS-TRANSACTIONS.md), Phase 2 account policies  
 Unblocks: Group budget views and web MVP reporting
 
@@ -105,6 +105,13 @@ actuals from Phase 3 classification lines after ledger migration, then compare
 old/new totals before enabling reports.
 
 ## Delivered slices
+
+- 2026-09-02: permission-filtered monthly income/spending/net and expense
+  category projections now read visible posted journals and immutable
+  classification lines. Web and mobile Reports screens consume the shared
+  `GET /v1/workspaces/:workspaceId/reports` contract with range selection,
+  partial-access indicators, loading, empty, and retryable error states. See
+  the [reports projection walkthrough](../../reviews/2026-09-02-reports-projection-walkthrough.md).
 
 - 2026-08-31: nested budget allocation now derives `BY_CHILDREN` parent
   totals and prevents nested child constraints from being counted twice.

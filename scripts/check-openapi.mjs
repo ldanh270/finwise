@@ -21,6 +21,7 @@ try {
 const requiredOperations = {
   "/session/bootstrap": ["get"],
   "/workspaces/{workspaceId}/overview": ["get"],
+  "/workspaces/{workspaceId}/reports": ["get"],
   "/workspaces/{workspaceId}/roles": ["get", "post"],
   "/workspaces/{workspaceId}/members": ["get"],
   "/workspaces/{workspaceId}/accounts": ["get", "post"],
@@ -39,11 +40,17 @@ if (contract?.openapi !== "3.1.0" || !isRecord(contract?.paths)) {
 const missingOperations = Object.entries(requiredOperations).flatMap(
   ([route, methods]) =>
     methods
-      .filter((method) => !isRecord(contract.paths[route]) || !isRecord(contract.paths[route][method]))
+      .filter(
+        (method) =>
+          !isRecord(contract.paths[route]) ||
+          !isRecord(contract.paths[route][method]),
+      )
       .map((method) => `${method.toUpperCase()} ${route}`),
 );
 if (missingOperations.length > 0) {
-  console.error(`OpenAPI contract is missing operations: ${missingOperations.join(", ")}`);
+  console.error(
+    `OpenAPI contract is missing operations: ${missingOperations.join(", ")}`,
+  );
   process.exit(1);
 }
 
@@ -53,7 +60,9 @@ for (const [route, pathItem] of Object.entries(contract.paths)) {
   for (const [method, operation] of Object.entries(pathItem)) {
     if (!["get", "post", "patch", "delete", "put"].includes(method)) continue;
     if (!isRecord(operation) || typeof operation.operationId !== "string") {
-      console.error(`OpenAPI operation ${method.toUpperCase()} ${route} needs an operationId.`);
+      console.error(
+        `OpenAPI operation ${method.toUpperCase()} ${route} needs an operationId.`,
+      );
       process.exit(1);
     }
     operationIds.push(operation.operationId);
@@ -75,14 +84,20 @@ const idempotentCommands = [
 ];
 const missingIdempotency = idempotentCommands.filter(([method, route]) => {
   const operation = contract.paths[route]?.[method];
-  return !isRecord(operation) || !Array.isArray(operation.parameters) ||
+  return (
+    !isRecord(operation) ||
+    !Array.isArray(operation.parameters) ||
     !operation.parameters.some(
       (parameter) =>
-        isRecord(parameter) && parameter.$ref === "#/components/parameters/IdempotencyKey",
-    );
+        isRecord(parameter) &&
+        parameter.$ref === "#/components/parameters/IdempotencyKey",
+    )
+  );
 });
 if (missingIdempotency.length > 0) {
-  console.error(`Financial commands missing Idempotency-Key: ${missingIdempotency.map(([method, route]) => `${method.toUpperCase()} ${route}`).join(", ")}`);
+  console.error(
+    `Financial commands missing Idempotency-Key: ${missingIdempotency.map(([method, route]) => `${method.toUpperCase()} ${route}`).join(", ")}`,
+  );
   process.exit(1);
 }
 

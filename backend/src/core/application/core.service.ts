@@ -25,6 +25,7 @@ import {
   CoreStorePort,
   JournalDraft,
 } from './core.ports';
+import { buildReportProjection } from '../domain/report';
 
 export interface WorkspaceResponse {
   readonly id: string;
@@ -240,6 +241,31 @@ export interface OverviewResponse {
   readonly hasPartialAccess: boolean;
 }
 
+export interface ReportsResponse {
+  readonly workspaceId: string;
+  readonly fromMonth: string;
+  readonly toMonth: string;
+  readonly totals: {
+    readonly income: ReturnType<typeof moneyDto>;
+    readonly spending: ReturnType<typeof moneyDto>;
+    readonly net: ReturnType<typeof moneyDto>;
+  };
+  readonly monthly: readonly {
+    readonly month: string;
+    readonly income: ReturnType<typeof moneyDto>;
+    readonly spending: ReturnType<typeof moneyDto>;
+    readonly net: ReturnType<typeof moneyDto>;
+  }[];
+  readonly categories: readonly {
+    readonly categoryId: string | null;
+    readonly name: string;
+    readonly income: ReturnType<typeof moneyDto>;
+    readonly spending: ReturnType<typeof moneyDto>;
+    readonly net: ReturnType<typeof moneyDto>;
+  }[];
+  readonly hasPartialAccess: boolean;
+}
+
 export interface RoleResponse {
   readonly id: string;
   readonly workspaceId: string;
@@ -357,6 +383,52 @@ export class CoreService {
         income: moneyDto(income),
         spending: moneyDto(spending),
       },
+      hasPartialAccess: this.store.hasPartialAccountAccess(workspaceId, actor),
+    };
+  }
+
+  reports(
+    actor: AuthenticatedActor,
+    workspaceId: string,
+    fromMonth?: string,
+    toMonth?: string,
+  ): ReportsResponse {
+    this.store.assertReportAccess(workspaceId, actor);
+    const endMonth =
+      toMonth === undefined ? currentMonth() : requiredMonth(toMonth);
+    const startMonth =
+      fromMonth === undefined
+        ? shiftMonth(endMonth, -5)
+        : requiredMonth(fromMonth);
+    if (startMonth > endMonth) {
+      throw FinwiseError.validation('fromMonth must not be after toMonth.', {
+        field: 'fromMonth',
+      });
+    }
+    const projection = buildReportProjection(
+      this.store.listTransactions(workspaceId, actor),
+      this.store.listCategories(workspaceId, actor),
+      startMonth,
+      endMonth,
+      {
+        getClassification: (transactionId) =>
+          this.store.getClassification(workspaceId, actor, transactionId),
+      },
+    );
+    return {
+      workspaceId,
+      fromMonth: projection.fromMonth,
+      toMonth: projection.toMonth,
+      totals: reportMoneyResponse(projection.totals),
+      monthly: projection.monthly.map((row) => ({
+        month: row.month,
+        ...reportMoneyResponse(row),
+      })),
+      categories: projection.categories.map((row) => ({
+        categoryId: row.categoryId,
+        name: row.categoryName,
+        ...reportMoneyResponse(row),
+      })),
       hasPartialAccess: this.store.hasPartialAccountAccess(workspaceId, actor),
     };
   }
@@ -1670,6 +1742,32 @@ function moneyDto(minorUnits: bigint): {
   readonly minorUnits: string;
 } {
   return { currency: MVP_CURRENCY, minorUnits: minorUnits.toString() };
+}
+
+function reportMoneyResponse(value: {
+  readonly incomeMinorUnits: bigint;
+  readonly spendingMinorUnits: bigint;
+  readonly netMinorUnits: bigint;
+}): {
+  readonly income: ReturnType<typeof moneyDto>;
+  readonly spending: ReturnType<typeof moneyDto>;
+  readonly net: ReturnType<typeof moneyDto>;
+} {
+  return {
+    income: moneyDto(value.incomeMinorUnits),
+    spending: moneyDto(value.spendingMinorUnits),
+    net: moneyDto(value.netMinorUnits),
+  };
+}
+
+function currentMonth(): string {
+  return new Date().toISOString().slice(0, 7);
+}
+
+function shiftMonth(month: string, offset: number): string {
+  const [year, monthNumber] = month.split('-').map(Number);
+  const shifted = new Date(Date.UTC(year, monthNumber - 1 + offset, 1));
+  return shifted.toISOString().slice(0, 7);
 }
 
 function csvEscape(value: string): string {

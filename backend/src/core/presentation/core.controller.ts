@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { CurrentActor } from '../../auth/actor.decorator';
@@ -273,6 +274,16 @@ export class CoreController {
     @Param('workspaceId') workspaceId: string,
   ) {
     return this.coreService.overview(actor, workspaceId);
+  }
+
+  @Get('workspaces/:workspaceId/reports')
+  reports(
+    @CurrentActor() actor: AuthenticatedActor,
+    @Param('workspaceId') workspaceId: string,
+    @Query('from') fromMonth?: string,
+    @Query('to') toMonth?: string,
+  ) {
+    return this.coreService.reports(actor, workspaceId, fromMonth, toMonth);
   }
 
   @Post('workspaces/:workspaceId/accounts')

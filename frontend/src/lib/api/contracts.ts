@@ -202,6 +202,31 @@ export type OverviewResponse = {
   requestId?: string;
 };
 
+export type ReportMoneySummary = {
+  income: MoneyDto;
+  spending: MoneyDto;
+  net: MoneyDto;
+};
+
+export type ReportMonthSummary = ReportMoneySummary & {
+  month: string;
+};
+
+export type ReportCategorySummary = ReportMoneySummary & {
+  categoryId: string | null;
+  name: string;
+};
+
+export type ReportsResponse = {
+  workspaceId: string;
+  fromMonth: string;
+  toMonth: string;
+  totals: ReportMoneySummary;
+  monthly: ReportMonthSummary[];
+  categories: ReportCategorySummary[];
+  hasPartialAccess?: boolean;
+};
+
 export type ApiErrorCode =
   | "API_NOT_CONFIGURED"
   | "AUTH_REQUIRED"
@@ -480,6 +505,48 @@ export function isOverviewResponse(value: unknown): value is OverviewResponse {
     isMoneyDto(value.totals.budgetRemaining) &&
     isMoneyDto(value.totals.income) &&
     isMoneyDto(value.totals.spending)
+  );
+}
+
+function isReportMoneySummary(value: unknown): value is ReportMoneySummary {
+  return (
+    isRecord(value) &&
+    isMoneyDto(value.income) &&
+    isMoneyDto(value.spending) &&
+    isMoneyDto(value.net)
+  );
+}
+
+function isReportMonthSummary(value: unknown): value is ReportMonthSummary {
+  return (
+    isRecord(value) &&
+    typeof value.month === "string" &&
+    isReportMoneySummary(value)
+  );
+}
+
+function isReportCategorySummary(
+  value: unknown,
+): value is ReportCategorySummary {
+  return (
+    isRecord(value) &&
+    (typeof value.categoryId === "string" || value.categoryId === null) &&
+    typeof value.name === "string" &&
+    isReportMoneySummary(value)
+  );
+}
+
+export function isReportsResponse(value: unknown): value is ReportsResponse {
+  return (
+    isRecord(value) &&
+    typeof value.workspaceId === "string" &&
+    typeof value.fromMonth === "string" &&
+    typeof value.toMonth === "string" &&
+    isReportMoneySummary(value.totals) &&
+    Array.isArray(value.monthly) &&
+    value.monthly.every(isReportMonthSummary) &&
+    Array.isArray(value.categories) &&
+    value.categories.every(isReportCategorySummary)
   );
 }
 

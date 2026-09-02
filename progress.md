@@ -1,5 +1,13 @@
 # Progress log
 
+## 2026-09-02
+
+- Replaced the web and mobile Reports placeholders with a permission-filtered
+  monthly ledger projection. Posted income/expense totals, net movement, and
+  immutable expense classification lines are exposed through the shared
+  OpenAPI/client contract with exact VND minor-unit strings. Added explicit
+  partial-access, loading, empty, validation, and retryable error states.
+
 ## 2026-09-01
 
 - Delivered the Expo React Native online feature-parity slice across Android

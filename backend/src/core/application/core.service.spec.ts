@@ -159,6 +159,63 @@ describe('CoreService', () => {
     expect(overview.recentTransactions).toHaveLength(2);
   });
 
+  it('builds permission-filtered report periods and category totals', () => {
+    const service = createService();
+    const workspaceId = service.bootstrap(actor).suggestedWorkspaceId;
+    const account = service.createAccount(actor, workspaceId, {
+      name: 'Report cash',
+      kind: 'cash',
+    });
+    const category = service.createCategory(actor, workspaceId, {
+      name: 'Food',
+    });
+    const expense = service.createTransaction(
+      actor,
+      workspaceId,
+      {
+        type: 'expense',
+        accountId: account.id,
+        amountMinorUnits: '300000',
+        effectiveDate: '2026-08-12',
+      },
+      'cmd-report-expense',
+    );
+    service.classifyTransaction(actor, workspaceId, expense.id, {
+      lines: [
+        {
+          categoryId: category.id,
+          amountMinorUnits: '300000',
+          tagIds: [],
+        },
+      ],
+    });
+    service.createTransaction(
+      actor,
+      workspaceId,
+      {
+        type: 'income',
+        accountId: account.id,
+        amountMinorUnits: '1000000',
+        effectiveDate: '2026-08-01',
+      },
+      'cmd-report-income',
+    );
+
+    const report = service.reports(actor, workspaceId, '2026-08', '2026-08');
+    expect(report.totals).toEqual({
+      income: { currency: 'VND', minorUnits: '1000000' },
+      spending: { currency: 'VND', minorUnits: '300000' },
+      net: { currency: 'VND', minorUnits: '700000' },
+    });
+    expect(report.categories[0]).toEqual({
+      categoryId: category.id,
+      name: 'Food',
+      income: { currency: 'VND', minorUnits: '0' },
+      spending: { currency: 'VND', minorUnits: '300000' },
+      net: { currency: 'VND', minorUnits: '-300000' },
+    });
+  });
+
   it('rejects dates that match the shape but not the calendar', () => {
     const service = createService();
     const workspaceId = service.bootstrap(actor).suggestedWorkspaceId;

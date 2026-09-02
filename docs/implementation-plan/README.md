@@ -2,7 +2,7 @@
 
 Status: Implementation roadmap actively executing; MVP boundaries are shipped
 where marked below and production gates remain explicit
-Last updated: 2026-09-01
+Last updated: 2026-09-02
 
 The previous database schema is not an approved source of domain truth. Phase 0
 preflight determines whether Phase 1+ can establish a fresh baseline or must
@@ -75,6 +75,7 @@ Prisma schema merely because a table already exists.
 - [Mobile bootstrap offline fallback walkthrough](../reviews/2026-09-02-mobile-bootstrap-offline-fallback-walkthrough.md)
 - [Mobile ledger detail, classification, and correction walkthrough](../reviews/2026-09-02-mobile-ledger-detail-correction-classification-walkthrough.md)
 - [Mobile local-network security walkthrough](../reviews/2026-09-02-mobile-local-network-security-walkthrough.md)
+- [Reports projection walkthrough](../reviews/2026-09-02-reports-projection-walkthrough.md)
 - [Budget allocation walkthrough](../reviews/2026-08-31-budget-allocation-walkthrough.md)
 - [Web budget planning walkthrough](../reviews/2026-08-31-web-budget-planning-walkthrough.md)
 - [Reconciliation list walkthrough](../reviews/2026-08-31-reconciliation-list-walkthrough.md)
@@ -109,7 +110,7 @@ behavior, test matrix, migration notes, and exit criteria.
 | [01. Platform foundation](phases/01-PLATFORM-FOUNDATION.md) | Boundary complete | Runtime primitives and strengthened contract gate work; official generator freshness remains |
 | [02. Identity/workspace/access](phases/02-IDENTITY-WORKSPACE-ACCESS.md) | In progress | Bootstrap, RBAC, invitations, membership lifecycle, owner transfer and archive work; durable workspace authorization remains |
 | [03. Ledger/accounts/transactions](phases/03-LEDGER-ACCOUNTS-TRANSACTIONS.md) | In progress | In-memory journals, archive, reversal/replacement and rebuild work; Prisma/checkpoints/source links remain |
-| [04. Classification/budgets/reporting](phases/04-CLASSIFICATION-BUDGETING-REPORTING.md) | Planning boundary complete | Categories/tags/monthly budget editor and projections work; split UI, rollover persistence, goals/full reports remain |
+| [04. Classification/budgets/reporting](phases/04-CLASSIFICATION-BUDGETING-REPORTING.md) | Report projection complete | Categories/tags/monthly budget editor, permission-filtered report projections, and report UI work; rollover persistence and chart/export polish remain |
 | [05. Group Treasury](phases/05-GROUP-TREASURY.md) | MVP boundary complete | Core application + web progress/report slice works; production persistence and advanced workflow gates remain |
 | [06. Ingestion/reconciliation](phases/06-INGESTION-RECONCILIATION.md) | MVP boundary complete | Web CSV review/confirm/ignore and reconciliation checkpoints work; durable persistence, object retention, adjustment UI, and bank adapters remain |
 | [07. Web MVP release](phases/07-WEB-MVP-RELEASE.md) | MVP command boundary complete | Ledger/group web commands work; auth, accessibility, operations and pilot gates remain |

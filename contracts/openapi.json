@@ -182,6 +182,39 @@
         }
       }
     },
+    "/workspaces/{workspaceId}/reports": {
+      "get": {
+        "operationId": "getWorkspaceReports",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceId" },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "pattern": "^\\d{4}-(0[1-9]|1[0-2])$" }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "pattern": "^\\d{4}-(0[1-9]|1[0-2])$" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Permission-filtered reports",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ReportsResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
     "/workspaces/{workspaceId}": {
       "get": {
         "operationId": "getWorkspace",
@@ -2537,6 +2570,63 @@
           },
           "budgets": { "type": "array", "items": { "type": "object" } },
           "totals": { "type": "object" },
+          "hasPartialAccess": { "type": "boolean" }
+        }
+      },
+      "ReportMoney": {
+        "type": "object",
+        "required": ["income", "spending", "net"],
+        "properties": {
+          "income": { "$ref": "#/components/schemas/MoneyDto" },
+          "spending": { "$ref": "#/components/schemas/MoneyDto" },
+          "net": { "$ref": "#/components/schemas/MoneyDto" }
+        }
+      },
+      "ReportsResponse": {
+        "type": "object",
+        "required": [
+          "workspaceId",
+          "fromMonth",
+          "toMonth",
+          "totals",
+          "monthly",
+          "categories",
+          "hasPartialAccess"
+        ],
+        "properties": {
+          "workspaceId": { "type": "string" },
+          "fromMonth": { "type": "string", "pattern": "^\\d{4}-(0[1-9]|1[0-2])$" },
+          "toMonth": { "type": "string", "pattern": "^\\d{4}-(0[1-9]|1[0-2])$" },
+          "totals": { "$ref": "#/components/schemas/ReportMoney" },
+          "monthly": {
+            "type": "array",
+            "items": {
+              "allOf": [
+                { "$ref": "#/components/schemas/ReportMoney" },
+                {
+                  "type": "object",
+                  "required": ["month"],
+                  "properties": { "month": { "type": "string" } }
+                }
+              ]
+            }
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "allOf": [
+                { "$ref": "#/components/schemas/ReportMoney" },
+                {
+                  "type": "object",
+                  "required": ["categoryId", "name"],
+                  "properties": {
+                    "categoryId": { "type": ["string", "null"] },
+                    "name": { "type": "string" }
+                  }
+                }
+              ]
+            }
+          },
           "hasPartialAccess": { "type": "boolean" }
         }
       }

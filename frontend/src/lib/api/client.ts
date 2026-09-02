@@ -15,9 +15,11 @@ import {
   type ImportSessionSummary,
   type ReconciliationSummary,
   type OverviewResponse,
+  type ReportsResponse,
   isBootstrapResponse,
   isBalanceViewsResponse,
   isOverviewResponse,
+  isReportsResponse,
   isGroupCollectionProgress,
   isGroupCollectionSummary,
   isGroupDirectExpense,
@@ -39,6 +41,10 @@ export type AccessTokenProvider = () => Promise<string | undefined>;
 export type FinwiseApi = {
   getBootstrap(): Promise<ApiResult<BootstrapResponse>>;
   getOverview(workspaceId: string): Promise<ApiResult<OverviewResponse>>;
+  getReports(
+    workspaceId: string,
+    options?: { fromMonth?: string; toMonth?: string },
+  ): Promise<ApiResult<ReportsResponse>>;
   getCategories(workspaceId: string): Promise<ApiResult<CategorySummary[]>>;
   createCategory(
     workspaceId: string,
@@ -401,6 +407,16 @@ export function createHttpFinwiseApi(
         `/v1/workspaces/${encodeURIComponent(workspaceId)}/overview`,
         isOverviewResponse,
       ),
+    getReports: (workspaceId, options) => {
+      const query = new URLSearchParams();
+      if (options?.fromMonth) query.set("from", options.fromMonth);
+      if (options?.toMonth) query.set("to", options.toMonth);
+      const suffix = query.toString() ? `?${query.toString()}` : "";
+      return getJson(
+        `/v1/workspaces/${encodeURIComponent(workspaceId)}/reports${suffix}`,
+        isReportsResponse,
+      );
+    },
     getCategories: (workspaceId) =>
       getJson(
         `/v1/workspaces/${encodeURIComponent(workspaceId)}/categories`,

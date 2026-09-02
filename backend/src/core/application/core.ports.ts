@@ -202,6 +202,7 @@ export interface CoreStorePort extends CoreMembershipPort {
     workspaceId: string,
     actor: AuthenticatedActor,
   ): readonly JournalTransactionRecord[];
+  assertReportAccess(workspaceId: string, actor: AuthenticatedActor): void;
   getTransaction(
     workspaceId: string,
     transactionId: string,

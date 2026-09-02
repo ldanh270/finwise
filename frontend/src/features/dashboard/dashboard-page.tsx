@@ -20,6 +20,7 @@ import { BudgetPage } from "../budget/budget-page";
 import { LedgerActionPanel } from "../ledger/ledger-action-panel";
 import { voidTransaction } from "../ledger/ledger-service";
 import { SignOutButton } from "../../lib/auth/sign-out-button";
+import { ReportsPage } from "../reports/reports-page";
 
 type DashboardSection =
   | "overview"
@@ -374,7 +375,6 @@ export default function DashboardPage() {
           >
             <Icon name="chart" width={18} height={18} />
             <span>Reports</span>
-            <span className="nav-soon">Soon</span>
           </button>
           <button
             className={`nav-item${activeSection === "group" ? " is-active" : ""}`}
@@ -1224,6 +1224,9 @@ function ResourceSection({
   }
   if (section === "budgets") {
     return <BudgetPage workspaceId={workspaceId} />;
+  }
+  if (section === "reports") {
+    return <ReportsPage workspaceId={workspaceId} />;
   }
   const copy = titles[section];
   const items =

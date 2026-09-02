@@ -136,6 +136,27 @@ export type OverviewResponse = {
   };
   readonly hasPartialAccess: boolean;
 };
+export type ReportMoneySummary = {
+  readonly income: MoneyDto;
+  readonly spending: MoneyDto;
+  readonly net: MoneyDto;
+};
+export type ReportMonthSummary = ReportMoneySummary & {
+  readonly month: string;
+};
+export type ReportCategorySummary = ReportMoneySummary & {
+  readonly categoryId: string | null;
+  readonly name: string;
+};
+export type ReportsResponse = {
+  readonly workspaceId: string;
+  readonly fromMonth: string;
+  readonly toMonth: string;
+  readonly totals: ReportMoneySummary;
+  readonly monthly: readonly ReportMonthSummary[];
+  readonly categories: readonly ReportCategorySummary[];
+  readonly hasPartialAccess: boolean;
+};
 export type CategorySummary = {
   readonly id: string;
   readonly workspaceId: string;
@@ -385,6 +406,16 @@ export class FinwiseApiClient {
   }
   getOverview(workspaceId: string): Promise<OverviewResponse> {
     return this.get(`/v1/workspaces/${segment(workspaceId)}/overview`);
+  }
+  getReports(
+    workspaceId: string,
+    options?: { readonly fromMonth?: string; readonly toMonth?: string },
+  ): Promise<ReportsResponse> {
+    const query = new URLSearchParams();
+    if (options?.fromMonth) query.set("from", options.fromMonth);
+    if (options?.toMonth) query.set("to", options.toMonth);
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+    return this.get(`/v1/workspaces/${segment(workspaceId)}/reports${suffix}`);
   }
   getWorkspaceMembers(
     workspaceId: string,

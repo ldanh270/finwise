@@ -906,6 +906,11 @@ export class InMemoryFinwiseStore implements CoreStorePort {
       );
   }
 
+  assertReportAccess(workspaceId: string, actor: AuthenticatedActor): void {
+    const member = this.requireMemberByUser(workspaceId, actor.userId, false);
+    this.requirePermission(member, PERMISSIONS.reportRead);
+  }
+
   voidTransaction(
     workspaceId: string,
     transactionId: string,
