@@ -13,7 +13,8 @@
     "format": "prettier --write \"src/**/*.{ts,tsx}\" \"app/**/*.tsx\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx}\" \"app/**/*.tsx\"",
     "typecheck": "tsc --noEmit",
-    "test": "jest --runInBand"
+    "test": "jest --runInBand",
+    "test:native-config": "node --test plugins/with-finwise-network-security.test.cjs"
   },
   "dependencies": {
     "@finwise/api-client": "workspace:*",

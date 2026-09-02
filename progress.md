@@ -288,6 +288,13 @@
 - Verified root format, lint, typecheck, backend tests, OpenAPI contract,
   backend/frontend build, mobile tests, and Android/iOS JavaScript exports.
 
+## 2026-09-02 — Mobile local-network security
+
+- Expo CNG now scopes Android cleartext and iOS ATS exceptions to explicit
+  development/local HTTP builds; preview and production projects remove them.
+- Android prebuild was verified with both local-development and production
+  profiles; native-config policy tests pass.
+
 ## 2026-09-02 — Dev runner port preflight
 
 - Root `dev/start` now checks configured backend/frontend ports before spawning

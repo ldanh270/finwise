@@ -37,7 +37,7 @@
     "test:dev-runner": "node --test scripts/process-tree.test.mjs scripts/port-preflight.test.mjs",
     "test:backend": "pnpm --filter backend test --runInBand",
     "test:e2e": "pnpm --filter backend test:e2e --runInBand",
-    "test:mobile": "pnpm --filter mobile test",
+    "test:mobile": "pnpm --filter mobile test && pnpm --filter mobile test:native-config",
     "test:cov": "pnpm --filter backend test:cov",
     "db:generate": "pnpm --filter backend db:generate",
     "db:validate": "pnpm --filter backend db:validate",

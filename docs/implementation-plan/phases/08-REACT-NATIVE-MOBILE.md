@@ -205,6 +205,12 @@ remains immutable, and affected overview/account/budget queries are invalidated
 after a successful command. See the [mobile ledger detail and correction
 walkthrough](../../reviews/2026-09-02-mobile-ledger-detail-correction-classification-walkthrough.md).
 
+The Expo CNG network-security plugin permits Android cleartext and the iOS ATS
+local-development exception only when `FINWISE_ALLOW_HTTP=true` or the EAS
+profile is `development`. Preview and production prebuilds remove those
+exceptions and require HTTPS API endpoints. See the [mobile local-network
+security walkthrough](../../reviews/2026-09-02-mobile-local-network-security-walkthrough.md).
+
 The mobile app now has an opt-in local biometric app lock. Preferences are
 partitioned by authenticated user in SecureStore, enabling requires a
 successful native biometric challenge, and returning from the background

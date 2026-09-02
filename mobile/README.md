@@ -68,11 +68,19 @@ explicitly synced, exported, or discarded before logout. Settings exports
 unresolved drafts as CSV and marks them `EXPORTED` only after the file is
 written/shared; export never creates a confirmed server transaction.
 
+The network-security CNG plugin permits local HTTP only when
+`FINWISE_ALLOW_HTTP=true` outside release profiles or the EAS build profile is
+`development`, which supports local HTTP API URLs on Android and iOS. Preview
+and production profiles always remove the Android cleartext flag and iOS ATS
+arbitrary-load exception, even if a local switch was accidentally inherited;
+those builds must use HTTPS API endpoints.
+
 Useful checks from the repository root:
 
 ```text
 pnpm typecheck:mobile
 pnpm test:mobile
+pnpm --filter mobile test:native-config
 pnpm --filter mobile export:android
 pnpm --filter mobile export:ios
 ```

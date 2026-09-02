@@ -74,6 +74,7 @@ Prisma schema merely because a table already exists.
 - [Mobile EAS build profiles walkthrough](../reviews/2026-09-02-mobile-eas-build-profiles-walkthrough.md)
 - [Mobile bootstrap offline fallback walkthrough](../reviews/2026-09-02-mobile-bootstrap-offline-fallback-walkthrough.md)
 - [Mobile ledger detail, classification, and correction walkthrough](../reviews/2026-09-02-mobile-ledger-detail-correction-classification-walkthrough.md)
+- [Mobile local-network security walkthrough](../reviews/2026-09-02-mobile-local-network-security-walkthrough.md)
 - [Budget allocation walkthrough](../reviews/2026-08-31-budget-allocation-walkthrough.md)
 - [Web budget planning walkthrough](../reviews/2026-08-31-web-budget-planning-walkthrough.md)
 - [Reconciliation list walkthrough](../reviews/2026-08-31-reconciliation-list-walkthrough.md)
