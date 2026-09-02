@@ -77,6 +77,7 @@ Prisma schema merely because a table already exists.
 - [Mobile local-network security walkthrough](../reviews/2026-09-02-mobile-local-network-security-walkthrough.md)
 - [Reports projection walkthrough](../reviews/2026-09-02-reports-projection-walkthrough.md)
 - [Runtime snapshot durability walkthrough](../reviews/2026-09-02-runtime-snapshot-durability-walkthrough.md)
+- [Release preflight walkthrough](../reviews/2026-09-02-release-preflight-walkthrough.md)
 - [Budget allocation walkthrough](../reviews/2026-08-31-budget-allocation-walkthrough.md)
 - [Web budget planning walkthrough](../reviews/2026-08-31-web-budget-planning-walkthrough.md)
 - [Reconciliation list walkthrough](../reviews/2026-08-31-reconciliation-list-walkthrough.md)

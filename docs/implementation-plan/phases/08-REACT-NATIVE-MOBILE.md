@@ -105,6 +105,10 @@ or managed runner.
   the [mobile outbox scaffold walkthrough](../../reviews/2026-08-31-mobile-outbox-scaffold-walkthrough.md)
   and [mobile sync walkthrough](../../reviews/2026-08-31-mobile-outbox-sync-walkthrough.md).
 
+- 2026-09-02: Reports now consumes the shared permission-filtered monthly and
+  category projection contract with loading, retry, empty, and partial-access
+  states. Physical-device and signed-release verification remain external gates.
+
 ## Exit criteria
 
 - One codebase delivers the online path sign-in → bootstrap → workspace →

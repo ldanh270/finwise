@@ -1,6 +1,6 @@
 # Phase 7 — Web MVP hardening and pilot release
 
-Status: MVP command boundary complete — ledger/group command surfaces delivered; auth, accessibility, and pilot gates remain
+Status: MVP command boundary complete — ledger/group/report surfaces delivered; auth, accessibility, and pilot gates remain
 Depends on: identity/access, ledger, planning/reporting, Group Treasury, ingestion  
 Unblocks: production pilot and Phase 8 mobile consumers
 

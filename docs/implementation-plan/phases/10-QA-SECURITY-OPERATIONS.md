@@ -103,6 +103,9 @@ account/report totals before enabling the next phase.
   process exited and whether it ended by exit code or signal, preserving the
   original coordinated shutdown behavior. See the [development runner exit
   diagnostics walkthrough](../../reviews/2026-09-02-dev-runner-exit-diagnostics-walkthrough.md).
+- 2026-09-02: a release preflight now fails closed for dev auth, malformed JWT
+  material, non-HTTPS web/mobile endpoints, invalid origins, unsafe TTLs, and
+  incomplete Expo/EAS identifiers. See the [release preflight walkthrough](../../reviews/2026-09-02-release-preflight-walkthrough.md).
 
 The continuous gate remains open until observability, security scanning,
 recovery drills, rate limits, and release evidence are attached to a pilot

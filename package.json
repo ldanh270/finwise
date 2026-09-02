@@ -50,6 +50,8 @@
     "db:migrate:deploy": "pnpm db:deploy",
     "db:status": "pnpm --filter backend db:status",
     "db:preflight": "node scripts/database-preflight.mjs",
+    "release:preflight": "node scripts/release-preflight.mjs",
+    "test:release-preflight": "node --test scripts/release-preflight.test.mjs",
     "db:seed": "pnpm --filter backend db:seed",
     "db:reset": "pnpm --filter backend db:reset",
     "db:studio": "pnpm --filter backend db:studio"
