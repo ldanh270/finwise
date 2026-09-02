@@ -71,6 +71,29 @@ export type JournalEntrySummary = {
   readonly amountMinorUnits: string;
   readonly direction: "increase" | "decrease";
 };
+export type ClassificationLineSummary = {
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly transactionId: string;
+  readonly categoryId: string;
+  readonly amount: MoneyDto;
+  readonly tagIds: readonly string[];
+};
+export type TransactionAuditSummary = {
+  readonly id: string;
+  readonly action: "created" | "voided" | "replaced" | string;
+  readonly actorMemberId: string;
+  readonly details?: Readonly<Record<string, string>>;
+  readonly createdAt: string;
+};
+export type JournalSourceLinkSummary = {
+  readonly id: string;
+  readonly transactionId: string;
+  readonly sourceType:
+    "import_record" | "group_submission" | "reconciliation" | string;
+  readonly sourceId: string;
+  readonly createdAt: string;
+};
 export type TransactionSummary = {
   readonly id: string;
   readonly workspaceId: string;
@@ -314,10 +337,7 @@ export class FinwiseApiClient {
   private readonly fetchImpl: typeof fetch;
   private readonly clientType: "web" | "mobile";
   private readonly refreshAccessToken?: FinwiseApiClientOptions["refreshAccessToken"];
-  private readonly workspaceRequests = new Map<
-    string,
-    Set<AbortController>
-  >();
+  private readonly workspaceRequests = new Map<string, Set<AbortController>>();
 
   constructor(options: FinwiseApiClientOptions) {
     this.baseUrl = options.baseUrl.replace(/\/$/, "");
@@ -376,6 +396,78 @@ export class FinwiseApiClient {
   }
   getTransactions(workspaceId: string): Promise<readonly TransactionSummary[]> {
     return this.get(`/v1/workspaces/${segment(workspaceId)}/transactions`);
+  }
+  getTransaction(
+    workspaceId: string,
+    transactionId: string,
+  ): Promise<TransactionSummary> {
+    return this.get(
+      `/v1/workspaces/${segment(workspaceId)}/transactions/${segment(transactionId)}`,
+    );
+  }
+  getTransactionClassification(
+    workspaceId: string,
+    transactionId: string,
+  ): Promise<readonly ClassificationLineSummary[]> {
+    return this.get(
+      `/v1/workspaces/${segment(workspaceId)}/transactions/${segment(transactionId)}/classification`,
+    );
+  }
+  classifyTransaction(
+    workspaceId: string,
+    transactionId: string,
+    input: {
+      readonly lines: readonly {
+        readonly categoryId: string;
+        readonly amountMinorUnits: string;
+        readonly tagIds?: readonly string[];
+      }[];
+    },
+  ): Promise<readonly ClassificationLineSummary[]> {
+    return this.post(
+      `/v1/workspaces/${segment(workspaceId)}/transactions/${segment(transactionId)}/classification`,
+      input,
+    );
+  }
+  replaceTransaction(
+    workspaceId: string,
+    transactionId: string,
+    input: {
+      readonly reason: string;
+      readonly type: "income" | "expense" | "transfer";
+      readonly amountMinorUnits: string;
+      readonly accountId: string;
+      readonly destinationAccountId?: string;
+      readonly effectiveDate: string;
+      readonly description?: string;
+    },
+    idempotencyKey: string,
+  ): Promise<{
+    readonly original: TransactionSummary;
+    readonly reversal: TransactionSummary;
+    readonly replacement: TransactionSummary;
+  }> {
+    return this.post(
+      `/v1/workspaces/${segment(workspaceId)}/transactions/${segment(transactionId)}/replace`,
+      input,
+      idempotencyKey,
+    );
+  }
+  getTransactionAudits(
+    workspaceId: string,
+    transactionId: string,
+  ): Promise<readonly TransactionAuditSummary[]> {
+    return this.get(
+      `/v1/workspaces/${segment(workspaceId)}/transactions/${segment(transactionId)}/audits`,
+    );
+  }
+  getTransactionSourceLinks(
+    workspaceId: string,
+    transactionId: string,
+  ): Promise<readonly JournalSourceLinkSummary[]> {
+    return this.get(
+      `/v1/workspaces/${segment(workspaceId)}/transactions/${segment(transactionId)}/source-links`,
+    );
   }
   getBalanceViews(workspaceId: string): Promise<readonly BalanceViewSummary[]> {
     return this.get(`/v1/workspaces/${segment(workspaceId)}/balances`);

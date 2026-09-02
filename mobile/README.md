@@ -20,6 +20,13 @@ labels this state and keeps all mutations online-only. The last selected
 workspace is persisted per user as a UX preference and is revalidated against
 the current bootstrap response before it is used.
 
+The Transactions screen opens workspace-scoped journal detail with entries,
+classification, audit history, and source evidence. Posted income/expense
+journals can be classified exactly once with VND split lines and tags. Posted
+income/expense/transfer journals can be corrected online through an idempotent
+reversal-and-replacement command; offline correction and classification remain
+intentionally unsupported.
+
 Protected deep links are restored after authentication only for whitelisted
 internal routes; external redirect values fall back to Overview.
 

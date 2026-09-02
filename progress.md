@@ -277,3 +277,13 @@
   no visible active account exists.
 - The UI explains the prerequisite while keeping collection and participant
   setup available.
+
+## 2026-09-02 — Mobile ledger detail and correction
+
+- Transactions now open server-authorized journal detail with entries,
+  classification, audit history, and source evidence.
+- Exact VND split validation prevents partial or floating-point classifications;
+  posted income/expense/transfer corrections use an idempotent online
+  reversal-and-replacement command.
+- Verified root format, lint, typecheck, backend tests, OpenAPI contract,
+  backend/frontend build, mobile tests, and Android/iOS JavaScript exports.

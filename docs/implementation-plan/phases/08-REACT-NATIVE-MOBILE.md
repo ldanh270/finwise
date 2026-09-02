@@ -196,6 +196,15 @@ The selected workspace preference is also persisted per user and hydrated
 before fallback selection is written, so app restarts preserve the last
 authorized choice without bypassing the latest membership check.
 
+The mobile Transactions route now opens server-authorized journal detail with
+classification, audit history, and source evidence. Posted income/expense
+journals can be classified once with exact VND split sums and active tags;
+posted income/expense/transfer journals can be corrected only through an
+online idempotent reversal-and-replacement command. The original journal
+remains immutable, and affected overview/account/budget queries are invalidated
+after a successful command. See the [mobile ledger detail and correction
+walkthrough](../../reviews/2026-09-02-mobile-ledger-detail-correction-classification-walkthrough.md).
+
 The mobile app now has an opt-in local biometric app lock. Preferences are
 partitioned by authenticated user in SecureStore, enabling requires a
 successful native biometric challenge, and returning from the background

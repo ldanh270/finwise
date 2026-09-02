@@ -1330,6 +1330,27 @@
         }
       }
     },
+    "/workspaces/{workspaceId}/transactions/{transactionId}/audits": {
+      "get": {
+        "operationId": "getTransactionAudits",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceId" },
+          { "name": "transactionId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Audit history for a visible journal",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/TransactionAudit" } }
+              }
+            }
+          },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
     "/workspaces/{workspaceId}/group/participants": {
       "get": {
         "operationId": "listGroupParticipants",
@@ -2481,6 +2502,17 @@
           "transactionId": { "type": "string" },
           "sourceType": { "type": "string", "enum": ["import_record", "group_submission", "reconciliation"] },
           "sourceId": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "TransactionAudit": {
+        "type": "object",
+        "required": ["id", "action", "actorMemberId", "createdAt"],
+        "properties": {
+          "id": { "type": "string" },
+          "action": { "type": "string", "enum": ["created", "voided", "replaced"] },
+          "actorMemberId": { "type": "string" },
+          "details": { "type": "object", "additionalProperties": { "type": "string" } },
           "createdAt": { "type": "string", "format": "date-time" }
         }
       },

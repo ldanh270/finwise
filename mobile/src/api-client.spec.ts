@@ -228,4 +228,81 @@ describe("shared mobile API client", () => {
       },
     ]);
   });
+
+  it("maps transaction detail, classification, correction, and evidence paths", async () => {
+    const requests: Array<{
+      method: string;
+      url: string;
+      body?: string;
+      idempotencyKey?: string;
+    }> = [];
+    const api = new FinwiseApiClient({
+      baseUrl: "https://api.finwise.test",
+      clientType: "mobile",
+      fetchImpl: async (url, init) => {
+        const headers = init?.headers as Record<string, string> | undefined;
+        requests.push({
+          method: init?.method ?? "",
+          url: String(url),
+          body: typeof init?.body === "string" ? init.body : undefined,
+          idempotencyKey: headers?.["Idempotency-Key"],
+        });
+        return new Response(JSON.stringify([]), { status: 200 });
+      },
+    });
+
+    await api.getTransaction("workspace/1", "transaction/1");
+    await api.getTransactionClassification("workspace/1", "transaction/1");
+    await api.classifyTransaction("workspace/1", "transaction/1", {
+      lines: [{ categoryId: "category/1", amountMinorUnits: "1000" }],
+    });
+    await api.replaceTransaction(
+      "workspace/1",
+      "transaction/1",
+      {
+        reason: "Correct account",
+        type: "expense",
+        amountMinorUnits: "1000",
+        accountId: "account/1",
+        effectiveDate: "2026-09-02",
+      },
+      "mobile-replace-command",
+    );
+    await api.getTransactionAudits("workspace/1", "transaction/1");
+    await api.getTransactionSourceLinks("workspace/1", "transaction/1");
+
+    expect(
+      requests.map(({ method, url, idempotencyKey }) => ({
+        method,
+        url,
+        idempotencyKey,
+      })),
+    ).toEqual([
+      {
+        method: "GET",
+        url: "https://api.finwise.test/v1/workspaces/workspace%2F1/transactions/transaction%2F1",
+      },
+      {
+        method: "GET",
+        url: "https://api.finwise.test/v1/workspaces/workspace%2F1/transactions/transaction%2F1/classification",
+      },
+      {
+        method: "POST",
+        url: "https://api.finwise.test/v1/workspaces/workspace%2F1/transactions/transaction%2F1/classification",
+      },
+      {
+        method: "POST",
+        url: "https://api.finwise.test/v1/workspaces/workspace%2F1/transactions/transaction%2F1/replace",
+        idempotencyKey: "mobile-replace-command",
+      },
+      {
+        method: "GET",
+        url: "https://api.finwise.test/v1/workspaces/workspace%2F1/transactions/transaction%2F1/audits",
+      },
+      {
+        method: "GET",
+        url: "https://api.finwise.test/v1/workspaces/workspace%2F1/transactions/transaction%2F1/source-links",
+      },
+    ]);
+  });
 });

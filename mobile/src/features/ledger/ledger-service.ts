@@ -1,7 +1,12 @@
 import type {
   AccountSummary,
+  CategorySummary,
+  ClassificationLineSummary,
   FinwiseApiClient,
+  JournalSourceLinkSummary,
+  TransactionAuditSummary,
   TransactionSummary,
+  TagSummary,
 } from "@finwise/api-client";
 
 /**
@@ -14,6 +19,20 @@ export function listAccounts(
   workspaceId: string,
 ): Promise<readonly AccountSummary[]> {
   return api.getAccounts(workspaceId);
+}
+
+export function listCategories(
+  api: FinwiseApiClient,
+  workspaceId: string,
+): Promise<readonly CategorySummary[]> {
+  return api.getCategories(workspaceId);
+}
+
+export function listTags(
+  api: FinwiseApiClient,
+  workspaceId: string,
+): Promise<readonly TagSummary[]> {
+  return api.getTags(workspaceId);
 }
 
 export function createAccount(
@@ -45,6 +64,76 @@ export function listTransactions(
   workspaceId: string,
 ): Promise<readonly TransactionSummary[]> {
   return api.getTransactions(workspaceId);
+}
+
+export function getTransaction(
+  api: FinwiseApiClient,
+  workspaceId: string,
+  transactionId: string,
+): Promise<TransactionSummary> {
+  return api.getTransaction(workspaceId, transactionId);
+}
+
+export function getTransactionClassification(
+  api: FinwiseApiClient,
+  workspaceId: string,
+  transactionId: string,
+): Promise<readonly ClassificationLineSummary[]> {
+  return api.getTransactionClassification(workspaceId, transactionId);
+}
+
+export function classifyTransaction(
+  api: FinwiseApiClient,
+  workspaceId: string,
+  transactionId: string,
+  input: {
+    readonly lines: readonly {
+      readonly categoryId: string;
+      readonly amountMinorUnits: string;
+      readonly tagIds?: readonly string[];
+    }[];
+  },
+): Promise<readonly ClassificationLineSummary[]> {
+  return api.classifyTransaction(workspaceId, transactionId, input);
+}
+
+export function replaceTransaction(
+  api: FinwiseApiClient,
+  workspaceId: string,
+  transactionId: string,
+  input: {
+    readonly reason: string;
+    readonly type: "income" | "expense" | "transfer";
+    readonly amountMinorUnits: string;
+    readonly accountId: string;
+    readonly destinationAccountId?: string;
+    readonly effectiveDate: string;
+    readonly description?: string;
+  },
+  idempotencyKey: string,
+): ReturnType<FinwiseApiClient["replaceTransaction"]> {
+  return api.replaceTransaction(
+    workspaceId,
+    transactionId,
+    input,
+    idempotencyKey,
+  );
+}
+
+export function getTransactionAudits(
+  api: FinwiseApiClient,
+  workspaceId: string,
+  transactionId: string,
+): Promise<readonly TransactionAuditSummary[]> {
+  return api.getTransactionAudits(workspaceId, transactionId);
+}
+
+export function getTransactionSourceLinks(
+  api: FinwiseApiClient,
+  workspaceId: string,
+  transactionId: string,
+): Promise<readonly JournalSourceLinkSummary[]> {
+  return api.getTransactionSourceLinks(workspaceId, transactionId);
 }
 
 export function createTransaction(
