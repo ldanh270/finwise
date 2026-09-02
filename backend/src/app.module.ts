@@ -8,9 +8,17 @@ import { GroupModule } from './group/group.module';
 import { IngestionModule } from './ingestion/ingestion.module';
 import { HealthController } from './health/health.controller';
 import { RuntimeSnapshotFlushInterceptor } from './shared/presentation/runtime-snapshot-flush.interceptor';
+import { WealthModule } from './wealth/wealth.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule, CoreModule, GroupModule, IngestionModule],
+  imports: [
+    PrismaModule,
+    AuthModule,
+    CoreModule,
+    GroupModule,
+    IngestionModule,
+    WealthModule,
+  ],
   controllers: [CoreController, HealthController],
   providers: [
     {

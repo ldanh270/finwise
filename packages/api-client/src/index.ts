@@ -157,6 +157,73 @@ export type ReportsResponse = {
   readonly categories: readonly ReportCategorySummary[];
   readonly hasPartialAccess: boolean;
 };
+export type LoanScheduleItemSummary = {
+  readonly installment: number;
+  readonly dueDate: string;
+  readonly principalMinorUnits: string;
+  readonly interestMinorUnits: string;
+  readonly feeMinorUnits: string;
+  readonly totalDueMinorUnits: string;
+  readonly openingPrincipalMinorUnits: string;
+  readonly closingPrincipalMinorUnits: string;
+};
+export type LoanContractSummary = {
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly direction: "LENT" | "BORROWED";
+  readonly principalMinorUnits: string;
+  readonly annualRateBasisPoints: string;
+  readonly termMonths: number;
+  readonly firstDueDate: string;
+  readonly feeMinorUnits: string;
+  readonly scheduleVersion: number;
+  readonly schedule: readonly LoanScheduleItemSummary[];
+};
+export type LoanPaymentSummary = {
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly contractId: string;
+  readonly installment: number;
+  readonly amountMinorUnits: string;
+  readonly effectiveDate: string;
+  readonly allocation: {
+    readonly feeMinorUnits: string;
+    readonly interestMinorUnits: string;
+    readonly principalMinorUnits: string;
+    readonly unappliedMinorUnits: string;
+  };
+};
+export type InvestmentPositionSummary = {
+  readonly instrumentId: string;
+  readonly quantityUnits: string;
+  readonly quantityScale: string;
+  readonly costBasisMinorUnits: string;
+  readonly realizedGainMinorUnits: string;
+  readonly marketValueMinorUnits?: string;
+  readonly unrealizedGainMinorUnits?: string;
+};
+export type InvestmentTradeSummary = {
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly instrumentId: string;
+  readonly side: "BUY" | "SELL";
+  readonly quantityUnits: string;
+  readonly quantityScale: string;
+  readonly totalCostMinorUnits: string;
+  readonly tradedAt: string;
+};
+export type InvestmentTradeResult = {
+  readonly trade: InvestmentTradeSummary;
+  readonly positions: readonly InvestmentPositionSummary[];
+};
+export type InvestmentValuationSummary = {
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly instrumentId: string;
+  readonly valuedAt: string;
+  readonly marketPriceMinorUnits: string;
+  readonly projection: InvestmentPositionSummary;
+};
 export type CategorySummary = {
   readonly id: string;
   readonly workspaceId: string;
@@ -416,6 +483,103 @@ export class FinwiseApiClient {
     if (options?.toMonth) query.set("to", options.toMonth);
     const suffix = query.toString() ? `?${query.toString()}` : "";
     return this.get(`/v1/workspaces/${segment(workspaceId)}/reports${suffix}`);
+  }
+  getWealthLoans(workspaceId: string): Promise<readonly LoanContractSummary[]> {
+    return this.get(`/v1/workspaces/${segment(workspaceId)}/wealth/loans`);
+  }
+  createWealthLoan(
+    workspaceId: string,
+    input: {
+      direction: "LENT" | "BORROWED";
+      scheduleMode: "INTEREST_FREE" | "REDUCING_BALANCE";
+      principalMinorUnits: string;
+      annualRateBasisPoints?: string;
+      termMonths: number;
+      firstDueDate: string;
+      feeMinorUnits?: string;
+    },
+    idempotencyKey: string,
+  ): Promise<LoanContractSummary> {
+    return this.post(
+      `/v1/workspaces/${segment(workspaceId)}/wealth/loans`,
+      input,
+      idempotencyKey,
+    );
+  }
+  getWealthLoanPayments(
+    workspaceId: string,
+    contractId: string,
+  ): Promise<readonly LoanPaymentSummary[]> {
+    return this.get(
+      `/v1/workspaces/${segment(workspaceId)}/wealth/loans/${segment(contractId)}/payments`,
+    );
+  }
+  recordWealthLoanPayment(
+    workspaceId: string,
+    contractId: string,
+    input: {
+      installment: number;
+      amountMinorUnits: string;
+      effectiveDate: string;
+    },
+    idempotencyKey: string,
+  ): Promise<LoanPaymentSummary> {
+    return this.post(
+      `/v1/workspaces/${segment(workspaceId)}/wealth/loans/${segment(contractId)}/payments`,
+      input,
+      idempotencyKey,
+    );
+  }
+  getWealthInvestmentPositions(
+    workspaceId: string,
+  ): Promise<readonly InvestmentPositionSummary[]> {
+    return this.get(
+      `/v1/workspaces/${segment(workspaceId)}/wealth/investments/positions`,
+    );
+  }
+  recordWealthInvestmentTrade(
+    workspaceId: string,
+    input: {
+      instrumentId: string;
+      side: "BUY" | "SELL";
+      quantityUnits: string;
+      quantityScale: string;
+      totalCostMinorUnits: string;
+      tradedAt: string;
+    },
+    idempotencyKey: string,
+  ): Promise<InvestmentTradeResult> {
+    return this.post(
+      `/v1/workspaces/${segment(workspaceId)}/wealth/investments/trades`,
+      input,
+      idempotencyKey,
+    );
+  }
+  getWealthInvestmentValuations(
+    workspaceId: string,
+    instrumentId?: string,
+  ): Promise<readonly InvestmentValuationSummary[]> {
+    const query = instrumentId
+      ? `?instrumentId=${encodeURIComponent(instrumentId)}`
+      : "";
+    return this.get(
+      `/v1/workspaces/${segment(workspaceId)}/wealth/investments/valuations${query}`,
+    );
+  }
+  recordWealthInvestmentValuation(
+    workspaceId: string,
+    input: {
+      instrumentId: string;
+      valuedAt: string;
+      marketPriceMinorUnits: string;
+    },
+    idempotencyKey: string,
+  ): Promise<InvestmentValuationSummary> {
+    return this.post(
+      `/v1/workspaces/${segment(workspaceId)}/wealth/investments/valuations`,
+      input,
+      idempotencyKey,
+    );
   }
   getWorkspaceMembers(
     workspaceId: string,

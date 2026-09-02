@@ -13,9 +13,11 @@ The current implementation covers custom JWT authentication, personal/shared
 workspaces, VND exact-money accounts and immutable journals, budgets, Group
 Treasury, CSV ingestion/reconciliation, permission-aware web screens, and a
 mobile online path with SecureStore sessions, workspace-scoped SQLite cache,
-and controlled offline income/expense drafts. The remaining release gates are
-provider/device operations (especially iOS signing and physical-device tests),
-not a second mobile feature implementation. The roadmap remains tracked in
+and controlled offline income/expense drafts. Manual loan/payment and investment
+trade/valuation APIs are also available behind the shared client. The remaining
+production gates are normalized Prisma persistence and provider/device
+operations (especially bank-provider selection, iOS signing, and physical-device
+tests), not another mobile scaffold. The roadmap remains tracked in
 [`docs/implementation-plan/README.md`](docs/implementation-plan/README.md).
 
 ## Setup

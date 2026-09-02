@@ -62,7 +62,26 @@ export interface WealthStorePort {
     workspaceId: string,
     instrumentId?: string,
   ): readonly InvestmentValuationRecord[];
+  findCommand(
+    workspaceId: string,
+    key: string,
+    operation: string,
+  ): WealthCommandRecord | undefined;
+  saveCommand(command: WealthCommandRecord): void;
   nextId(prefix: string): string;
+}
+
+export interface WealthCommandRecord {
+  readonly workspaceId: string;
+  readonly key: string;
+  readonly operation: string;
+  readonly requestHash: string;
+  readonly response: unknown;
+}
+
+export interface WealthCommandContext {
+  readonly key: string;
+  readonly requestHash: string;
 }
 
 export type LoanScheduleMode = 'INTEREST_FREE' | 'REDUCING_BALANCE';

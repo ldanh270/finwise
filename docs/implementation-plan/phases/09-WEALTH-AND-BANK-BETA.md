@@ -1,6 +1,6 @@
 # Phase 9 — Wealth modules and bank beta
 
-Status: Application boundary complete — pure wealth calculators and workspace-scoped application slice delivered; persistence/API/provider work remains
+Status: Loan/investment API boundary complete with workspace authorization and idempotent snapshot-backed writes; normalized persistence and bank provider work remain
 Depends on: ledger source links, access policies, ingestion/reconciliation, Phase 7 release controls  
 Blocks: none for MVP
 
@@ -97,6 +97,14 @@ gates; code must remain adapter/provider-neutral.
 - Worker failure cannot roll back committed financial truth or leak secrets.
 
 ## Delivered slices
+
+- 2026-09-02: exposed the loan schedule/payment and manual investment
+  trade/valuation application slice through authenticated workspace-scoped
+  REST endpoints. Commands require `Idempotency-Key`, replay the same result,
+  reject payload reuse, and preserve bigint values as decimal strings. The
+  transitional snapshot adapter persists the wealth store; normalized Prisma
+  models and bank-provider integration remain release gates. See the [wealth
+  API walkthrough](../../reviews/2026-09-02-wealth-api-boundary-walkthrough.md).
 
 - 2026-08-31: exact bigint loan schedules/payment allocation and weighted-
   average investment position/valuation calculators. See the [change

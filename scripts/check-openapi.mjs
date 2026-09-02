@@ -30,6 +30,14 @@ const requiredOperations = {
   "/workspaces/{workspaceId}/budgets": ["get", "post"],
   "/workspaces/{workspaceId}/imports": ["get", "post"],
   "/workspaces/{workspaceId}/reconciliations": ["get", "post"],
+  "/workspaces/{workspaceId}/wealth/loans": ["get", "post"],
+  "/workspaces/{workspaceId}/wealth/loans/{contractId}/payments": [
+    "get",
+    "post",
+  ],
+  "/workspaces/{workspaceId}/wealth/investments/positions": ["get"],
+  "/workspaces/{workspaceId}/wealth/investments/trades": ["post"],
+  "/workspaces/{workspaceId}/wealth/investments/valuations": ["get", "post"],
 };
 
 if (contract?.openapi !== "3.1.0" || !isRecord(contract?.paths)) {
@@ -81,6 +89,10 @@ const idempotentCommands = [
   ["post", "/workspaces/{workspaceId}/imports/records/confirm"],
   ["post", "/workspaces/{workspaceId}/imports/records/{recordId}/confirm"],
   ["post", "/workspaces/{workspaceId}/group/expenses"],
+  ["post", "/workspaces/{workspaceId}/wealth/loans"],
+  ["post", "/workspaces/{workspaceId}/wealth/loans/{contractId}/payments"],
+  ["post", "/workspaces/{workspaceId}/wealth/investments/trades"],
+  ["post", "/workspaces/{workspaceId}/wealth/investments/valuations"],
 ];
 const missingIdempotency = idempotentCommands.filter(([method, route]) => {
   const operation = contract.paths[route]?.[method];

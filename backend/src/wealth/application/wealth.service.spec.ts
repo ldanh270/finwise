@@ -62,4 +62,27 @@ describe('WealthService', () => {
     expect(valuation.projection.marketValueMinorUnits).toBe(450n);
     expect(service.listInvestmentPositions('workspace-2')).toEqual([]);
   });
+
+  it('replays an idempotent command and rejects key reuse with a different payload', () => {
+    const service = new WealthService(new InMemoryWealthStore());
+    const input = {
+      direction: 'LENT' as const,
+      scheduleMode: 'INTEREST_FREE' as const,
+      principalMinorUnits: 100n,
+      termMonths: 1,
+      firstDueDate: '2026-09-01',
+    };
+    const command = { key: 'loan-1', requestHash: 'hash-a' };
+    const first = service.createLoan('workspace-1', input, command);
+    const replay = service.createLoan('workspace-1', input, command);
+
+    expect(replay).toEqual(first);
+    expect(() =>
+      service.createLoan(
+        'workspace-1',
+        { ...input, principalMinorUnits: 101n },
+        { ...command, requestHash: 'hash-b' },
+      ),
+    ).toThrow('Idempotency key');
+  });
 });

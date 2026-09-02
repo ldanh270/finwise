@@ -5,6 +5,7 @@ import {
   LoanContractRecord,
   LoanPaymentRecord,
   WealthStorePort,
+  WealthCommandRecord,
 } from '../application/wealth.ports';
 
 export class InMemoryWealthStore implements WealthStorePort {
@@ -12,6 +13,7 @@ export class InMemoryWealthStore implements WealthStorePort {
   private readonly payments = new Map<string, LoanPaymentRecord>();
   private readonly trades = new Map<string, InvestmentTradeRecord>();
   private readonly valuations = new Map<string, InvestmentValuationRecord>();
+  private readonly commands = new Map<string, WealthCommandRecord>();
   private sequence = 0;
 
   createLoan(contract: LoanContractRecord): LoanContractRecord {
@@ -77,6 +79,22 @@ export class InMemoryWealthStore implements WealthStorePort {
       (valuation) =>
         valuation.workspaceId === workspaceId &&
         (instrumentId === undefined || valuation.instrumentId === instrumentId),
+    );
+  }
+
+  findCommand(
+    workspaceId: string,
+    key: string,
+    operation: string,
+  ): WealthCommandRecord | undefined {
+    const command = this.commands.get(`${workspaceId}:${operation}:${key}`);
+    return command?.workspaceId === workspaceId ? command : undefined;
+  }
+
+  saveCommand(command: WealthCommandRecord): void {
+    this.commands.set(
+      `${command.workspaceId}:${command.operation}:${command.key}`,
+      command,
     );
   }
 

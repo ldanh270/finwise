@@ -215,6 +215,91 @@
         }
       }
     },
+    "/workspaces/{workspaceId}/wealth/loans": {
+      "get": {
+        "operationId": "listWealthLoans",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "responses": {
+          "200": { "description": "Loan contracts", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/LoanContract" } } } } },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "operationId": "createWealthLoan",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }, { "$ref": "#/components/parameters/IdempotencyKey" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateLoanRequest" } } } },
+        "responses": {
+          "201": { "description": "Loan contract", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoanContract" } } } },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/wealth/loans/{contractId}/payments": {
+      "get": {
+        "operationId": "listWealthLoanPayments",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }, { "name": "contractId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "description": "Loan payments", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/LoanPayment" } } } } },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "post": {
+        "operationId": "recordWealthLoanPayment",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }, { "name": "contractId", "in": "path", "required": true, "schema": { "type": "string" } }, { "$ref": "#/components/parameters/IdempotencyKey" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoanPaymentRequest" } } } },
+        "responses": {
+          "201": { "description": "Loan payment", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoanPayment" } } } },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/wealth/investments/positions": {
+      "get": {
+        "operationId": "listWealthInvestmentPositions",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "responses": {
+          "200": { "description": "Investment positions", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/InvestmentPosition" } } } } },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/wealth/investments/trades": {
+      "post": {
+        "operationId": "recordWealthInvestmentTrade",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }, { "$ref": "#/components/parameters/IdempotencyKey" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/InvestmentTradeRequest" } } } },
+        "responses": {
+          "201": { "description": "Investment trade and positions", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/InvestmentTradeResult" } } } },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/wealth/investments/valuations": {
+      "get": {
+        "operationId": "listWealthInvestmentValuations",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }, { "name": "instrumentId", "in": "query", "required": false, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "description": "Investment valuations", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/InvestmentValuation" } } } } },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "operationId": "recordWealthInvestmentValuation",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }, { "$ref": "#/components/parameters/IdempotencyKey" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/InvestmentValuationRequest" } } } },
+        "responses": {
+          "201": { "description": "Investment valuation", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/InvestmentValuation" } } } },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
     "/workspaces/{workspaceId}": {
       "get": {
         "operationId": "getWorkspace",
@@ -2571,6 +2656,140 @@
           "budgets": { "type": "array", "items": { "type": "object" } },
           "totals": { "type": "object" },
           "hasPartialAccess": { "type": "boolean" }
+        }
+      },
+      "CreateLoanRequest": {
+        "type": "object",
+        "required": ["direction", "scheduleMode", "principalMinorUnits", "termMonths", "firstDueDate"],
+        "properties": {
+          "direction": { "type": "string", "enum": ["LENT", "BORROWED"] },
+          "scheduleMode": { "type": "string", "enum": ["INTEREST_FREE", "REDUCING_BALANCE"] },
+          "principalMinorUnits": { "type": "string", "pattern": "^[1-9]\\d*$" },
+          "annualRateBasisPoints": { "type": "string", "pattern": "^\\d+$" },
+          "termMonths": { "type": "integer", "minimum": 1 },
+          "firstDueDate": { "type": "string", "format": "date" },
+          "feeMinorUnits": { "type": "string", "pattern": "^\\d+$" }
+        }
+      },
+      "LoanScheduleItem": {
+        "type": "object",
+        "required": ["installment", "dueDate", "principalMinorUnits", "interestMinorUnits", "feeMinorUnits", "totalDueMinorUnits", "openingPrincipalMinorUnits", "closingPrincipalMinorUnits"],
+        "properties": {
+          "installment": { "type": "integer" },
+          "dueDate": { "type": "string", "format": "date" },
+          "principalMinorUnits": { "type": "string" },
+          "interestMinorUnits": { "type": "string" },
+          "feeMinorUnits": { "type": "string" },
+          "totalDueMinorUnits": { "type": "string" },
+          "openingPrincipalMinorUnits": { "type": "string" },
+          "closingPrincipalMinorUnits": { "type": "string" }
+        }
+      },
+      "LoanContract": {
+        "type": "object",
+        "required": ["id", "workspaceId", "direction", "principalMinorUnits", "annualRateBasisPoints", "termMonths", "firstDueDate", "feeMinorUnits", "scheduleVersion", "schedule"],
+        "properties": {
+          "id": { "type": "string" },
+          "workspaceId": { "type": "string" },
+          "direction": { "type": "string", "enum": ["LENT", "BORROWED"] },
+          "principalMinorUnits": { "type": "string" },
+          "annualRateBasisPoints": { "type": "string" },
+          "termMonths": { "type": "integer" },
+          "firstDueDate": { "type": "string", "format": "date" },
+          "feeMinorUnits": { "type": "string" },
+          "scheduleVersion": { "type": "integer" },
+          "schedule": { "type": "array", "items": { "$ref": "#/components/schemas/LoanScheduleItem" } }
+        }
+      },
+      "LoanPaymentRequest": {
+        "type": "object",
+        "required": ["installment", "amountMinorUnits", "effectiveDate"],
+        "properties": {
+          "installment": { "type": "integer", "minimum": 1 },
+          "amountMinorUnits": { "type": "string", "pattern": "^\\d+$" },
+          "effectiveDate": { "type": "string", "format": "date" }
+        }
+      },
+      "LoanPayment": {
+        "type": "object",
+        "required": ["id", "workspaceId", "contractId", "installment", "amountMinorUnits", "effectiveDate", "allocation"],
+        "properties": {
+          "id": { "type": "string" },
+          "workspaceId": { "type": "string" },
+          "contractId": { "type": "string" },
+          "installment": { "type": "integer" },
+          "amountMinorUnits": { "type": "string" },
+          "effectiveDate": { "type": "string", "format": "date" },
+          "allocation": {
+            "type": "object",
+            "required": ["feeMinorUnits", "interestMinorUnits", "principalMinorUnits", "unappliedMinorUnits"],
+            "properties": {
+              "feeMinorUnits": { "type": "string" },
+              "interestMinorUnits": { "type": "string" },
+              "principalMinorUnits": { "type": "string" },
+              "unappliedMinorUnits": { "type": "string" }
+            }
+          }
+        }
+      },
+      "InvestmentTradeRequest": {
+        "type": "object",
+        "required": ["instrumentId", "side", "quantityUnits", "quantityScale", "totalCostMinorUnits", "tradedAt"],
+        "properties": {
+          "instrumentId": { "type": "string", "minLength": 1 },
+          "side": { "type": "string", "enum": ["BUY", "SELL"] },
+          "quantityUnits": { "type": "string", "pattern": "^[1-9]\\d*$" },
+          "quantityScale": { "type": "string", "pattern": "^[1-9]\\d*$" },
+          "totalCostMinorUnits": { "type": "string", "pattern": "^\\d+$" },
+          "tradedAt": { "type": "string", "format": "date" }
+        }
+      },
+      "InvestmentPosition": {
+        "type": "object",
+        "required": ["instrumentId", "quantityUnits", "quantityScale", "costBasisMinorUnits", "realizedGainMinorUnits"],
+        "properties": {
+          "instrumentId": { "type": "string" },
+          "quantityUnits": { "type": "string" },
+          "quantityScale": { "type": "string" },
+          "costBasisMinorUnits": { "type": "string" },
+          "realizedGainMinorUnits": { "type": "string" },
+          "marketValueMinorUnits": { "type": "string" },
+          "unrealizedGainMinorUnits": { "type": "string" }
+        }
+      },
+      "InvestmentTrade": {
+        "allOf": [
+          { "$ref": "#/components/schemas/InvestmentTradeRequest" },
+          { "type": "object", "required": ["id", "workspaceId"], "properties": { "id": { "type": "string" }, "workspaceId": { "type": "string" } } }
+        ]
+      },
+      "InvestmentTradeResult": {
+        "type": "object",
+        "required": ["trade", "positions"],
+        "properties": {
+          "trade": { "$ref": "#/components/schemas/InvestmentTrade" },
+          "positions": { "type": "array", "items": { "$ref": "#/components/schemas/InvestmentPosition" } }
+        }
+      },
+      "InvestmentValuationRequest": {
+        "type": "object",
+        "required": ["instrumentId", "valuedAt", "marketPriceMinorUnits"],
+        "properties": {
+          "instrumentId": { "type": "string", "minLength": 1 },
+          "valuedAt": { "type": "string", "format": "date" },
+          "marketPriceMinorUnits": { "type": "string", "pattern": "^\\d+$" }
+        }
+      },
+      "InvestmentValuation": {
+        "type": "object",
+        "required": ["id", "workspaceId", "instrumentId", "valuedAt", "marketPriceMinorUnits", "projection"],
+        "properties": {
+          "id": { "type": "string" },
+          "workspaceId": { "type": "string" },
+          "instrumentId": { "type": "string" },
+          "valuedAt": { "type": "string", "format": "date" },
+          "marketPriceMinorUnits": { "type": "string" },
+          "projection": { "$ref": "#/components/schemas/InvestmentPosition" }
         }
       },
       "ReportMoney": {

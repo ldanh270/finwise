@@ -16,13 +16,25 @@ import {
   RecordLoanPaymentInput,
   WealthStorePort,
   InvestmentValuationRecord,
+  WealthCommandContext,
+  WealthCommandRecord,
 } from './wealth.ports';
 
 export class WealthService {
   constructor(private readonly store: WealthStorePort) {}
 
-  createLoan(workspaceId: string, input: CreateLoanInput): LoanContractRecord {
+  createLoan(
+    workspaceId: string,
+    input: CreateLoanInput,
+    command?: WealthCommandContext,
+  ): LoanContractRecord {
     requireWorkspaceId(workspaceId);
+    const replay = this.replay<LoanContractRecord>(
+      workspaceId,
+      command,
+      'loan.create',
+    );
+    if (replay) return replay;
     const annualRateBasisPoints = input.annualRateBasisPoints ?? 0n;
     const feeMinorUnits = input.feeMinorUnits ?? 0n;
     const schedule =
@@ -40,7 +52,7 @@ export class WealthService {
             input.firstDueDate,
             feeMinorUnits,
           );
-    return this.store.createLoan({
+    const contract = this.store.createLoan({
       id: this.store.nextId('loan'),
       workspaceId,
       direction: input.direction,
@@ -52,12 +64,26 @@ export class WealthService {
       scheduleVersion: 1,
       schedule,
     });
+    this.remember(workspaceId, command, 'loan.create', contract);
+    return contract;
+  }
+
+  listLoans(workspaceId: string): readonly LoanContractRecord[] {
+    requireWorkspaceId(workspaceId);
+    return this.store.listLoans(workspaceId);
   }
 
   recordLoanPayment(
     workspaceId: string,
     input: RecordLoanPaymentInput,
+    command?: WealthCommandContext,
   ): LoanPaymentRecord {
+    const replay = this.replay<LoanPaymentRecord>(
+      workspaceId,
+      command,
+      'loan.payment',
+    );
+    if (replay) return replay;
     const contract = this.store.getLoan(workspaceId, input.contractId);
     const due = contract.schedule.find(
       (item) => item.installment === input.installment,
@@ -81,7 +107,7 @@ export class WealthService {
       due.interestMinorUnits - paid.interestMinorUnits,
       due.principalMinorUnits - paid.principalMinorUnits,
     );
-    return this.store.addLoanPayment({
+    const payment = this.store.addLoanPayment({
       id: this.store.nextId('loan-payment'),
       workspaceId,
       contractId: contract.id,
@@ -90,16 +116,34 @@ export class WealthService {
       effectiveDate: input.effectiveDate,
       allocation,
     });
+    this.remember(workspaceId, command, 'loan.payment', payment);
+    return payment;
+  }
+
+  listLoanPayments(
+    workspaceId: string,
+    contractId: string,
+  ): readonly LoanPaymentRecord[] {
+    requireWorkspaceId(workspaceId);
+    return this.store.listLoanPayments(workspaceId, contractId);
   }
 
   recordInvestmentTrade(
     workspaceId: string,
     input: RecordInvestmentTradeInput,
+    command?: WealthCommandContext,
   ): {
     readonly trade: InvestmentTradeRecord;
     readonly positions: readonly ReturnType<typeof projectPositions>[number][];
   } {
     requireWorkspaceId(workspaceId);
+    const replay = this.replay<{
+      readonly trade: InvestmentTradeRecord;
+      readonly positions: readonly ReturnType<
+        typeof projectPositions
+      >[number][];
+    }>(workspaceId, command, 'investment.trade');
+    if (replay) return replay;
     const trade: InvestmentTradeRecord = {
       id: this.store.nextId('trade'),
       workspaceId,
@@ -114,13 +158,22 @@ export class WealthService {
       ...this.store.listInvestmentTrades(workspaceId),
       trade,
     ]);
-    return { trade: this.store.addInvestmentTrade(trade), positions };
+    const result = { trade: this.store.addInvestmentTrade(trade), positions };
+    this.remember(workspaceId, command, 'investment.trade', result);
+    return result;
   }
 
   recordInvestmentValuation(
     workspaceId: string,
     input: RecordInvestmentValuationInput,
+    command?: WealthCommandContext,
   ): InvestmentValuationRecord {
+    const replay = this.replay<InvestmentValuationRecord>(
+      workspaceId,
+      command,
+      'investment.valuation',
+    );
+    if (replay) return replay;
     const position = projectPositions(
       this.store
         .listInvestmentTrades(workspaceId)
@@ -135,11 +188,59 @@ export class WealthService {
       marketPriceMinorUnits: input.marketPriceMinorUnits,
       projection: addValuation(position, input.marketPriceMinorUnits),
     };
-    return this.store.addInvestmentValuation(valuation);
+    const result = this.store.addInvestmentValuation(valuation);
+    this.remember(workspaceId, command, 'investment.valuation', result);
+    return result;
   }
 
   listInvestmentPositions(workspaceId: string) {
+    requireWorkspaceId(workspaceId);
     return projectPositions(this.store.listInvestmentTrades(workspaceId));
+  }
+
+  listInvestmentValuations(
+    workspaceId: string,
+    instrumentId?: string,
+  ): readonly InvestmentValuationRecord[] {
+    requireWorkspaceId(workspaceId);
+    return this.store.listInvestmentValuations(workspaceId, instrumentId);
+  }
+
+  private replay<T>(
+    workspaceId: string,
+    command: WealthCommandContext | undefined,
+    operation: string,
+  ): T | undefined {
+    if (!command) return undefined;
+    const existing = this.store.findCommand(
+      workspaceId,
+      command.key,
+      operation,
+    );
+    if (!existing) return undefined;
+    if (existing.requestHash !== command.requestHash) {
+      throw FinwiseError.conflict(
+        'Idempotency key was already used for another request.',
+      );
+    }
+    return existing.response as T;
+  }
+
+  private remember<T>(
+    workspaceId: string,
+    command: WealthCommandContext | undefined,
+    operation: string,
+    response: T,
+  ): void {
+    if (!command) return;
+    const record: WealthCommandRecord = {
+      workspaceId,
+      key: command.key,
+      operation,
+      requestHash: command.requestHash,
+      response,
+    };
+    this.store.saveCommand(record);
   }
 }
 

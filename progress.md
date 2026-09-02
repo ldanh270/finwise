@@ -10,6 +10,10 @@
 - Added `pnpm release:preflight`, a fail-closed production configuration check
   for custom JWT key-pair integrity, HTTPS endpoints/origins, safe token TTLs,
   and Expo/EAS release identifiers; it never prints secret values.
+- Exposed workspace-authorized loan/payment and manual investment
+  trade/valuation APIs with bigint-safe transport and idempotent command replay;
+  the API is snapshot-backed until normalized wealth persistence and a real bank
+  provider are selected.
 - Replaced the web and mobile Reports placeholders with a permission-filtered
   monthly ledger projection. Posted income/expense totals, net movement, and
   immutable expense classification lines are exposed through the shared
