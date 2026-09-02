@@ -192,6 +192,9 @@ continue showing already-cached workspace reads with an explicit stale/offline
 banner; writes remain online-only and server-authorized. The cache validates
 the stored user identity before it can influence workspace selection. See the
 [bootstrap offline fallback walkthrough](../../reviews/2026-09-02-mobile-bootstrap-offline-fallback-walkthrough.md).
+The selected workspace preference is also persisted per user and hydrated
+before fallback selection is written, so app restarts preserve the last
+authorized choice without bypassing the latest membership check.
 
 The mobile app now has an opt-in local biometric app lock. Preferences are
 partitioned by authenticated user in SecureStore, enabling requires a

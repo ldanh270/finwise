@@ -37,6 +37,11 @@ shown, offers a retry action, and asks the user to reconnect before making
 changes. Existing per-workspace cached account, transaction, budget, and
 overview screens retain their own stale/error indicators.
 
+The selected workspace preference is hydrated before the provider persists a
+fallback workspace, so an API response arriving before SQLite cannot overwrite
+the user's last choice. A revoked or missing choice still resolves through the
+latest authorized bootstrap list.
+
 ## Migration and security implications
 
 No database migration is required. The cache is local SQLite workflow data and

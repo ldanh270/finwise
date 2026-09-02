@@ -16,7 +16,9 @@ snapshots use a user/workspace-partitioned SQLite key/value boundary. If the
 process stops while a draft is syncing, the next restore re-queues that draft
 with the same idempotency key. The last server-authorized workspace list is
 also cached per user so previously loaded reads can reopen offline; the app
-labels this state and keeps all mutations online-only.
+labels this state and keeps all mutations online-only. The last selected
+workspace is persisted per user as a UX preference and is revalidated against
+the current bootstrap response before it is used.
 
 Protected deep links are restored after authentication only for whitelisted
 internal routes; external redirect values fall back to Overview.

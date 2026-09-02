@@ -16,6 +16,7 @@ import type { BootstrapResponse, WorkspaceSummary } from "@finwise/api-client";
 import { AuthProvider, useAuth } from "../auth/auth-context";
 import { AppLockProvider, useAppLock } from "../auth/app-lock-context";
 import { BootstrapCache } from "../cache/bootstrap-cache";
+import { WorkspaceSelectionStore } from "../cache/workspace-selection";
 import { sqliteJsonStorage } from "../sync/sqlite-storage";
 import {
   getWorkspaceBootstrapStatus,
@@ -56,16 +57,19 @@ function WorkspaceProvider({ children }: PropsWithChildren) {
   const { api, session, status } = useAuth();
   const { isLocked } = useAppLock();
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>();
+  const [selectionHydrated, setSelectionHydrated] = useState(false);
   const [cachedBootstrap, setCachedBootstrap] = useState<BootstrapResponse>();
   const queryClient = useQueryClient();
   useEffect(() => {
     if (status !== "signed_out") return;
     setSelectedWorkspaceId(undefined);
+    setSelectionHydrated(false);
     setCachedBootstrap(undefined);
     queryClient.clear();
   }, [queryClient, status]);
   useEffect(() => {
     if (status !== "authenticated" || !session?.user.id) {
+      setSelectionHydrated(false);
       setCachedBootstrap(undefined);
       return;
     }
@@ -77,6 +81,27 @@ function WorkspaceProvider({ children }: PropsWithChildren) {
         if (active && snapshot) setCachedBootstrap(snapshot.value);
       })
       .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [session?.user.id, status]);
+  useEffect(() => {
+    if (status !== "authenticated" || !session?.user.id) return;
+    let active = true;
+    setSelectedWorkspaceId(undefined);
+    setSelectionHydrated(false);
+    void new WorkspaceSelectionStore(session.user.id, sqliteJsonStorage)
+      .read()
+      .then((storedWorkspaceId) => {
+        if (!active) return;
+        if (storedWorkspaceId) {
+          setSelectedWorkspaceId(storedWorkspaceId);
+        }
+        setSelectionHydrated(true);
+      })
+      .catch(() => {
+        if (active) setSelectionHydrated(true);
+      });
     return () => {
       active = false;
     };
@@ -115,6 +140,27 @@ function WorkspaceProvider({ children }: PropsWithChildren) {
   const workspace = effectiveBootstrap?.workspaces.find(
     (candidate) => candidate.id === workspaceId,
   );
+  useEffect(() => {
+    if (
+      status !== "authenticated" ||
+      !session?.user.id ||
+      !selectionHydrated ||
+      !workspaceId ||
+      selectedWorkspaceId === workspaceId
+    ) {
+      return;
+    }
+    setSelectedWorkspaceId(workspaceId);
+    void new WorkspaceSelectionStore(session.user.id, sqliteJsonStorage).write(
+      workspaceId,
+    );
+  }, [
+    selectedWorkspaceId,
+    selectionHydrated,
+    session?.user.id,
+    status,
+    workspaceId,
+  ]);
   const value = useMemo(
     () => ({
       bootstrap: effectiveBootstrap,
@@ -124,8 +170,15 @@ function WorkspaceProvider({ children }: PropsWithChildren) {
       retryBootstrap: async () => retryBootstrap(),
       workspace,
       workspaceId,
-      selectWorkspace: (nextWorkspaceId: string) =>
-        setSelectedWorkspaceId(nextWorkspaceId),
+      selectWorkspace: (nextWorkspaceId: string) => {
+        setSelectedWorkspaceId(nextWorkspaceId);
+        if (session?.user.id) {
+          void new WorkspaceSelectionStore(
+            session.user.id,
+            sqliteJsonStorage,
+          ).write(nextWorkspaceId);
+        }
+      },
     }),
     [
       bootstrapIsStale,
@@ -133,6 +186,8 @@ function WorkspaceProvider({ children }: PropsWithChildren) {
       bootstrapError,
       bootstrapStatus,
       retryBootstrap,
+      selectionHydrated,
+      session?.user.id,
       workspace,
       workspaceId,
     ],
