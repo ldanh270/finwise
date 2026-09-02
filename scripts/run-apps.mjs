@@ -72,10 +72,18 @@ for (const application of applications) {
     console.error(`[${application.name}] ${error.message}`);
     stopApplications(1);
   });
-  child.on('exit', (exitCode) => {
-    if (!isShuttingDown && exitCode !== 0) {
-      stopApplications(exitCode ?? 1);
+  child.on('exit', (exitCode, signal) => {
+    if (isShuttingDown || exitCode === 0) {
+      return;
     }
+
+    const reason = signal
+      ? `signal ${signal}`
+      : `exit code ${exitCode ?? 1}`;
+    console.error(
+      `[${application.name}] process stopped unexpectedly (${reason}).`,
+    );
+    stopApplications(exitCode ?? 1);
   });
 
   children.push(child);

@@ -99,6 +99,10 @@ account/report totals before enabling the next phase.
 - 2026-08-31: startup diagnostics now use a tested recursive redaction boundary
   for credential-like keys and embedded sensitive error values. See the [safe
   log redaction walkthrough](../../reviews/2026-08-31-safe-log-redaction-walkthrough.md).
+- 2026-09-02: the Windows/Unix development runner now reports which child
+  process exited and whether it ended by exit code or signal, preserving the
+  original coordinated shutdown behavior. See the [development runner exit
+  diagnostics walkthrough](../../reviews/2026-09-02-dev-runner-exit-diagnostics-walkthrough.md).
 
 The continuous gate remains open until observability, security scanning,
 recovery drills, rate limits, and release evidence are attached to a pilot
