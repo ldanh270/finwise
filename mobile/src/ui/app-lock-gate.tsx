@@ -15,7 +15,7 @@ export function AppLockGate({
   readonly checking?: boolean;
   readonly error?: string | null;
   readonly onUnlock?: () => void;
-  readonly onRecover?: () => void;
+  readonly onRecover?: () => void | Promise<void>;
 }) {
   return (
     <SafeAreaView style={styles.container}>
@@ -38,7 +38,10 @@ export function AppLockGate({
         <PrimaryButton label="Unlock with biometrics" onPress={onUnlock} />
       ) : null}
       {!checking && onRecover ? (
-        <SecondaryButton label="Use password instead" onPress={onRecover} />
+        <SecondaryButton
+          label="Use password instead"
+          onPress={() => void onRecover()}
+        />
       ) : null}
     </SafeAreaView>
   );

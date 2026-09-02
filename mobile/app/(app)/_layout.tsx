@@ -11,12 +11,15 @@ import { useWorkspace } from "../../src/app/providers";
 import { PrimaryButton, colors } from "../../src/ui/components";
 import { protectedPathForLogin } from "../../src/navigation/deep-link";
 import { AppLockGate } from "../../src/ui/app-lock-gate";
+import { clearUserWorkspaceData } from "../../src/session/clear-user-data";
+import { useState } from "react";
 
 export default function AuthenticatedLayout() {
-  const { status, signOut } = useAuth();
+  const { status, session, signOut } = useAuth();
   const { status: lockStatus, isLocked, error, unlock } = useAppLock();
   const { bootstrapStatus, bootstrapError, retryBootstrap } = useWorkspace();
   const pathname = usePathname();
+  const [recoveryError, setRecoveryError] = useState<string | null>(null);
   if (status === "restoring") return null;
   if (status !== "authenticated") {
     const redirectPath = protectedPathForLogin(pathname);
@@ -30,10 +33,27 @@ export default function AuthenticatedLayout() {
   if (isLocked) {
     return (
       <AppLockGate
-        error={error}
+        error={recoveryError ?? error}
         onUnlock={() => void unlock()}
-        onRecover={() => {
-          void signOut().then(() => router.replace("/login"));
+        onRecover={async () => {
+          if (session?.user.id) {
+            try {
+              await clearUserWorkspaceData(session.user.id);
+            } catch {
+              setRecoveryError(
+                "Local workspace data could not be cleared. You remain signed in; try biometric unlock and retry.",
+              );
+              return;
+            }
+          }
+          try {
+            await signOut();
+            router.replace("/login");
+          } catch {
+            setRecoveryError(
+              "The session could not be cleared. You remain signed in; retry password recovery.",
+            );
+          }
         }}
       />
     );

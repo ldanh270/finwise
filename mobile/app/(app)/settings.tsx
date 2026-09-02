@@ -22,6 +22,7 @@ import { useWorkspace } from "../../src/app/providers";
 import { MobileOutboxRepository } from "../../src/sync/mobile-outbox-repository";
 import type { OutboxRecord } from "../../src/sync/outbox";
 import { draftExportCsv } from "../../src/sync/draft-export";
+import { clearUserWorkspaceData } from "../../src/session/clear-user-data";
 
 export default function SettingsRoute() {
   const { api, session, signOut } = useAuth();
@@ -88,6 +89,16 @@ export default function SettingsRoute() {
       ? true
       : await canLogoutAcrossWorkspaces();
     if (canLogout) {
+      if (session?.user.id) {
+        try {
+          await clearUserWorkspaceData(session.user.id);
+        } catch {
+          setFeedback(
+            "Local workspace data could not be cleared. You remain signed in; try again before logging out.",
+          );
+          return;
+        }
+      }
       await signOut();
       router.replace("/login");
       return;

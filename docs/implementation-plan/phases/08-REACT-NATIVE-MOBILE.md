@@ -189,6 +189,12 @@ password login flow; it does not weaken or replace server JWT validation.
 Face ID/Touch ID permission text is declared through Expo config so native
 projects remain CNG-generated. See the [biometric app lock walkthrough](../../reviews/2026-09-02-mobile-biometric-app-lock-walkthrough.md).
 
+Confirmed logout now removes every user-partitioned SQLite key (cached reads,
+outbox snapshots, and staged receipt metadata) after the pending-draft policy
+allows logout. A storage failure keeps the session active and asks the user to
+retry, avoiding a false security guarantee. See the [logout data cleanup
+walkthrough](../../reviews/2026-09-02-mobile-logout-data-cleanup-walkthrough.md).
+
 The mobile Imports & reconciliation screen now makes primary read failures
 explicit. Account/import/reconciliation loading is gated, unavailable reads
 show a retryable state, stale cached lists carry a warning, and normalized-row

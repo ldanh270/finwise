@@ -6,6 +6,11 @@ export interface JsonStorage {
   removeItem(key: string): Promise<void>;
 }
 
+/** Storage boundary that can remove all keys belonging to a user partition. */
+export interface PrefixJsonStorage extends JsonStorage {
+  removeByPrefix(prefix: string): Promise<void>;
+}
+
 /**
  * Serialization boundary for the eventual SQLite/AsyncStorage adapter. The
  * outbox remains in-memory during a command, while callers persist snapshots

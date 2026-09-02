@@ -1,9 +1,9 @@
 import { openDatabaseAsync, type SQLiteDatabase } from "expo-sqlite";
-import type { JsonStorage } from "./outbox-persistence";
+import type { PrefixJsonStorage } from "./outbox-persistence";
 
 /** Small key/value boundary backed by SQLite. The JSON values are workflow
  * snapshots; tokens are intentionally never passed to this adapter. */
-export class SqliteJsonStorage implements JsonStorage {
+export class SqliteJsonStorage implements PrefixJsonStorage {
   private databasePromise: Promise<SQLiteDatabase> | undefined;
 
   async getItem(key: string): Promise<string | null> {
@@ -26,6 +26,15 @@ export class SqliteJsonStorage implements JsonStorage {
   async removeItem(key: string): Promise<void> {
     const database = await this.database();
     await database.runAsync("DELETE FROM finwise_kv WHERE key = ?", [key]);
+  }
+
+  async removeByPrefix(prefix: string): Promise<void> {
+    const database = await this.database();
+    const escapedPrefix = prefix.replace(/[\\%_]/g, "\\$&");
+    await database.runAsync(
+      "DELETE FROM finwise_kv WHERE key LIKE ? ESCAPE '\\'",
+      [`${escapedPrefix}%`],
+    );
   }
 
   private database(): Promise<SQLiteDatabase> {
