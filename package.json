@@ -34,7 +34,7 @@
     "typecheck:frontend": "pnpm --filter frontend typecheck",
     "typecheck:mobile": "pnpm --filter mobile typecheck",
     "test": "pnpm test:backend",
-    "test:dev-runner": "node --test scripts/process-tree.test.mjs",
+    "test:dev-runner": "node --test scripts/process-tree.test.mjs scripts/port-preflight.test.mjs",
     "test:backend": "pnpm --filter backend test --runInBand",
     "test:e2e": "pnpm --filter backend test:e2e --runInBand",
     "test:mobile": "pnpm --filter mobile test",

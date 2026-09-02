@@ -50,6 +50,16 @@ pnpm dev:backend
 Override the combined-dev ports with `FRONTEND_PORT` and `BACKEND_PORT` when
 needed.
 
+If the runner reports an occupied port, inspect only the configured dev ports
+and stop the owning process when it is a stale Finwise process:
+
+```powershell
+netstat -ano | Select-String ':3000|:3001'
+taskkill /PID <pid-from-netstat> /T /F
+```
+
+The preflight does not terminate arbitrary processes automatically.
+
 ## Database
 
 ```powershell

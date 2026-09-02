@@ -91,6 +91,7 @@ Prisma schema merely because a table already exists.
 - [Root pnpm workspace install-policy walkthrough](../reviews/2026-08-31-pnpm-workspace-install-policy-walkthrough.md)
 - [Windows development runner walkthrough](../reviews/2026-08-31-windows-dev-runner-walkthrough.md)
 - [Development runner exit diagnostics walkthrough](../reviews/2026-09-02-dev-runner-exit-diagnostics-walkthrough.md)
+- [Development runner port preflight walkthrough](../reviews/2026-09-02-dev-runner-port-preflight-walkthrough.md)
 - [Root test-runner argument walkthrough](../reviews/2026-08-31-root-test-runner-arguments-walkthrough.md)
 - [Nest runtime validation dependencies walkthrough](../reviews/2026-08-31-nest-runtime-validation-dependencies-walkthrough.md)
 - [Database deploy runner walkthrough](../reviews/2026-09-01-database-deploy-runner-walkthrough.md)

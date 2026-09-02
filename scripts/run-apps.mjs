@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import process from 'node:process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { findPortConflicts } from './port-preflight.mjs';
 import { stopProcessTree } from './process-tree.mjs';
 
 const mode = process.argv[2];
@@ -25,11 +26,15 @@ const applications = [
     name: 'backend',
     args: ['--filter', 'backend', isDevelopment ? 'start:dev' : 'start:prod'],
     env: { PORT: process.env.BACKEND_PORT ?? '3001' },
+    port: Number(process.env.BACKEND_PORT ?? '3001'),
+    portEnv: 'BACKEND_PORT',
   },
   {
     name: 'frontend',
     args: ['--filter', 'frontend', isDevelopment ? 'dev' : 'start'],
     env: { PORT: process.env.FRONTEND_PORT ?? '3000' },
+    port: Number(process.env.FRONTEND_PORT ?? '3000'),
+    portEnv: 'FRONTEND_PORT',
   },
 ];
 
@@ -53,6 +58,17 @@ function writeOutput(applicationName, chunk) {
       process.stdout.write(`[${applicationName}] ${line}`);
     }
   }
+}
+
+const portConflicts = await findPortConflicts(applications);
+if (portConflicts.length > 0) {
+  for (const conflict of portConflicts) {
+    console.error(
+      `[${conflict.name}] port ${conflict.port} is already in use. ` +
+        `Stop the owning process or set ${conflict.portEnv} to another port.`,
+    );
+  }
+  process.exit(1);
 }
 
 for (const application of applications) {

@@ -287,3 +287,11 @@
   reversal-and-replacement command.
 - Verified root format, lint, typecheck, backend tests, OpenAPI contract,
   backend/frontend build, mobile tests, and Android/iOS JavaScript exports.
+
+## 2026-09-02 — Dev runner port preflight
+
+- Root `dev/start` now checks configured backend/frontend ports before spawning
+  children and reports an actionable conflict with the relevant env variable.
+- This prevents a stale `3000`/`3001` listener from partially starting the
+  workspace and ending in an opaque backend `ELIFECYCLE` line.
+- Verified the occupied-port and clean startup smokes plus five runner tests.

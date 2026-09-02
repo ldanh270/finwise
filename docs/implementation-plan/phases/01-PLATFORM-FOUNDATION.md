@@ -130,6 +130,10 @@ reviewable diff from feature work.
   pnpm/Next/Nest process tree when a sibling exits, preventing stale port
   listeners and opaque follow-up `ELIFECYCLE` failures. See the
   [process-tree cleanup walkthrough](../../reviews/2026-09-01-windows-dev-runner-process-tree-walkthrough.md).
+- 2026-09-02: the development runner probes configured ports before spawning
+  either app, so occupied ports fail fast with the owning app and environment
+  variable instead of a partial-startup `ELIFECYCLE` tail. See the
+  [port preflight walkthrough](../../reviews/2026-09-02-dev-runner-port-preflight-walkthrough.md).
 
 ## Exit criteria
 
