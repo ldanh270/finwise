@@ -17,6 +17,7 @@ import {
   Divider,
 } from "../../src/ui/components";
 import { useAuth } from "../../src/auth/auth-context";
+import { useAppLock } from "../../src/auth/app-lock-context";
 import { useWorkspace } from "../../src/app/providers";
 import { MobileOutboxRepository } from "../../src/sync/mobile-outbox-repository";
 import type { OutboxRecord } from "../../src/sync/outbox";
@@ -24,6 +25,7 @@ import { draftExportCsv } from "../../src/sync/draft-export";
 
 export default function SettingsRoute() {
   const { api, session, signOut } = useAuth();
+  const appLock = useAppLock();
   const { bootstrap, workspaceId } = useWorkspace();
   const [drafts, setDrafts] = useState<readonly OutboxRecord[]>([]);
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -160,6 +162,17 @@ export default function SettingsRoute() {
     }
   }
 
+  async function toggleBiometricLock() {
+    if (appLock.enabled) {
+      await appLock.disable();
+      setFeedback("Biometric app lock disabled.");
+      return;
+    }
+    if (await appLock.enable()) {
+      setFeedback("Biometric app lock enabled for this device.");
+    }
+  }
+
   return (
     <AppShell active="settings">
       <ScrollScreen>
@@ -179,6 +192,23 @@ export default function SettingsRoute() {
             onPress={() => router.replace("/(app)")}
           />
           <PrimaryButton label="Sign out" onPress={() => void logout()} />
+        </Card>
+        <Card>
+          <Header eyebrow="DEVICE SECURITY" title="Biometric app lock" />
+          <Text style={{ color: colors.muted, lineHeight: 20 }}>
+            {appLock.capability.available
+              ? "Require Face ID, Touch ID, or your device biometric when Finwise returns from the background."
+              : "Enroll a device biometric first. Password login remains available as recovery."}
+          </Text>
+          <PrimaryButton
+            label={
+              appLock.enabled
+                ? "Disable biometric lock"
+                : "Enable biometric lock"
+            }
+            onPress={() => void toggleBiometricLock()}
+          />
+          {appLock.error ? <InlineError message={appLock.error} /> : null}
         </Card>
         <Card>
           <Header

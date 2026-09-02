@@ -68,6 +68,7 @@ Prisma schema merely because a table already exists.
 - [Mobile cache read race walkthrough](../reviews/2026-09-01-mobile-cache-read-race-walkthrough.md)
 - [Mobile deep-link reauthorization walkthrough](../reviews/2026-09-01-mobile-deep-link-reauthorization-walkthrough.md)
 - [Mobile Group account gate walkthrough](../reviews/2026-09-01-mobile-group-account-gate-walkthrough.md)
+- [Mobile biometric app lock walkthrough](../reviews/2026-09-02-mobile-biometric-app-lock-walkthrough.md)
 - [Budget allocation walkthrough](../reviews/2026-08-31-budget-allocation-walkthrough.md)
 - [Web budget planning walkthrough](../reviews/2026-08-31-web-budget-planning-walkthrough.md)
 - [Reconciliation list walkthrough](../reviews/2026-08-31-reconciliation-list-walkthrough.md)

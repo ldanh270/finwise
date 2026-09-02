@@ -181,6 +181,14 @@ before composing scoped feature routes. Loading, empty, and retryable error
 states are explicit and covered by a pure status classifier test. See the
 [bootstrap readiness walkthrough](../../reviews/2026-09-01-mobile-bootstrap-readiness-walkthrough.md).
 
+The mobile app now has an opt-in local biometric app lock. Preferences are
+partitioned by authenticated user in SecureStore, enabling requires a
+successful native biometric challenge, and returning from the background
+re-locks the protected route tree. The recovery action signs out to the
+password login flow; it does not weaken or replace server JWT validation.
+Face ID/Touch ID permission text is declared through Expo config so native
+projects remain CNG-generated. See the [biometric app lock walkthrough](../../reviews/2026-09-02-mobile-biometric-app-lock-walkthrough.md).
+
 The mobile Imports & reconciliation screen now makes primary read failures
 explicit. Account/import/reconciliation loading is gated, unavailable reads
 show a retryable state, stale cached lists carry a warning, and normalized-row

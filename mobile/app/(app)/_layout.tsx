@@ -1,4 +1,4 @@
-import { Redirect, Stack, usePathname } from "expo-router";
+import { Redirect, Stack, router, usePathname } from "expo-router";
 import {
   ActivityIndicator,
   SafeAreaView,
@@ -6,12 +6,15 @@ import {
   Text,
 } from "react-native";
 import { useAuth } from "../../src/auth/auth-context";
+import { useAppLock } from "../../src/auth/app-lock-context";
 import { useWorkspace } from "../../src/app/providers";
 import { PrimaryButton, colors } from "../../src/ui/components";
 import { protectedPathForLogin } from "../../src/navigation/deep-link";
+import { AppLockGate } from "../../src/ui/app-lock-gate";
 
 export default function AuthenticatedLayout() {
-  const { status } = useAuth();
+  const { status, signOut } = useAuth();
+  const { status: lockStatus, isLocked, error, unlock } = useAppLock();
   const { bootstrapStatus, bootstrapError, retryBootstrap } = useWorkspace();
   const pathname = usePathname();
   if (status === "restoring") return null;
@@ -21,6 +24,18 @@ export default function AuthenticatedLayout() {
       <Redirect href={{ pathname: "/login", params: { redirectPath } }} />
     ) : (
       <Redirect href="/login" />
+    );
+  }
+  if (lockStatus === "checking") return <AppLockGate checking />;
+  if (isLocked) {
+    return (
+      <AppLockGate
+        error={error}
+        onUnlock={() => void unlock()}
+        onRecover={() => {
+          void signOut().then(() => router.replace("/login"));
+        }}
+      />
     );
   }
   if (bootstrapStatus === "loading") return <BootstrapGate kind="loading" />;

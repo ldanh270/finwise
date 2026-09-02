@@ -19,6 +19,11 @@ with the same idempotency key.
 Protected deep links are restored after authentication only for whitelisted
 internal routes; external redirect values fall back to Overview.
 
+The app also supports an opt-in local biometric lock. The preference is stored
+per user in SecureStore, biometric verification gates protected screens after
+backgrounding, and the recovery action returns to password login. This is a
+device convenience layer; server JWT/session authorization remains unchanged.
+
 ## Local workflow
 
 ```text

@@ -14,6 +14,7 @@ import {
 } from "react";
 import type { BootstrapResponse, WorkspaceSummary } from "@finwise/api-client";
 import { AuthProvider, useAuth } from "../auth/auth-context";
+import { AppLockProvider, useAppLock } from "../auth/app-lock-context";
 import {
   getWorkspaceBootstrapStatus,
   type WorkspaceBootstrapStatus,
@@ -39,7 +40,9 @@ export function AppProviders({ children }: PropsWithChildren) {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <WorkspaceProvider>{children}</WorkspaceProvider>
+        <AppLockProvider>
+          <WorkspaceProvider>{children}</WorkspaceProvider>
+        </AppLockProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
@@ -47,6 +50,7 @@ export function AppProviders({ children }: PropsWithChildren) {
 
 function WorkspaceProvider({ children }: PropsWithChildren) {
   const { api, status } = useAuth();
+  const { isLocked } = useAppLock();
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>();
   const queryClient = useQueryClient();
   useEffect(() => {
@@ -58,9 +62,9 @@ function WorkspaceProvider({ children }: PropsWithChildren) {
     () => ({
       queryKey: ["bootstrap"],
       queryFn: () => api.getBootstrap(),
-      enabled: status === "authenticated",
+      enabled: status === "authenticated" && !isLocked,
     }),
-    [api, status],
+    [api, isLocked, status],
   );
   const {
     data: bootstrap,
