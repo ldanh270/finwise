@@ -7,6 +7,7 @@ import { hydrateStoreState, serializeStoreState } from './runtime-store-state';
 export class PrismaRuntimeSnapshotRepository implements OnModuleDestroy {
   private readonly logger = new Logger(PrismaRuntimeSnapshotRepository.name);
   private writeQueue: Promise<void> = Promise.resolve();
+  private readonly writeFailures: unknown[] = [];
 
   constructor(private readonly prisma: PrismaService) {}
 
@@ -34,6 +35,7 @@ export class PrismaRuntimeSnapshotRepository implements OnModuleDestroy {
         });
       })
       .catch((error: unknown) => {
+        this.writeFailures.push(error);
         const message =
           error instanceof Error ? error.message : 'Unknown error';
         this.logger.error(
@@ -44,6 +46,10 @@ export class PrismaRuntimeSnapshotRepository implements OnModuleDestroy {
 
   async flush(): Promise<void> {
     await this.writeQueue;
+    if (this.writeFailures.length === 0) return;
+
+    const [firstFailure] = this.writeFailures.splice(0);
+    throw firstFailure;
   }
 
   async onModuleDestroy(): Promise<void> {

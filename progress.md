@@ -2,6 +2,11 @@
 
 ## 2026-09-02
 
+- Added an HTTP durability barrier for the transitional PostgreSQL runtime
+  snapshot adapter: every response waits for queued snapshot writes, and
+  persistence failures reach the typed exception pipeline instead of being
+  silently acknowledged. Normalized bounded-context Prisma repositories remain
+  the production-scale follow-up.
 - Replaced the web and mobile Reports placeholders with a permission-filtered
   monthly ledger projection. Posted income/expense totals, net movement, and
   immutable expense classification lines are exposed through the shared

@@ -1,6 +1,6 @@
 # Phase 3 — Accounts and immutable ledger
 
-Status: In progress — durable runtime-store adapter landed; normalized Prisma repositories/full account workflows pending
+Status: In progress — HTTP durability barrier landed on the transitional runtime-store adapter; normalized Prisma repositories/full account workflows pending
 Depends on: [Phase 2](02-IDENTITY-WORKSPACE-ACCESS.md), Phase 1 money/UoW ports  
 Unblocks: budgets, reports, Group Treasury, ingestion, wealth modules
 
