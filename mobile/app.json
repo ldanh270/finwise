@@ -8,7 +8,12 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "plugins": [
-      "expo-router",
+      [
+        "expo-router",
+        {
+          "root": "./app"
+        }
+      ],
       "expo-secure-store",
       "expo-dev-client",
       "./plugins/with-finwise-network-security.cjs",

@@ -79,6 +79,7 @@ Prisma schema merely because a table already exists.
 - [Runtime snapshot durability walkthrough](../reviews/2026-09-02-runtime-snapshot-durability-walkthrough.md)
 - [Release preflight walkthrough](../reviews/2026-09-02-release-preflight-walkthrough.md)
 - [Wealth API boundary walkthrough](../reviews/2026-09-02-wealth-api-boundary-walkthrough.md)
+- [Expo 54 migration walkthrough](../reviews/2026-09-02-expo-54-migration-walkthrough.md)
 - [Budget allocation walkthrough](../reviews/2026-08-31-budget-allocation-walkthrough.md)
 - [Web budget planning walkthrough](../reviews/2026-08-31-web-budget-planning-walkthrough.md)
 - [Reconciliation list walkthrough](../reviews/2026-08-31-reconciliation-list-walkthrough.md)
@@ -117,7 +118,7 @@ behavior, test matrix, migration notes, and exit criteria.
 | [05. Group Treasury](phases/05-GROUP-TREASURY.md) | MVP boundary complete | Core application + web progress/report slice works; production persistence and advanced workflow gates remain |
 | [06. Ingestion/reconciliation](phases/06-INGESTION-RECONCILIATION.md) | MVP boundary complete | Web CSV review/confirm/ignore and reconciliation checkpoints work; durable persistence, object retention, adjustment UI, and bank adapters remain |
 | [07. Web MVP release](phases/07-WEB-MVP-RELEASE.md) | MVP command boundary complete | Ledger/group web commands work; auth, accessibility, operations and pilot gates remain |
-| [08. React Native mobile](phases/08-REACT-NATIVE-MOBILE.md) | Online feature parity complete | Web-used capabilities are implemented in Expo; native iOS/Android device gates remain |
+| [08. React Native mobile](phases/08-REACT-NATIVE-MOBILE.md) | Online parity + Expo SDK 54 complete | Web-used capabilities and SDK 54 dependency migration are delivered; native iOS/Android device gates remain |
 | [09. Wealth/bank beta](phases/09-WEALTH-AND-BANK-BETA.md) | Application boundary complete | Loan/investment application semantics work in-memory; APIs, persistence, and provider gates remain |
 | [10. QA/security/operations](phases/10-QA-SECURITY-OPERATIONS.md) | Continuous boundary work | Health, correlation, and redaction slices work; recovery, rate limits, metrics, and pilot evidence remain |
 

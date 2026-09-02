@@ -1,0 +1,4 @@
+
+# Expo local state and generated environment declarations.
+.expo/
+expo-env.d.ts

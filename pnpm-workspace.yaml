@@ -10,6 +10,8 @@ packages:
 # package is explicitly reviewed so local installs are not blocked while the
 # rest of the minimum-release-age policy remains active.
 confirmModulesPurge: false
+publicHoistPattern:
+  - metro-runtime
 allowBuilds:
   '@prisma/engines': true
   '@swc/core': true

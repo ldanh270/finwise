@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import { Alert, Platform, Pressable, Text, View } from "react-native";
 import { useEffect, useRef, useState } from "react";

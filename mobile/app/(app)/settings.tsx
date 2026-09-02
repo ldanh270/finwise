@@ -1,7 +1,7 @@
 import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Text, View } from "react-native";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import { AppShell } from "../../src/ui/app-shell";
 import {

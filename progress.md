@@ -2,6 +2,14 @@
 
 ## 2026-09-02
 
+- Upgraded the mobile app from Expo SDK 53 to SDK 54. Expo CLI aligned the
+  native module set to Expo Router 6, React Native 0.81.5, React 19.1, and the
+  SDK 54 package versions. The Router root is explicit so the repository's
+  non-route `src/app` modules do not shadow `app/` routes; CSV export uses the
+  SDK 54 `expo-file-system/legacy` compatibility namespace. Added the Metro
+  runtime hoist required by Expo CLI with pnpm and verified Doctor, typed
+  routes, mobile tests, native config, Android/iOS exports, root typecheck,
+  lint, format, backend tests, contracts, and build.
 - Added an HTTP durability barrier for the transitional PostgreSQL runtime
   snapshot adapter: every response waits for queued snapshot writes, and
   persistence failures reach the typed exception pipeline instead of being

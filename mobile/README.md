@@ -1,8 +1,8 @@
 # Finwise mobile
 
-This is the Expo Router TypeScript app for Finwise iOS and Android. It uses
-development builds and Expo Prebuild/CNG; Expo Go is not the verification
-runtime for native dependencies.
+This is the Expo Router TypeScript app for Finwise iOS and Android, currently
+on Expo SDK 54. It uses development builds and Expo Prebuild/CNG; Expo Go is
+not the verification runtime for native dependencies.
 
 The app shares the Nest `/v1` API client with web. It includes custom JWT
 login/register/refresh, workspace switching, overview, accounts/opening

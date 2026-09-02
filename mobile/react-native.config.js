@@ -1,7 +1,7 @@
 /**
- * Expo 53 moved the package bridge to `expo.modules`.
- * Keep the project-level override explicit so pnpm/Gradle autolinking cannot
- * reuse the legacy `expo.core` import from a stale package config cache.
+ * Keep the project-level override explicit so pnpm/Gradle autolinking uses the
+ * current `expo.modules` bridge and cannot reuse a legacy `expo.core` import
+ * from a stale package config cache.
  */
 module.exports = {
   dependencies: {

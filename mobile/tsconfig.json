@@ -8,8 +8,19 @@
     "isolatedModules": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "types": ["node", "jest", "expo"],
+    "types": [
+      "node",
+      "jest",
+      "expo"
+    ],
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "app/**/*.tsx"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "app/**/*.tsx",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
+  ],
+  "extends": "expo/tsconfig.base"
 }

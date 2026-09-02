@@ -1,6 +1,6 @@
 # Phase 8 — React Native mobile
 
-Status: Online feature parity slice complete — Expo/CNG app, JWT/SecureStore boundary, shared API client, SQLite cache/outbox, and mobile feature routes delivered; native device sign-off remains
+Status: Online feature parity and Expo SDK 54 migration complete — Expo/CNG app, JWT/SecureStore boundary, shared API client, SQLite cache/outbox, and mobile feature routes delivered; native device sign-off remains
 Depends on: [Phase 7](07-WEB-MVP-RELEASE.md), generated OpenAPI client, [auth/session architecture](../AUTH-SESSION-ARCHITECTURE.md)  
 Unblocks: first-class iOS/Android daily capture
 
@@ -175,7 +175,7 @@ The CI workflow also includes a macOS job that generates the iOS CNG project,
 installs CocoaPods, and builds an unsigned iOS Simulator target.
 
 An Android CNG debug build now passes with the local SDK/NDK after the project
-level Expo 53 autolinking override and a short `C:\v` pnpm virtual-store path.
+level Expo autolinking override and a short `C:\v` pnpm virtual-store path.
 All four ABIs and APK packaging complete successfully; generated native output
 is removed after validation. The first default-path attempt reproduced
 Windows' 260-character CMake limit, so the CI job remains configured to build
@@ -312,3 +312,14 @@ Protected deep links now carry a whitelisted internal route through Login or
 Signup and restore that route after authentication. External, malformed, and
 unknown redirect values always fall back to the authenticated Overview. See
 the [deep-link reauthorization walkthrough](../../reviews/2026-09-01-mobile-deep-link-reauthorization-walkthrough.md).
+
+The mobile dependency set is now aligned to Expo SDK 54 through Expo CLI's
+compatibility resolver: Expo Router 6, React Native 0.81.5, React 19.1, and
+the SDK 54 native modules are pinned in `mobile/package.json`. The Router
+plugin explicitly targets `./app` because this repository also has a
+non-route `src/app` module directory; this preserves typed route generation
+without moving application code. Expo FileSystem's legacy namespace remains
+used for the existing CSV export surface because SDK 54 moved those APIs out
+of the root module. `metro-runtime` is public-hoisted for the Expo CLI under
+pnpm's strict virtual store layout. No API, cache/outbox, ledger, or persisted
+data shape changed. See the [Expo 54 migration walkthrough](../../reviews/2026-09-02-expo-54-migration-walkthrough.md).
