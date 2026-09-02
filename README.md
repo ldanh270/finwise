@@ -77,6 +77,11 @@ npm run dev
 The runner detects the package manager that launched it. `pnpm dev` keeps the
 workspace filters; `npm run dev` invokes `npm --prefix backend|frontend`.
 
+For a phone smoke test with Expo Go, run `pnpm dev:mobile:go` and scan the full
+QR shown in the terminal. `pnpm dev:mobile:go:offline` skips Expo's remote
+version check when the CLI cannot reach the network. The phone and computer
+must share a Wi-Fi network; set `mobile/.env` to the computer's LAN API URL.
+
 Override the combined-dev ports with `FRONTEND_PORT` and `BACKEND_PORT` when
 needed.
 

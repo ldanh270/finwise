@@ -15,6 +15,9 @@ controlled offline drafts without creating a second ledger.
 - Use Expo Router, development builds, Prebuild/CNG, and the New Architecture.
   Expo Go is not the primary verification runtime; generated native projects are
   not hand-edited.
+- Keep an explicit Expo Go/LAN smoke-test command separate from the development
+  build command so QR onboarding is discoverable without weakening native
+  verification requirements.
 - Declare Expo peer dependencies directly and keep the SDK-compatible versions
   pinned (`expo-constants`, `expo-linking`, Expo Router, React Native,
   safe-area-context, TypeScript) so native autolinking cannot select an
@@ -108,6 +111,10 @@ or managed runner.
 - 2026-09-02: Reports now consumes the shared permission-filtered monthly and
   category projection contract with loading, retry, empty, and partial-access
   states. Physical-device and signed-release verification remain external gates.
+- 2026-09-02: Expo Go smoke testing now has explicit LAN and offline commands;
+  the default mobile command continues to target the installed development
+  build. QR onboarding guidance requires a full terminal QR and same-network
+  API reachability.
 
 ## Exit criteria
 

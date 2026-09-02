@@ -43,6 +43,22 @@ pnpm --filter mobile prebuild
 pnpm --filter mobile android   # or ios on macOS
 ```
 
+For the quickest phone smoke test with Expo Go, use the explicit LAN command:
+
+```text
+pnpm dev:mobile:go
+```
+
+Keep the terminal QR fully visible and scan it from Expo Go's QR scanner, not
+from a cropped screenshot or a small terminal preview. The phone and computer
+must be on the same Wi-Fi. If Expo CLI cannot reach its version service, use
+`pnpm dev:mobile:go:offline`; offline mode only skips CLI metadata checks, and
+the phone still needs LAN access to the Metro URL.
+
+The default `pnpm dev:mobile` targets the installed Expo development build.
+Expo Go is a smoke-test option, not the native verification runtime for
+SecureStore, local-network security, or other custom native behavior.
+
 EAS build profiles are checked in for the three release lanes:
 
 ```text
