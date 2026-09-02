@@ -72,6 +72,7 @@ Prisma schema merely because a table already exists.
 - [Mobile logout data cleanup walkthrough](../reviews/2026-09-02-mobile-logout-data-cleanup-walkthrough.md)
 - [Mobile workspace authorization fallback walkthrough](../reviews/2026-09-02-mobile-workspace-authorization-fallback-walkthrough.md)
 - [Mobile EAS build profiles walkthrough](../reviews/2026-09-02-mobile-eas-build-profiles-walkthrough.md)
+- [Mobile bootstrap offline fallback walkthrough](../reviews/2026-09-02-mobile-bootstrap-offline-fallback-walkthrough.md)
 - [Budget allocation walkthrough](../reviews/2026-08-31-budget-allocation-walkthrough.md)
 - [Web budget planning walkthrough](../reviews/2026-08-31-web-budget-planning-walkthrough.md)
 - [Reconciliation list walkthrough](../reviews/2026-08-31-reconciliation-list-walkthrough.md)

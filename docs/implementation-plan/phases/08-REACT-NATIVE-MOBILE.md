@@ -186,6 +186,13 @@ before composing scoped feature routes. Loading, empty, and retryable error
 states are explicit and covered by a pure status classifier test. See the
 [bootstrap readiness walkthrough](../../reviews/2026-09-01-mobile-bootstrap-readiness-walkthrough.md).
 
+The last server-authorized workspace list is now cached in a user-only SQLite
+partition. When the bootstrap request is unavailable, protected routes can
+continue showing already-cached workspace reads with an explicit stale/offline
+banner; writes remain online-only and server-authorized. The cache validates
+the stored user identity before it can influence workspace selection. See the
+[bootstrap offline fallback walkthrough](../../reviews/2026-09-02-mobile-bootstrap-offline-fallback-walkthrough.md).
+
 The mobile app now has an opt-in local biometric app lock. Preferences are
 partitioned by authenticated user in SecureStore, enabling requires a
 successful native biometric challenge, and returning from the background

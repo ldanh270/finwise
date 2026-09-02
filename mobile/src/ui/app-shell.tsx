@@ -35,7 +35,13 @@ export function AppShell({
   children: ReactNode;
 }) {
   const { session, api } = useAuth();
-  const { bootstrap, workspace, selectWorkspace } = useWorkspace();
+  const {
+    bootstrap,
+    bootstrapIsStale,
+    retryBootstrap,
+    workspace,
+    selectWorkspace,
+  } = useWorkspace();
   const queryClient = useQueryClient();
   const [syncError, setSyncError] = useState<string | null>(null);
 
@@ -129,6 +135,20 @@ export function AppShell({
         <Text accessibilityRole="alert" style={styles.syncNotice}>
           {syncError}
         </Text>
+      ) : null}
+      {bootstrapIsStale ? (
+        <View style={styles.staleNotice}>
+          <Text accessibilityRole="alert" style={styles.staleNoticeText}>
+            Offline — showing your last authorized workspace list. Reconnect
+            before making changes.
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => void retryBootstrap()}
+          >
+            <Text style={styles.staleRetry}>Retry connection</Text>
+          </Pressable>
+        </View>
       ) : null}
       {bootstrap && bootstrap.workspaces.length > 1 ? (
         <View style={styles.workspacePicker}>
@@ -264,6 +284,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 8,
   },
+  staleNotice: {
+    paddingHorizontal: 20,
+    paddingBottom: 8,
+    gap: 4,
+  },
+  staleNoticeText: { color: colors.amber, fontSize: 12, lineHeight: 18 },
+  staleRetry: { color: colors.teal, fontSize: 12, fontWeight: "700" },
   workspacePicker: {
     paddingHorizontal: 20,
     flexDirection: "row",

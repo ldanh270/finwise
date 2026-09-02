@@ -14,7 +14,9 @@ export, settings, a web-matching Reports placeholder, and an offline manual inco
 and refresh tokens are stored only in `expo-secure-store`; cache and outbox
 snapshots use a user/workspace-partitioned SQLite key/value boundary. If the
 process stops while a draft is syncing, the next restore re-queues that draft
-with the same idempotency key.
+with the same idempotency key. The last server-authorized workspace list is
+also cached per user so previously loaded reads can reopen offline; the app
+labels this state and keeps all mutations online-only.
 
 Protected deep links are restored after authentication only for whitelisted
 internal routes; external redirect values fall back to Overview.
