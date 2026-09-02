@@ -80,6 +80,7 @@ Prisma schema merely because a table already exists.
 - [Release preflight walkthrough](../reviews/2026-09-02-release-preflight-walkthrough.md)
 - [Wealth API boundary walkthrough](../reviews/2026-09-02-wealth-api-boundary-walkthrough.md)
 - [Expo 54 migration walkthrough](../reviews/2026-09-02-expo-54-migration-walkthrough.md)
+- [Package-manager-independent server walkthrough](../reviews/2026-09-02-package-manager-independent-server-walkthrough.md)
 - [Budget allocation walkthrough](../reviews/2026-08-31-budget-allocation-walkthrough.md)
 - [Web budget planning walkthrough](../reviews/2026-08-31-web-budget-planning-walkthrough.md)
 - [Reconciliation list walkthrough](../reviews/2026-08-31-reconciliation-list-walkthrough.md)

@@ -4,8 +4,9 @@ Finwise is a VND-first, multi-workspace money-management application. The
 Next.js web client and Expo React Native client use the NestJS `/v1` API;
 financial truth and authorization never live in the clients.
 
-The repository is organized as a pnpm workspace. `backend/` owns the modular
-NestJS API, `frontend/` owns the Next.js web experience, `packages/` contains
+The repository is organized as a pnpm workspace for local development.
+`backend/` and `frontend/` are independently installable Node applications, so
+the API can be built and run on a server with npm alone. `packages/` contains
 transport-only shared packages, and `docs/` is the product/domain source of
 truth.
 
@@ -41,6 +42,23 @@ values into `backend/.env`:
 node scripts/generate-jwt-keys.mjs
 ```
 
+### Server install (npm, no pnpm required)
+
+The backend has its own `package.json` and can be deployed independently. On a
+build or runtime server, run these commands from the repository root:
+
+```powershell
+npm run server:install
+npm run server:build
+npm run server:db:deploy
+npm run server:start
+```
+
+The equivalent commands from `backend/` are `npm install`, `npm run build`,
+`npm run db:deploy`, and `npm run start:prod`. `npm install` is intentional:
+the pnpm workspace lockfile is for local workspace/mobile development, while
+the server lane must not require pnpm or Corepack.
+
 ## Development
 
 ```powershell
@@ -48,6 +66,16 @@ pnpm dev             # frontend :3000 and backend :3001
 pnpm dev:frontend
 pnpm dev:backend
 ```
+
+After installing `backend/` and `frontend/` with npm, the combined runner also
+works without pnpm:
+
+```powershell
+npm run dev
+```
+
+The runner detects the package manager that launched it. `pnpm dev` keeps the
+workspace filters; `npm run dev` invokes `npm --prefix backend|frontend`.
 
 Override the combined-dev ports with `FRONTEND_PORT` and `BACKEND_PORT` when
 needed.
@@ -68,15 +96,18 @@ The preflight does not terminate arbitrary processes automatically.
 pnpm db:generate
 pnpm db:validate
 pnpm db:status
-pnpm db:migrate --name add_transactions  # local development; replace the name
-pnpm db:migrate:create --name add_transactions
-pnpm db:deploy                           # CI/staging/production
+pnpm db:migrate -- --name add_transactions  # local development; replace the name
+pnpm db:migrate:create -- --name add_transactions
 pnpm db:seed                             # idempotent demo data
 pnpm db:studio
 pnpm db:pull                             # introspect an existing database
 pnpm db:format
 pnpm db:reset                            # destructive; development only
 ```
+
+All backend database scripts are also npm-compatible. For CI/staging/
+production use `npm run db:deploy` (or `npm run server:db:deploy`) so no pnpm
+binary is required.
 
 Use `DIRECT_URL` for Prisma CLI migrations and `DATABASE_URL` for the backend
 runtime connection. The current provider is `cockroachdb` because the configured
@@ -95,3 +126,7 @@ pnpm test:e2e
 pnpm build
 pnpm contracts:check
 ```
+
+For a server-only quality gate, use `npm run lint`, `npm run server:typecheck`,
+`npm run server:test`, and `npm run build`. Full workspace checks still include
+the Expo mobile package and therefore remain pnpm commands.

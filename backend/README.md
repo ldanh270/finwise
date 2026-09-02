@@ -28,8 +28,12 @@
 ## Project setup
 
 ```bash
-$ pnpm install
+$ npm install
 ```
+
+The backend is a standalone Node application. npm is the supported install and
+runtime path for build servers and production hosts; the root pnpm workspace
+remains available for local development and mobile work.
 
 ### PostgreSQL-compatible database and Prisma
 
@@ -40,18 +44,18 @@ uses CockroachDB Cloud on port 26257. `DATABASE_URL` is used by the NestJS
 runtime; `DIRECT_URL` is used by Prisma CLI migrations.
 
 ```bash
-pnpm db:generate
-pnpm db:validate
-pnpm db:deploy
+npm run db:generate
+npm run db:validate
+npm run db:deploy
 ```
 
-`pnpm db:deploy` applies the checked-in SQL migrations through the configured
+`npm run db:deploy` applies the checked-in SQL migrations through the configured
 TLS connection and is safe on Windows/CockroachDB Cloud. It verifies migration
 checksums and commits each SQL file together with its `_prisma_migrations`
-metadata. Linux CI can run `pnpm db:deploy:prisma` with the CockroachDB CA when
+metadata. Linux CI can run `npm run db:deploy:prisma` with the CockroachDB CA when
 the native Prisma migration engine is available.
 
-For a new local schema change, use `pnpm db:migrate --name <migration_name>`
+For a new local schema change, use `npm run db:migrate -- --name <migration_name>`
 and commit the generated migration.
 
 All Finwise tables and enums are mapped to the PostgreSQL schema `finwise`.
@@ -75,26 +79,26 @@ shared or production environments.
 
 ```bash
 # development
-$ pnpm run start
+$ npm run start
 
 # watch mode
-$ pnpm run start:dev
+$ npm run start:dev
 
 # production mode
-$ pnpm run start:prod
+$ npm run start:prod
 ```
 
 ## Run tests
 
 ```bash
 # unit tests
-$ pnpm run test
+$ npm run test
 
 # e2e tests
-$ pnpm run test:e2e
+$ npm run test:e2e
 
 # test coverage
-$ pnpm run test:cov
+$ npm run test:cov
 ```
 
 ## Deployment
@@ -104,7 +108,7 @@ When you're ready to deploy your NestJS application to production, there are som
 If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
 
 ```bash
-$ pnpm install -g @nestjs/mau
+$ npm install --global @nestjs/mau
 $ mau deploy
 ```
 

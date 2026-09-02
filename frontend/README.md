@@ -29,8 +29,13 @@ API URL and fails closed when it is missing.
 
 ```powershell
 Copy-Item .env.example .env.local
-pnpm dev
+npm install
+npm run dev
 ```
+
+The frontend is independently installable. Build and run it on a server with
+`npm run build` followed by `npm run start`; pnpm remains an optional shortcut
+when working from the root workspace.
 
 Never put private JWT keys, passwords, or refresh tokens in this file or in
 browser code. Financial data still flows through the authorized NestJS `/v1`

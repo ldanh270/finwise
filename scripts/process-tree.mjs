@@ -2,8 +2,9 @@ import { spawn } from "node:child_process";
 
 /**
  * Stop a child process and every process it owns when the platform supports
- * process-tree termination. Windows starts pnpm.cmd through cmd.exe, so
- * child.kill() alone leaves the nested Next/Nest process listening on a port.
+ * process-tree termination. Windows starts package-manager shims through
+ * cmd.exe, so child.kill() alone leaves nested Next/Nest processes listening
+ * on a port.
  */
 export function stopProcessTree(
   child,

@@ -2,6 +2,10 @@ import { spawn } from 'node:child_process';
 import process from 'node:process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  buildPackageCommand,
+  resolvePackageManager,
+} from './package-manager.mjs';
 import { findPortConflicts } from './port-preflight.mjs';
 import { stopProcessTree } from './process-tree.mjs';
 
@@ -16,7 +20,10 @@ const rootDirectory = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '..',
 );
-const pnpmCommand = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
+const packageManager = resolvePackageManager({
+  requestedManager: process.env.FINWISE_PACKAGE_MANAGER,
+  userAgent: process.env.npm_config_user_agent,
+});
 const isDevelopment = mode === 'dev';
 const children = [];
 let isShuttingDown = false;
@@ -24,14 +31,22 @@ let isShuttingDown = false;
 const applications = [
   {
     name: 'backend',
-    args: ['--filter', 'backend', isDevelopment ? 'start:dev' : 'start:prod'],
+    directory: path.join(rootDirectory, 'backend'),
+    script: isDevelopment ? 'start:dev' : 'start:prod',
+    pnpmArgs: [
+      '--filter',
+      'backend',
+      isDevelopment ? 'start:dev' : 'start:prod',
+    ],
     env: { PORT: process.env.BACKEND_PORT ?? '3001' },
     port: Number(process.env.BACKEND_PORT ?? '3001'),
     portEnv: 'BACKEND_PORT',
   },
   {
     name: 'frontend',
-    args: ['--filter', 'frontend', isDevelopment ? 'dev' : 'start'],
+    directory: path.join(rootDirectory, 'frontend'),
+    script: isDevelopment ? 'dev' : 'start',
+    pnpmArgs: ['--filter', 'frontend', isDevelopment ? 'dev' : 'start'],
     env: { PORT: process.env.FRONTEND_PORT ?? '3000' },
     port: Number(process.env.FRONTEND_PORT ?? '3000'),
     portEnv: 'FRONTEND_PORT',
@@ -72,11 +87,16 @@ if (portConflicts.length > 0) {
 }
 
 for (const application of applications) {
-  const child = spawn(pnpmCommand, application.args, {
+  const { command, args } = buildPackageCommand({
+    packageManager,
+    platform: process.platform,
+    application,
+  });
+  const child = spawn(command, args, {
     cwd: rootDirectory,
     env: { ...process.env, ...application.env },
-    // Windows cannot spawn a .cmd shim directly with Node's default mode.
-    // The arguments here are fixed workspace scripts, so shell dispatch does
+    // Windows cannot spawn a package-manager shim directly with Node's default
+    // mode. The arguments are fixed package scripts, so shell dispatch does
     // not expose user-controlled command text.
     shell: process.platform === 'win32',
     stdio: ['inherit', 'pipe', 'pipe'],
@@ -93,9 +113,7 @@ for (const application of applications) {
       return;
     }
 
-    const reason = signal
-      ? `signal ${signal}`
-      : `exit code ${exitCode ?? 1}`;
+    const reason = signal ? `signal ${signal}` : `exit code ${exitCode ?? 1}`;
     console.error(
       `[${application.name}] process stopped unexpectedly (${reason}).`,
     );

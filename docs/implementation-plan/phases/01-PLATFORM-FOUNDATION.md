@@ -1,6 +1,7 @@
 # Phase 1 — Platform foundation
 
-Status: Boundary complete — runtime primitives and strengthened contract snapshot landed; official generator/CI freshness gate pending
+Status: Boundary complete — runtime primitives, strengthened contract snapshot,
+and standalone npm server lane landed; official generator/CI freshness gate pending
 Depends on: [Phase 0](00-ROADMAP-AND-DECISIONS.md)  
 Unblocks: identity, ledger, and all feature modules
 
@@ -15,6 +16,8 @@ for vertical feature delivery without implementing financial features yet.
   (when scaffolded), `packages`, and `contracts`; do not add Nx/Turborepo.
 - NestJS is the only business API. Next.js and mobile never query PostgreSQL
   directly for financial data.
+- The root pnpm workspace is a development/mobile convenience; production API
+  hosts must install, build, migrate, and start `backend/` with npm alone.
 - Domain/application modules may depend only on ports and shared primitives;
   Prisma, NestJS, auth crypto adapters, HTTP DTOs, and UI types stay at the edges.
 - All API responses use typed errors `{ code, message, details?, requestId }`.
@@ -63,6 +66,8 @@ must show request IDs only in support details, not raw internal errors.
 
 1. Consolidate package manifests/scripts and add root commands for format check,
    lint, typecheck, unit/integration tests, OpenAPI generation/check, and builds.
+   Keep standalone backend commands runnable through `npm --prefix backend` so
+   deployment hosts do not need pnpm or Corepack.
 2. Configure Nest global prefix `/v1`, validation with whitelist/forbid-unknown
    behavior, typed exception filter, request ID, health/readiness, and safe
    logging redaction.
@@ -134,6 +139,11 @@ reviewable diff from feature work.
   either app, so occupied ports fail fast with the owning app and environment
   variable instead of a partial-startup `ELIFECYCLE` tail. See the
   [port preflight walkthrough](../../reviews/2026-09-02-dev-runner-port-preflight-walkthrough.md).
+- 2026-09-02: root backend build/start/database/test/typecheck commands now
+  dispatch through npm, and the combined runner selects npm or pnpm from the
+  invoking lifecycle. Backend and frontend package scripts expose independent
+  npm install/build/start paths; Expo remains an explicit pnpm workspace lane.
+  See the [package-manager-independent server walkthrough](../../reviews/2026-09-02-package-manager-independent-server-walkthrough.md).
 
 ## Exit criteria
 
