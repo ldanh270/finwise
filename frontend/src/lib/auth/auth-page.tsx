@@ -132,11 +132,11 @@ export default function AuthPage({
             autoComplete={
               mode === "login" ? "current-password" : "new-password"
             }
-            placeholder="At least 12 characters"
+            placeholder="At least 6 characters"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             required
-            minLength={mode === "register" ? 12 : undefined}
+            minLength={mode === "register" ? 6 : undefined}
             maxLength={128}
           />
           <button

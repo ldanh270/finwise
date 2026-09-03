@@ -10,7 +10,7 @@ import type {
 } from './auth.types';
 
 const MAX_PASSWORD_LENGTH = 128;
-const MIN_PASSWORD_LENGTH = 12;
+const MIN_PASSWORD_LENGTH = 6;
 const MAX_FAILED_LOGINS = 5;
 const LOCKOUT_MINUTES = 15;
 const DEFAULT_REFRESH_TTL_SECONDS = 30 * 24 * 60 * 60;
