@@ -202,15 +202,26 @@ export function AppShell({
               }
               style={styles.navItem}
             >
-              <Text
-                style={[styles.navIcon, active === section && styles.navActive]}
+              <View
+                style={[
+                  styles.navIconPill,
+                  active === section && styles.navIconPillActive,
+                ]}
               >
-                {navGlyph(section)}
-              </Text>
+                <Text
+                  style={[
+                    styles.navIcon,
+                    active === section && styles.navIconActive,
+                  ]}
+                >
+                  {navGlyph(section)}
+                </Text>
+              </View>
               <Text
+                numberOfLines={1}
                 style={[
                   styles.navLabel,
-                  active === section && styles.navActive,
+                  active === section && styles.navLabelActive,
                 ]}
               >
                 {section === "group"
@@ -241,14 +252,14 @@ function initials(value: string): string {
 function navGlyph(section: MobileSection): string {
   return (
     {
-      overview: "◈",
-      transactions: "↗",
-      budgets: "▥",
+      overview: "⊞",
+      accounts: "▣",
+      transactions: "⇄",
+      budgets: "◔",
       reports: "▤",
       group: "◎",
-      inbox: "⌁",
-      accounts: "▣",
-      settings: "●",
+      inbox: "✉",
+      settings: "⚙",
     }[section] ?? "•"
   );
 }
@@ -322,15 +333,43 @@ const styles = StyleSheet.create({
   },
   navContent: {
     ...bottomNavigationContentStyle,
-    paddingTop: 8,
+    paddingTop: 6,
   },
   navItem: {
     ...bottomNavigationItemStyle,
     alignItems: "center",
-    gap: 3,
-    paddingHorizontal: 2,
+    justifyContent: "center",
+    paddingHorizontal: 1,
   },
-  navIcon: { color: "#90a39f", fontSize: 20, lineHeight: 22 },
-  navLabel: { color: "#809490", fontSize: 10, fontWeight: "700" },
-  navActive: { color: colors.teal },
+  navIconPill: {
+    width: 44,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 2,
+  },
+  navIconPillActive: {
+    backgroundColor: colors.tealSoft,
+  },
+  navIcon: {
+    color: "#7b938f",
+    fontSize: 22,
+    lineHeight: 26,
+    textAlign: "center",
+  },
+  navIconActive: {
+    color: colors.teal,
+    fontWeight: "700",
+  },
+  navLabel: {
+    color: "#7b938f",
+    fontSize: 10,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  navLabelActive: {
+    color: colors.teal,
+    fontWeight: "700",
+  },
 });

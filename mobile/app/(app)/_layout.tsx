@@ -73,7 +73,14 @@ export default function AuthenticatedLayout() {
       />
     );
   }
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <Stack screenOptions={{ headerShown: false, animation: "none" }}>
+      <Stack.Screen
+        name="transaction/new"
+        options={{ animation: "slide_from_bottom", presentation: "modal" }}
+      />
+    </Stack>
+  );
 }
 
 function BootstrapGate({
