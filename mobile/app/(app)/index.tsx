@@ -104,7 +104,7 @@ export default function OverviewRoute() {
                   alignItems: "center",
                 }}
               >
-                <Header eyebrow="ACTIVITY" title="Recent transactions" />{" "}
+                <Header eyebrow="ACTIVITY" title="Recent transactions" />
                 <PrimaryButton
                   label="Add"
                   onPress={() => router.push("/(app)/transaction/new")}
