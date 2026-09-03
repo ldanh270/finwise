@@ -27,7 +27,12 @@ export function Screen({ children }: PropsWithChildren) {
 }
 export function ScrollScreen({ children }: PropsWithChildren) {
   return (
-    <ScrollView contentContainerStyle={styles.scroll}>{children}</ScrollView>
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.scroll}
+    >
+      {children}
+    </ScrollView>
   );
 }
 export function Header({

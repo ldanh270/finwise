@@ -231,7 +231,9 @@ export function AppShell({
                   ? "Group"
                   : section === "inbox"
                     ? "Inbox"
-                    : section[0]?.toUpperCase() + section.slice(1)}
+                    : section === "transactions"
+                      ? "Activity"
+                      : section[0]?.toUpperCase() + section.slice(1)}
               </Text>
             </Pressable>
           ))}
