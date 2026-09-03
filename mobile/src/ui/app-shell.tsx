@@ -3,7 +3,6 @@ import {
   AppState,
   Pressable,
   SafeAreaView,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -14,6 +13,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../auth/auth-context";
 import { useWorkspace } from "../app/providers";
 import { colors } from "./components";
+import {
+  bottomNavigationContentStyle,
+  bottomNavigationItemStyle,
+} from "./bottom-navigation-layout";
 import { MobileOutboxRepository } from "../sync/mobile-outbox-repository";
 import { isWorkspaceQueryFor } from "../app/workspace-query-scope";
 
@@ -175,51 +178,51 @@ export function AppShell({
         </View>
       ) : null}
       <View style={styles.body}>{children}</View>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.navContent}
-        style={styles.nav}
-      >
-        {(
-          [
-            "overview",
-            "accounts",
-            "transactions",
-            "budgets",
-            "reports",
-            "group",
-            "inbox",
-          ] as MobileSection[]
-        ).map((section) => (
-          <Pressable
-            key={section}
-            accessibilityRole="button"
-            accessibilityState={{ selected: active === section }}
-            onPress={() =>
-              router.replace(
-                section === "overview" ? "/(app)" : `/(app)/${section}`,
-              )
-            }
-            style={styles.navItem}
-          >
-            <Text
-              style={[styles.navIcon, active === section && styles.navActive]}
+      <View style={styles.nav}>
+        <View style={styles.navContent}>
+          {(
+            [
+              "overview",
+              "accounts",
+              "transactions",
+              "budgets",
+              "reports",
+              "group",
+              "inbox",
+            ] as MobileSection[]
+          ).map((section) => (
+            <Pressable
+              key={section}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active === section }}
+              onPress={() =>
+                router.replace(
+                  section === "overview" ? "/(app)" : `/(app)/${section}`,
+                )
+              }
+              style={styles.navItem}
             >
-              {navGlyph(section)}
-            </Text>
-            <Text
-              style={[styles.navLabel, active === section && styles.navActive]}
-            >
-              {section === "group"
-                ? "Group"
-                : section === "inbox"
-                  ? "Inbox"
-                  : section[0]?.toUpperCase() + section.slice(1)}
-            </Text>
-          </Pressable>
-        ))}
-      </ScrollView>
+              <Text
+                style={[styles.navIcon, active === section && styles.navActive]}
+              >
+                {navGlyph(section)}
+              </Text>
+              <Text
+                style={[
+                  styles.navLabel,
+                  active === section && styles.navActive,
+                ]}
+              >
+                {section === "group"
+                  ? "Group"
+                  : section === "inbox"
+                    ? "Inbox"
+                    : section[0]?.toUpperCase() + section.slice(1)}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -318,13 +321,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   navContent: {
-    flexGrow: 1,
-    minWidth: "100%",
-    flexDirection: "row",
-    justifyContent: "space-around",
+    ...bottomNavigationContentStyle,
     paddingTop: 8,
   },
-  navItem: { alignItems: "center", gap: 3, minWidth: 62, paddingHorizontal: 6 },
+  navItem: {
+    ...bottomNavigationItemStyle,
+    alignItems: "center",
+    gap: 3,
+    paddingHorizontal: 2,
+  },
   navIcon: { color: "#90a39f", fontSize: 20, lineHeight: 22 },
   navLabel: { color: "#809490", fontSize: 10, fontWeight: "700" },
   navActive: { color: colors.teal },
