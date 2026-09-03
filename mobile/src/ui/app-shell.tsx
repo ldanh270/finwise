@@ -1,12 +1,9 @@
 import { router } from "expo-router";
+import { AppState, Pressable, StyleSheet, Text, View } from "react-native";
 import {
-  AppState,
-  Pressable,
   SafeAreaView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -37,6 +34,7 @@ export function AppShell({
   active: MobileSection;
   children: ReactNode;
 }) {
+  const insets = useSafeAreaInsets();
   const { session, api } = useAuth();
   const {
     bootstrap,
@@ -116,7 +114,7 @@ export function AppShell({
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView edges={["top", "left", "right"]} style={styles.safe}>
       <View style={styles.topbar}>
         <View>
           <Text style={styles.brand}>finwise</Text>
@@ -178,7 +176,12 @@ export function AppShell({
         </View>
       ) : null}
       <View style={styles.body}>{children}</View>
-      <View style={styles.nav}>
+      <View
+        style={[
+          styles.nav,
+          { paddingBottom: insets.bottom > 0 ? insets.bottom : 8 },
+        ]}
+      >
         <View style={styles.navContent}>
           {(
             [
@@ -326,14 +329,13 @@ const styles = StyleSheet.create({
   workspaceChipText: { color: colors.muted, fontSize: 12 },
   workspaceChipTextActive: { color: colors.teal, fontWeight: "700" },
   nav: {
-    height: 72,
     borderTopWidth: 1,
     borderTopColor: colors.border,
     backgroundColor: colors.surface,
+    paddingTop: 8,
   },
   navContent: {
     ...bottomNavigationContentStyle,
-    paddingTop: 6,
   },
   navItem: {
     ...bottomNavigationItemStyle,

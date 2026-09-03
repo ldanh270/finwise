@@ -214,7 +214,7 @@ export function Divider() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.canvas },
-  scroll: { padding: 20, gap: 16, paddingBottom: 110 },
+  scroll: { padding: 20, gap: 16, paddingBottom: 20 },
   header: { gap: 6, marginBottom: 4 },
   eyebrow: {
     color: "#78908b",
