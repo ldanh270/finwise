@@ -21,6 +21,10 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm db:generate
+        env:
+          # Prisma reads the datasource while generating types but does not connect.
+          DIRECT_URL: postgresql://127.0.0.1:26257/finwise
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm typecheck
@@ -58,7 +62,7 @@ jobs:
         working-directory: mobile/android
 
   mobile-ios-native:
-    runs-on: macos-14
+    runs-on: macos-15
     env:
       COCOAPODS_DISABLE_STATS: "true"
     steps:
@@ -70,6 +74,8 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      - name: Verify Xcode version
+        run: xcodebuild -version
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter mobile prebuild -- --platform ios --no-install
       - run: pod install
