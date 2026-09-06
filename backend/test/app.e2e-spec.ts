@@ -53,7 +53,9 @@ describe('Finwise API (e2e)', () => {
           readonly checks: { readonly database: string };
         };
         expect(body.status).toBe('not_ready');
-        expect(body.checks.database).toBe('failed');
+        expect(body.checks.database).toBe(
+          process.env.DATABASE_URL ? 'failed' : 'not_configured',
+        );
       });
   });
 
