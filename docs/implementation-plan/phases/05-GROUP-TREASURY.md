@@ -14,7 +14,7 @@ claims separate from confirmed cash and excluding general peer-debt settlement.
 - `Participant` is workspace-scoped and may be a non-user. Linking to a member
   never grants access; merge/link operations are authorized and audited.
 - Collection campaigns define purpose, due date, default requested amount,
-  category, and partial/late policy. Each participant receives a copied or
+  budget, and partial/late policy. Each participant receives a copied or
   custom obligation. Status derives from verified allocations:
   `waived|unpaid|partial|paid|overpaid`.
 - Submission is evidence and never changes balance. Verification by a permitted
@@ -24,7 +24,7 @@ claims separate from confirmed cash and excluding general peer-debt settlement.
 - Direct group spending posts a Ledger expense when the authorized actor posts;
   controlled templates separate submit and post and default to no self-approval.
   Family templates may explicitly allow self-approval.
-- Sponsored member-paid expense records value, payer, category, and receipt but
+- Sponsored member-paid expense records value, payer, budget, and receipt but
   changes no group account and consumes no treasury budget. It is reported
   separately.
 - Reimbursable claim: submit (no balance), approve (freeze accepted amount,

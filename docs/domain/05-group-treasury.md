@@ -126,7 +126,7 @@ account scope for the financial posting.
 
 ### CollectionCampaign
 
-Defines purpose, due date, status, default requested amount, optional category,
+Defines purpose, due date, status, default requested amount, optional budget,
 and whether late/partial contributions are allowed.
 
 ### ContributionObligation
@@ -175,7 +175,7 @@ Example: the class bank account pays 1,000,000 VND for food.
 
 Example: Lan personally buys 1,000,000 VND of food and does not want repayment.
 
-- Record an approved sponsored expense with payer participant, category, tags,
+- Record an approved sponsored expense with payer participant, budget, tags,
   receipt, and amount.
 - It does not change a group account and does not consume treasury budget.
 - Show it in a separate sponsored-value report so the contribution is visible.
@@ -276,4 +276,3 @@ notification failure must not roll back a verified financial posting.
    or mandatory manual choice.
 6. Decide whether one contribution receipt may allocate to multiple participants
    (recommended for parent/class scenarios).
-

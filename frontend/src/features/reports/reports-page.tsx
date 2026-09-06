@@ -180,25 +180,25 @@ function ReportContent({ report }: { report: ReportsResponse }) {
         </section>
         <section className="resource-panel">
           <div className="resource-toolbar">
-            <span>Spending by category</span>
+            <span>Spending by budget</span>
             <span className="resource-hint">Classified lines</span>
           </div>
-          {report.categories.length === 0 ? (
+          {report.budgets.length === 0 ? (
             <p className="panel-empty">
-              Classify a transaction to see category movement.
+              Assign a budget to a transaction to see budget movement.
             </p>
           ) : (
-            <div className="report-category-list">
-              {report.categories.map((category) => (
+            <div className="report-budget-list">
+              {report.budgets.map((budget) => (
                 <div
-                  className="report-category-row"
-                  key={category.categoryId ?? "uncategorized"}
+                  className="report-budget-row"
+                  key={budget.budgetId ?? "unassigned"}
                 >
                   <span>
-                    <strong>{category.name}</strong>
-                    <small>Net {formatMoney(category.net)}</small>
+                    <strong>{budget.name}</strong>
+                    <small>Net {formatMoney(budget.net)}</small>
                   </span>
-                  <strong>{formatMoney(category.spending)}</strong>
+                  <strong>{formatMoney(budget.spending)}</strong>
                 </div>
               ))}
             </div>

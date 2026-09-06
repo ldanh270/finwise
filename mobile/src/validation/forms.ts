@@ -10,6 +10,7 @@ export const manualTransactionSchema = z.object({
   type: z.enum(["income", "expense", "transfer"]),
   accountId: z.string().min(1),
   destinationAccountId: z.string().optional(),
+  budgetId: z.string().optional(),
   amountMinorUnits: minorUnits,
   effectiveDate: isoDate,
   description: z.string().max(500).optional(),

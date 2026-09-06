@@ -383,18 +383,18 @@
         }
       }
     },
-    "/workspaces/{workspaceId}/categories": {
+    "/workspaces/{workspaceId}/budgets": {
       "get": {
-        "operationId": "listCategories",
+        "operationId": "listBudgets",
         "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
         "responses": {
           "200": {
-            "description": "Workspace category tree",
+            "description": "Workspace budget buckets",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "array",
-                  "items": { "$ref": "#/components/schemas/Category" }
+                  "items": { "$ref": "#/components/schemas/BudgetBucket" }
                 }
               }
             }
@@ -403,22 +403,22 @@
         }
       },
       "post": {
-        "operationId": "createCategory",
+        "operationId": "createBudget",
         "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/CreateCategoryRequest" }
+              "schema": { "$ref": "#/components/schemas/CreateBudgetBucketRequest" }
             }
           }
         },
         "responses": {
           "201": {
-            "description": "Category created",
+            "description": "Budget bucket created",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/Category" }
+                "schema": { "$ref": "#/components/schemas/BudgetBucket" }
               }
             }
           },
@@ -428,13 +428,13 @@
         }
       }
     },
-    "/workspaces/{workspaceId}/categories/{categoryId}/archive": {
+    "/workspaces/{workspaceId}/budgets/{budgetId}/archive": {
       "post": {
-        "operationId": "archiveCategory",
+        "operationId": "archiveBudget",
         "parameters": [
           { "$ref": "#/components/parameters/WorkspaceId" },
           {
-            "name": "categoryId",
+            "name": "budgetId",
             "in": "path",
             "required": true,
             "schema": { "type": "string", "format": "uuid" }
@@ -442,10 +442,10 @@
         ],
         "responses": {
           "201": {
-            "description": "Category archived",
+            "description": "Budget bucket archived",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/Category" }
+                "schema": { "$ref": "#/components/schemas/BudgetBucket" }
               }
             }
           },
@@ -500,7 +500,7 @@
         }
       }
     },
-    "/workspaces/{workspaceId}/budgets": {
+    "/workspaces/{workspaceId}/budget-periods": {
       "get": {
         "operationId": "listBudgetPeriods",
         "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
@@ -526,7 +526,7 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/CreateBudgetRequest" }
+              "schema": { "$ref": "#/components/schemas/CreateBudgetPeriodRequest" }
             }
           }
         },
@@ -545,7 +545,7 @@
         }
       }
     },
-    "/workspaces/{workspaceId}/budgets/{month}": {
+    "/workspaces/{workspaceId}/budget-periods/{month}": {
       "get": {
         "operationId": "getBudgetOverview",
         "parameters": [
@@ -571,7 +571,7 @@
         }
       }
     },
-    "/workspaces/{workspaceId}/budgets/{month}/close": {
+    "/workspaces/{workspaceId}/budget-periods/{month}/close": {
       "post": {
         "operationId": "closeBudgetPeriod",
         "parameters": [
@@ -1290,9 +1290,9 @@
                     "maxItems": 50,
                     "items": {
                       "type": "object",
-                      "required": ["categoryId", "amountMinorUnits"],
+                      "required": ["budgetId", "amountMinorUnits"],
                       "properties": {
-                        "categoryId": { "type": "string", "format": "uuid" },
+                        "budgetId": { "type": "string", "format": "uuid" },
                         "amountMinorUnits": { "type": "string" },
                         "tagIds": { "type": "array", "items": { "type": "string", "format": "uuid" } }
                       }
@@ -1894,7 +1894,7 @@
           "permissions": { "type": "array", "items": { "type": "string" } }
         }
       },
-      "Category": {
+      "BudgetBucket": {
         "type": "object",
         "required": ["id", "workspaceId", "name", "status"],
         "properties": {
@@ -1905,7 +1905,7 @@
           "status": { "type": "string", "enum": ["active", "archived"] }
         }
       },
-      "CreateCategoryRequest": {
+      "CreateBudgetBucketRequest": {
         "type": "object",
         "required": ["name"],
         "properties": {
@@ -1932,12 +1932,12 @@
       },
       "ClassificationLine": {
         "type": "object",
-        "required": ["id", "workspaceId", "transactionId", "categoryId", "amount", "tagIds"],
+        "required": ["id", "workspaceId", "transactionId", "budgetId", "amount", "tagIds"],
         "properties": {
           "id": { "type": "string", "format": "uuid" },
           "workspaceId": { "type": "string", "format": "uuid" },
           "transactionId": { "type": "string", "format": "uuid" },
-          "categoryId": { "type": "string", "format": "uuid" },
+          "budgetId": { "type": "string", "format": "uuid" },
           "amount": { "$ref": "#/components/schemas/MoneyDto" },
           "tagIds": { "type": "array", "items": { "type": "string", "format": "uuid" } }
         }
@@ -1954,7 +1954,7 @@
           "status": { "type": "string", "enum": ["open", "closed"] }
         }
       },
-      "CreateBudgetRequest": {
+      "CreateBudgetPeriodRequest": {
         "type": "object",
         "required": ["month", "baseMinorUnits", "constraints"],
         "properties": {
@@ -1965,9 +1965,9 @@
             "maxItems": 100,
             "items": {
               "type": "object",
-              "required": ["categoryId", "mode"],
+              "required": ["budgetId", "mode"],
               "properties": {
-                "categoryId": { "type": "string", "format": "uuid" },
+                "budgetId": { "type": "string", "format": "uuid" },
                 "mode": { "type": "string", "enum": ["BY_CHILDREN", "SHARED_POOL", "HYBRID"] },
                 "fixedMinorUnits": { "type": "string" },
                 "percentageBasisPoints": { "type": "integer", "minimum": 0, "maximum": 10000 },
@@ -2570,6 +2570,7 @@
           "accountId": { "type": "string" },
           "sourceAccountId": { "type": "string" },
           "destinationAccountId": { "type": "string" },
+          "budgetId": { "type": "string", "format": "uuid" },
           "effectiveDate": { "type": "string", "format": "date" },
           "description": { "type": "string" }
         }
@@ -2809,7 +2810,7 @@
           "toMonth",
           "totals",
           "monthly",
-          "categories",
+          "budgets",
           "hasPartialAccess"
         ],
         "properties": {
@@ -2830,16 +2831,16 @@
               ]
             }
           },
-          "categories": {
+          "budgets": {
             "type": "array",
             "items": {
               "allOf": [
                 { "$ref": "#/components/schemas/ReportMoney" },
                 {
                   "type": "object",
-                  "required": ["categoryId", "name"],
+                  "required": ["budgetId", "name"],
                   "properties": {
-                    "categoryId": { "type": ["string", "null"] },
+                    "budgetId": { "type": ["string", "null"] },
                     "name": { "type": "string" }
                   }
                 }

@@ -31,7 +31,7 @@ import {
   classifyTransaction,
   listTransactions,
   listAccounts,
-  listCategories,
+  listBudgets,
   listTags,
   replaceTransaction,
   voidTransaction,
@@ -91,9 +91,9 @@ export default function TransactionsRoute() {
     queryFn: () => listAccounts(api, workspaceId as string),
     enabled: Boolean(workspaceId),
   });
-  const categoriesQuery = useQuery({
-    queryKey: ["categories", workspaceId],
-    queryFn: () => listCategories(api, workspaceId as string),
+  const budgetsQuery = useQuery({
+    queryKey: ["budgets", workspaceId],
+    queryFn: () => listBudgets(api, workspaceId as string),
     enabled: Boolean(workspaceId),
   });
   const tagsQuery = useQuery({
@@ -227,10 +227,10 @@ export default function TransactionsRoute() {
                 workspaceId={workspaceId as string}
                 transactionId={selectedTransactionId}
                 accounts={accountsQuery.data ?? []}
-                categories={categoriesQuery.data ?? []}
+                budgets={budgetsQuery.data ?? []}
                 tags={tagsQuery.data ?? []}
                 accountsUnavailable={accountsQuery.isError}
-                categoriesUnavailable={categoriesQuery.isError}
+                budgetsUnavailable={budgetsQuery.isError}
                 tagsUnavailable={tagsQuery.isError}
                 onClose={() => setSelectedTransactionId(null)}
                 onChanged={() => {
@@ -379,10 +379,10 @@ function TransactionDetail({
   workspaceId,
   transactionId,
   accounts,
-  categories,
+  budgets,
   tags,
   accountsUnavailable,
-  categoriesUnavailable,
+  budgetsUnavailable,
   tagsUnavailable,
   onClose,
   onChanged,
@@ -391,10 +391,10 @@ function TransactionDetail({
   workspaceId: string;
   transactionId: string;
   accounts: readonly import("@finwise/api-client").AccountSummary[];
-  categories: readonly import("@finwise/api-client").CategorySummary[];
+  budgets: readonly import("@finwise/api-client").BudgetSummary[];
   tags: readonly import("@finwise/api-client").TagSummary[];
   accountsUnavailable: boolean;
-  categoriesUnavailable: boolean;
+  budgetsUnavailable: boolean;
   tagsUnavailable: boolean;
   onClose: () => void;
   onChanged: () => void;
@@ -439,13 +439,13 @@ function TransactionDetail({
     setClassificationLines(
       classificationQuery.data.length
         ? classificationQuery.data.map((line) => ({
-            categoryId: line.categoryId,
+            budgetId: line.budgetId,
             amountMinorUnits: line.amount.minorUnits,
             tagIds: [...line.tagIds],
           }))
         : [
             {
-              categoryId: "",
+              budgetId: "",
               amountMinorUnits: detailQuery.data.amount.minorUnits,
               tagIds: [],
             },
@@ -468,16 +468,15 @@ function TransactionDetail({
   const replacementAccountOptions = accounts
     .filter((account) => account.status === "active")
     .map((account) => ({ label: account.name, value: account.id }));
-  const categoryOptions = categories
+  const budgetOptions = budgets
     .filter(
-      (category) =>
-        category.status === "active" &&
-        !categories.some(
-          (child) =>
-            child.status === "active" && child.parentId === category.id,
+      (budget) =>
+        budget.status === "active" &&
+        !budgets.some(
+          (child) => child.status === "active" && child.parentId === budget.id,
         ),
     )
-    .map((category) => ({ label: category.name, value: category.id }));
+    .map((budget) => ({ label: budget.name, value: budget.id }));
   const canReplace = replacement !== null && transaction.status === "posted";
   const hasClassification = Boolean(classificationQuery.data?.length);
   const canClassify =
@@ -516,10 +515,7 @@ function TransactionDetail({
       lines: classificationLines,
     })
       .then(() => {
-        Alert.alert(
-          "Classification saved",
-          "Budget and category views will refresh.",
-        );
+        Alert.alert("Classification saved", "Budget views will refresh.");
         void classificationQuery.refetch();
         onChanged();
       })
@@ -632,13 +628,13 @@ function TransactionDetail({
         <>
           <Divider />
           <Text style={{ color: colors.ink, fontWeight: "700" }}>
-            Categories and tags
+            Budgets and tags
           </Text>
           {classificationQuery.data?.map((line) => (
             <View key={line.id} style={{ gap: 3 }}>
               <Text style={{ color: colors.ink }}>
-                {categories.find((category) => category.id === line.categoryId)
-                  ?.name ?? line.categoryId}
+                {budgets.find((budget) => budget.id === line.budgetId)?.name ??
+                  line.budgetId}
               </Text>
               <Text style={{ color: colors.muted }}>
                 {line.amount.minorUnits} minor units
@@ -656,7 +652,7 @@ function TransactionDetail({
         <>
           <Divider />
           <Text style={{ color: colors.ink, fontWeight: "700" }}>
-            Categories and tags
+            Budgets and tags
           </Text>
           {classificationQuery.isError ? (
             <>
@@ -667,8 +663,8 @@ function TransactionDetail({
               />
             </>
           ) : null}
-          {categoriesUnavailable ? (
-            <InlineError message="Categories are unavailable. Retry the screen before classifying." />
+          {budgetsUnavailable ? (
+            <InlineError message="Budgets are unavailable. Retry the screen before classifying." />
           ) : null}
           {tagsUnavailable ? (
             <InlineError message="Tags are unavailable; classification can still be saved without tags." />
@@ -681,10 +677,10 @@ function TransactionDetail({
           {classificationLines.map((line, index) => (
             <View key={`line-${index}`} style={{ gap: 8 }}>
               <SelectField
-                label={`Line ${index + 1} category`}
-                value={line.categoryId}
-                options={categoryOptions}
-                onChange={(categoryId) => updateLine(index, { categoryId })}
+                label={`Line ${index + 1} budget`}
+                value={line.budgetId}
+                options={budgetOptions}
+                onChange={(budgetId) => updateLine(index, { budgetId })}
               />
               <TextField
                 label="Amount (minor units)"
@@ -741,11 +737,11 @@ function TransactionDetail({
             </View>
           ))}
           <SecondaryButton
-            label="Add category line"
+            label="Add budget line"
             onPress={() =>
               setClassificationLines((current) => [
                 ...current,
-                { categoryId: "", amountMinorUnits: "0", tagIds: [] },
+                { budgetId: "", amountMinorUnits: "0", tagIds: [] },
               ])
             }
           />
@@ -759,7 +755,7 @@ function TransactionDetail({
             disabled={
               busyAction !== null ||
               !classificationLines.length ||
-              !categoryOptions.length ||
+              !budgetOptions.length ||
               classificationQuery.isError
             }
           />

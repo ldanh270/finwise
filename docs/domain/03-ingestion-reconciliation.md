@@ -15,7 +15,7 @@ Ledger.
 ### Option A: bank/file rows immediately become transactions
 
 - Pros: zero-review convenience and fast initial demo.
-- Cons: duplicates affect balances; pending amounts can change; bad categories
+- Cons: duplicates affect balances; pending amounts can change; bad budgets
   pollute budgets; group members may see private raw descriptions; matching a
   manually entered transaction becomes correction work.
 
@@ -168,7 +168,7 @@ transactions follow normal account policy.
 
 1. Adapter persists raw version and normalized record idempotently.
 2. Policy checks custodian/delegated-reviewer access.
-3. Reviewer selects target account, date, payee, category split, and tags, or a
+3. Reviewer selects target account, date, payee, budget split, and tags, or a
    candidate existing transaction.
 4. Application revalidates amount, workspace, account scope, and source version.
 5. `match`: create one unique match link, no financial posting; or `confirm`:

@@ -5,13 +5,13 @@ import { Icon } from "../../components/ui/icons";
 import type {
   ApiError,
   BudgetOverviewSummary,
-  CategorySummary,
+  BudgetBucketSummary,
 } from "../../lib/api/contracts";
 import { formatMoney } from "../../lib/formatting/money";
 import {
   closeBudgetPeriod,
   createBudgetPeriod,
-  createCategory,
+  createBudget,
   createTag,
   loadPlanning,
   type PlanningSnapshot,
@@ -30,7 +30,7 @@ type ActionState =
 
 export function BudgetPage({ workspaceId }: Props) {
   const [state, setState] = useState<PageState>({ status: "loading" });
-  const [categoryState, setCategoryState] = useState<ActionState>({
+  const [budgetBucketState, setBudgetBucketState] = useState<ActionState>({
     status: "idle",
   });
   const [tagState, setTagState] = useState<ActionState>({ status: "idle" });
@@ -38,12 +38,12 @@ export function BudgetPage({ workspaceId }: Props) {
     status: "idle",
   });
   const [closeState, setCloseState] = useState<ActionState>({ status: "idle" });
-  const [categoryName, setCategoryName] = useState("");
+  const [budgetName, setBudgetName] = useState("");
   const [parentId, setParentId] = useState("");
   const [tagName, setTagName] = useState("");
   const [month, setMonth] = useState(currentMonth());
   const [baseMinorUnits, setBaseMinorUnits] = useState("");
-  const [categoryId, setCategoryId] = useState("");
+  const [budgetId, setBudgetId] = useState("");
   const [mode, setMode] = useState<"BY_CHILDREN" | "SHARED_POOL" | "HYBRID">(
     "SHARED_POOL",
   );
@@ -70,10 +70,10 @@ export function BudgetPage({ workspaceId }: Props) {
       }
       setState({ status: "ready", value: result.value });
       if (result.value.selectedMonth) setMonth(result.value.selectedMonth);
-      if (!categoryId && result.value.categories[0])
-        setCategoryId(result.value.categories[0].id);
+      if (!budgetId && result.value.budgets[0])
+        setBudgetId(result.value.budgets[0].id);
     },
-    [categoryId, workspaceId],
+    [budgetId, workspaceId],
   );
 
   useEffect(() => {
@@ -82,20 +82,20 @@ export function BudgetPage({ workspaceId }: Props) {
     void load();
   }, [load]);
 
-  async function submitCategory(event: FormEvent<HTMLFormElement>) {
+  async function submitBudgetBucket(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!workspaceId) return;
-    setCategoryState({ status: "saving" });
-    const result = await createCategory(workspaceId, {
-      name: categoryName,
+    setBudgetBucketState({ status: "saving" });
+    const result = await createBudget(workspaceId, {
+      name: budgetName,
       parentId: parentId || undefined,
     });
     if (!result.ok) {
-      setCategoryState({ status: "error", error: result.error });
+      setBudgetBucketState({ status: "error", error: result.error });
       return;
     }
-    setCategoryState({ status: "success" });
-    setCategoryName("");
+    setBudgetBucketState({ status: "success" });
+    setBudgetName("");
     await load(
       state.status === "ready"
         ? (state.value.selectedMonth ?? undefined)
@@ -130,7 +130,7 @@ export function BudgetPage({ workspaceId }: Props) {
       baseMinorUnits,
       constraints: [
         {
-          categoryId,
+          budgetId,
           mode,
           fixedMinorUnits: fixedMinorUnits || "0",
           percentageBasisPoints: Number(percentageBasisPoints),
@@ -174,7 +174,7 @@ export function BudgetPage({ workspaceId }: Props) {
 
   const snapshot = state.value;
   const selectedOverview = snapshot.overview;
-  const roots = snapshot.categories.filter((category) => !category.parentId);
+  const roots = snapshot.budgets.filter((budget) => !budget.parentId);
   return (
     <>
       <section className="page-heading">
@@ -197,15 +197,15 @@ export function BudgetPage({ workspaceId }: Props) {
       <div className="budget-planning-grid">
         <section className="resource-panel">
           <div className="resource-toolbar">
-            <span>Category tree</span>
+            <span>Budget buckets</span>
             <span className="resource-hint">Two levels maximum</span>
           </div>
-          <form className="ingestion-form" onSubmit={submitCategory}>
+          <form className="ingestion-form" onSubmit={submitBudgetBucket}>
             <label>
               Name
               <input
-                value={categoryName}
-                onChange={(event) => setCategoryName(event.target.value)}
+                value={budgetName}
+                onChange={(event) => setBudgetName(event.target.value)}
                 maxLength={100}
                 required
               />
@@ -216,40 +216,42 @@ export function BudgetPage({ workspaceId }: Props) {
                 value={parentId}
                 onChange={(event) => setParentId(event.target.value)}
               >
-                <option value="">Root category</option>
-                {roots.map((category) => (
-                  <option value={category.id} key={category.id}>
-                    {category.name}
+                <option value="">Root budget</option>
+                {roots.map((budget) => (
+                  <option value={budget.id} key={budget.id}>
+                    {budget.name}
                   </option>
                 ))}
               </select>
             </label>
-            {categoryState.status === "error" ? (
+            {budgetBucketState.status === "error" ? (
               <p className="inline-feedback is-error" role="alert">
-                {categoryState.error.message}
+                {budgetBucketState.error.message}
               </p>
             ) : null}
-            {categoryState.status === "success" ? (
+            {budgetBucketState.status === "success" ? (
               <p className="inline-feedback" role="status">
-                Category created.
+                Budget created.
               </p>
             ) : null}
             <button
               className="primary-button"
               type="submit"
-              disabled={categoryState.status === "saving"}
+              disabled={budgetBucketState.status === "saving"}
             >
-              {categoryState.status === "saving" ? "Creating…" : "Add category"}
+              {budgetBucketState.status === "saving"
+                ? "Creating…"
+                : "Add budget"}
             </button>
           </form>
-          <div className="category-list">
-            {snapshot.categories.length === 0 ? (
+          <div className="budget-bucket-list">
+            {snapshot.budgets.length === 0 ? (
               <p className="empty-copy">
-                Create a category before allocating a budget.
+                Create a budget bucket before allocating a monthly plan.
               </p>
             ) : (
-              snapshot.categories.map((category) => (
-                <CategoryRow category={category} key={category.id} />
+              snapshot.budgets.map((budget) => (
+                <BudgetBucketRow budget={budget} key={budget.id} />
               ))
             )}
           </div>
@@ -328,18 +330,18 @@ export function BudgetPage({ workspaceId }: Props) {
             />
           </label>
           <label>
-            Category
+            Budget
             <select
-              value={categoryId}
-              onChange={(event) => setCategoryId(event.target.value)}
+              value={budgetId}
+              onChange={(event) => setBudgetId(event.target.value)}
               required
             >
               <option value="" disabled>
-                Select category
+                Select budget
               </option>
-              {snapshot.categories.map((category) => (
-                <option value={category.id} key={category.id}>
-                  {category.name}
+              {snapshot.budgets.map((budget) => (
+                <option value={budget.id} key={budget.id}>
+                  {budget.name}
                 </option>
               ))}
             </select>
@@ -402,8 +404,7 @@ export function BudgetPage({ workspaceId }: Props) {
             className="primary-button"
             type="submit"
             disabled={
-              budgetState.status === "saving" ||
-              snapshot.categories.length === 0
+              budgetState.status === "saving" || snapshot.budgets.length === 0
             }
           >
             {budgetState.status === "saving" ? "Saving…" : "Save monthly plan"}
@@ -440,7 +441,7 @@ export function BudgetPage({ workspaceId }: Props) {
       {selectedOverview ? (
         <BudgetOverview
           overview={selectedOverview}
-          categories={snapshot.categories}
+          budgets={snapshot.budgets}
           closeState={closeState}
           onClose={() => void closeSelectedPeriod()}
         />
@@ -449,31 +450,29 @@ export function BudgetPage({ workspaceId }: Props) {
   );
 }
 
-function CategoryRow({ category }: { category: CategorySummary }) {
+function BudgetBucketRow({ budget }: { budget: BudgetBucketSummary }) {
   return (
-    <div className="category-row">
+    <div className="budget-bucket-row">
       <span>
-        {category.parentId ? "↳ " : ""}
-        {category.name}
+        {budget.parentId ? "↳ " : ""}
+        {budget.name}
       </span>
-      <small>{category.status}</small>
+      <small>{budget.status}</small>
     </div>
   );
 }
 function BudgetOverview({
   overview,
-  categories,
+  budgets,
   closeState,
   onClose,
 }: {
   overview: BudgetOverviewSummary;
-  categories: CategorySummary[];
+  budgets: BudgetBucketSummary[];
   closeState: ActionState;
   onClose: () => void;
 }) {
-  const categoryName = new Map(
-    categories.map((category) => [category.id, category.name]),
-  );
+  const budgetName = new Map(budgets.map((budget) => [budget.id, budget.name]));
   return (
     <section className="resource-panel budget-overview-panel">
       <div className="resource-toolbar">
@@ -496,11 +495,9 @@ function BudgetOverview({
       </div>
       <div className="budget-constraint-list">
         {overview.constraints.map((constraint) => (
-          <div className="budget-constraint-row" key={constraint.categoryId}>
+          <div className="budget-constraint-row" key={constraint.budgetId}>
             <span>
-              <strong>
-                {categoryName.get(constraint.categoryId) ?? "Category"}
-              </strong>
+              <strong>{budgetName.get(constraint.budgetId) ?? "Budget"}</strong>
               <small>
                 {constraint.mode} · {constraint.rolloverMode}
               </small>

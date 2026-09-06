@@ -247,7 +247,7 @@ records remain authoritative.
 | --- | --- | --- |
 | Account balance | Posted ledger through effective time | Hidden accounts; provider-only pending data |
 | Cashflow | External income/outflow on effective date | Same-workspace transfers, principal exchanges, valuations |
-| Spending by category | Eligible expense lines | Transfers, investment buys, loan principal, sponsored group value |
+| Spending by budget | Eligible expense lines | Transfers, investment buys, loan principal, sponsored group value |
 | Budget vs actual | Budget period/effective date | Same rules as Planning document; reimbursement counted once |
 | Net worth | Assets minus liabilities using permitted latest valuations | Goals and budgets are not assets; stale prices labeled |
 | Group treasury | Actual group accounts | Submissions not verified, member personal accounts |

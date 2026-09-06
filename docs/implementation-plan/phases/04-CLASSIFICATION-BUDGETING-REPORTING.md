@@ -1,25 +1,25 @@
 # Phase 4 — Classification, budgets, and reporting
 
-Status: Report projection complete — category/classification, budget projection, rollover calculation, and permission-filtered web/mobile reports are implemented; persistence and chart/export polish remain
+Status: Report projection complete — budget-bucket classification, budget projection, rollover calculation, and permission-filtered web/mobile reports are implemented; persistence and chart/export polish remain
 Depends on: [Phase 3](03-LEDGER-ACCOUNTS-TRANSACTIONS.md), Phase 2 account policies  
 Unblocks: Group budget views and web MVP reporting
 
 ## Objective
 
-Add category/tag classification, split transactions, soft monthly budgets,
+Add budget/tag classification, split transactions, soft monthly budgets,
 rollover, goals, and permission-filtered reports without changing account
 balances or making budgets a second cash ledger.
 
 ## Business rules
 
-- Categories form at most two levels. A parent is a roll-up; post to a parent
+- Budget buckets form at most two levels. A parent is a roll-up; post to a parent
   only when it has no active children or use a visible `Other` child. Archive,
-  do not delete, categories referenced by history.
-- Classification lines are positive, each has exactly one category, and their
+  do not delete, budget buckets referenced by history.
+- Classification lines are positive, each has exactly one budget, and their
   sum equals the user-facing transaction amount. Account movement happens once;
   tags attach to lines and cannot alter amount.
 - Budgets are soft monthly limits. Actuals are eligible posted expense lines by
-  effective date/category descendant, subject to account visibility. Transfers,
+  effective date/budget descendant, subject to account visibility. Transfers,
   opening balances, loan principal, investment activity, pending imports,
   sponsored group costs, and reimbursement settlement are excluded.
 - One active monthly plan per workspace in MVP. `BY_CHILDREN` funds children and
@@ -54,26 +54,26 @@ use typed source links and their context-specific inclusion rules.
 
 ## Schema and API surface
 
-Create `Category` (parent, status, workspace), `Tag`, `ClassificationLine`,
+Create `BudgetBucket` (parent, status, workspace), `Tag`, `ClassificationLine`,
 `LineTag`, `BudgetPlan`, `BudgetPeriod`, immutable `BudgetRevision`,
 `BudgetConstraint` (mode/fixed/percentage/cap owner/rollover), `RolloverResult`,
 `BudgetAdjustment`, `SavingsGoal`, and report projection/checkpoint tables.
-Add constraints for category depth/cycles, one active plan, unique category per
+Add constraints for budget depth/cycles, one active plan, unique budget per
 period, percentage ≤ 100%, fixed ≤ base, and exact split sums.
 
 Expose:
 
-- category/tag CRUD/archive;
+- budget/tag CRUD/archive;
 - transaction classify/split/tag commands with `expectedVersion`;
 - budget plan/period/constraint/revision/close/reopen/carry-adjustment APIs;
 - goal CRUD/progress/link/unlink;
-- monthly overview, cashflow, spending-by-category, budget-vs-actual, and
+- monthly overview, cashflow, spending-by-budget, budget-vs-actual, and
   goal-progress queries with `partialData` and freshness metadata;
 - CSV export using the same authorization filter as on-screen reports.
 
 ## Client behavior
 
-Web leads category tree management, split-line editor, tag filters, nested budget
+Web leads budget bucket management, split-line editor, tag filters, nested budget
 editor with fixed/percentage/flexible explanation, period close/reopen prompts,
 goal progress, dashboards, drill-downs, and export. Forms show exact VND string
 inputs, server validation, stale projection indicators, partial-data banners,
@@ -87,7 +87,7 @@ calculation or show hidden-account totals from a stale local cache.
 
 | Area | Required cases |
 | --- | --- |
-| Category | two-level limit, cycle/depth rejection, archive/reference, parent posting |
+| Budget bucket | two-level limit, cycle/depth rejection, archive/reference, parent posting |
 | Split | positive lines, exact sum, remainder assignment, account effect once |
 | Budget | all three modes, fixed/percentage constraints, rollover modes, negative carry |
 | Close/revision | revision audit, close freeze, deliberate reopen/carry adjustment |
@@ -98,8 +98,8 @@ calculation or show hidden-account totals from a stale local cache.
 
 ## Migration notes
 
-Do not reinterpret legacy category/budget rows as ledger truth. If old rows are
-retained, map them to archived categories and explicit budget revisions, flag
+Do not reinterpret legacy classification/budget rows as ledger truth. If old rows are
+retained, map them to archived budget buckets and explicit budget revisions, flag
 ambiguous parent/child relationships, and require an operator review. Build
 actuals from Phase 3 classification lines after ledger migration, then compare
 old/new totals before enabling reports.
@@ -107,7 +107,7 @@ old/new totals before enabling reports.
 ## Delivered slices
 
 - 2026-09-02: permission-filtered monthly income/spending/net and expense
-  category projections now read visible posted journals and immutable
+  budget projections now read visible posted journals and immutable
   classification lines. Web and mobile Reports screens consume the shared
   `GET /v1/workspaces/:workspaceId/reports` contract with range selection,
   partial-access indicators, loading, empty, and retryable error states. See
@@ -118,7 +118,7 @@ old/new totals before enabling reports.
   Fixed allocations are applied before recurring percentage guardrails, and
   rollover remains outside the percentage base. See the [budget allocation
   walkthrough](../../reviews/2026-08-31-budget-allocation-walkthrough.md).
-- 2026-08-31: the web dashboard now manages categories/tags, monthly budget
+- 2026-08-31: the web dashboard now manages budget buckets/tags, monthly budget
   constraints, period selection, projection totals, and explicit close using
   the existing scoped core endpoints. See the [web budget planning walkthrough](../../reviews/2026-08-31-web-budget-planning-walkthrough.md).
 
@@ -133,8 +133,8 @@ old/new totals before enabling reports.
 
 ## First-slice evidence
 
-The in-memory core now enforces two-level category trees, archived category
-history, line-level tags, exact classification sums and leaf-category posting.
+The in-memory core now enforces two-level budget trees, archived budget-bucket
+history, line-level tags, exact classification sums and leaf-budget posting.
 It also supports one budget period per workspace/month with fixed and
 percentage allocations, descendant actuals filtered by account visibility,
 remaining totals and explicit close. A pure rollover calculator now covers

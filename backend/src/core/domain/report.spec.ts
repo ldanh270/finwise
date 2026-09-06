@@ -1,12 +1,12 @@
 import { buildReportProjection } from './report';
 import type {
-  CategoryRecord,
+  BudgetRecord,
   ClassificationLineRecord,
   JournalTransactionRecord,
 } from './ledger.types';
 
-const category: CategoryRecord = {
-  id: 'category-food',
+const budget: BudgetRecord = {
+  id: 'budget-food',
   workspaceId: 'workspace-1',
   name: 'Food',
   status: 'active',
@@ -42,7 +42,7 @@ function line(
     id: `line-${transactionId}`,
     workspaceId: 'workspace-1',
     transactionId,
-    categoryId: category.id,
+    budgetId: budget.id,
     amountMinorUnits,
     tagIds: [],
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -50,7 +50,7 @@ function line(
 }
 
 describe('buildReportProjection', () => {
-  it('aggregates posted income, spending and classified categories by month', () => {
+  it('aggregates posted income, spending and budget allocations by month', () => {
     const classifications = new Map<
       string,
       readonly ClassificationLineRecord[]
@@ -62,7 +62,7 @@ describe('buildReportProjection', () => {
         transaction('transfer-1', 'transfer', 500n, '2026-01-15'),
         transaction('voided-1', 'expense', 900n, '2026-01-20', 'voided'),
       ],
-      [category],
+      [budget],
       '2026-01',
       '2026-02',
       { getClassification: (id) => classifications.get(id) ?? [] },
@@ -87,10 +87,10 @@ describe('buildReportProjection', () => {
         netMinorUnits: 0n,
       },
     ]);
-    expect(projection.categories).toEqual([
+    expect(projection.budgets).toEqual([
       {
-        categoryId: category.id,
-        categoryName: 'Food',
+        budgetId: budget.id,
+        budgetName: 'Food',
         incomeMinorUnits: 0n,
         spendingMinorUnits: 300n,
         netMinorUnits: -300n,
@@ -106,9 +106,9 @@ describe('buildReportProjection', () => {
       '2026-02',
       { getClassification: () => [] },
     );
-    expect(projection.categories[0]).toMatchObject({
-      categoryId: null,
-      categoryName: 'Uncategorized',
+    expect(projection.budgets[0]).toMatchObject({
+      budgetId: null,
+      budgetName: 'Unassigned',
       spendingMinorUnits: 250n,
     });
     expect(() =>

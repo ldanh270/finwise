@@ -2,10 +2,10 @@ import { calculateBudgetAllocations } from './budget-allocation';
 
 describe('calculateBudgetAllocations', () => {
   const depth: Record<string, number> = { parent: 0, childA: 1, childB: 1 };
-  const isWithin = (categoryId: string, ancestorId: string): boolean =>
-    categoryId === ancestorId ||
+  const isWithin = (budgetId: string, ancestorId: string): boolean =>
+    budgetId === ancestorId ||
     (ancestorId === 'parent' &&
-      (categoryId === 'childA' || categoryId === 'childB'));
+      (budgetId === 'childA' || budgetId === 'childB'));
 
   it('derives a BY_CHILDREN parent once without double-counting children', () => {
     const allocations = calculateBudgetAllocations(
@@ -13,28 +13,28 @@ describe('calculateBudgetAllocations', () => {
       [
         {
           id: 'parent-budget',
-          categoryId: 'parent',
+          budgetId: 'parent',
           mode: 'BY_CHILDREN',
           fixedMinorUnits: 0n,
           percentageBasisPoints: 0,
         },
         {
           id: 'child-a-budget',
-          categoryId: 'childA',
+          budgetId: 'childA',
           mode: 'BY_CHILDREN',
           fixedMinorUnits: 300_000n,
           percentageBasisPoints: 0,
         },
         {
           id: 'child-b-budget',
-          categoryId: 'childB',
+          budgetId: 'childB',
           mode: 'BY_CHILDREN',
           fixedMinorUnits: 200_000n,
           percentageBasisPoints: 0,
         },
       ],
       isWithin,
-      (categoryId) => depth[categoryId] ?? 0,
+      (budgetId) => depth[budgetId] ?? 0,
     );
 
     expect(allocations).toEqual([
@@ -62,21 +62,21 @@ describe('calculateBudgetAllocations', () => {
       [
         {
           id: 'fixed',
-          categoryId: 'childA',
+          budgetId: 'childA',
           mode: 'BY_CHILDREN',
           fixedMinorUnits: 200_000n,
           percentageBasisPoints: 0,
         },
         {
           id: 'percentage',
-          categoryId: 'childB',
+          budgetId: 'childB',
           mode: 'BY_CHILDREN',
           fixedMinorUnits: 0n,
           percentageBasisPoints: 5000,
         },
       ],
       isWithin,
-      (categoryId) => depth[categoryId] ?? 0,
+      (budgetId) => depth[budgetId] ?? 0,
     );
 
     expect(

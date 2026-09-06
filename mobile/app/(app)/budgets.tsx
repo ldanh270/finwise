@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   BudgetPeriodSummary,
-  CategorySummary,
+  BudgetSummary,
   TagSummary,
 } from "@finwise/api-client";
 import { Text, View } from "react-native";
@@ -26,11 +26,11 @@ import { useWorkspace } from "../../src/app/providers";
 import {
   closeBudgetPeriod,
   createBudgetPeriod,
-  createCategory,
+  createBudget,
   createTag,
   getBudgetOverview,
   getBudgetPeriods,
-  getCategories,
+  listBudgets,
   getTags,
 } from "../../src/features/planning/budget-service";
 import {
@@ -47,9 +47,9 @@ export default function BudgetsRoute() {
     queryFn: () => getBudgetPeriods(api, workspaceId as string),
     enabled: Boolean(workspaceId),
   });
-  const categoriesQuery = useQuery({
-    queryKey: ["categories", workspaceId],
-    queryFn: () => getCategories(api, workspaceId as string),
+  const budgetsQuery = useQuery({
+    queryKey: ["budgets", workspaceId],
+    queryFn: () => listBudgets(api, workspaceId as string),
     enabled: Boolean(workspaceId),
   });
   const tagsQuery = useQuery({
@@ -64,7 +64,7 @@ export default function BudgetsRoute() {
   const [cachedBudget, setCachedBudget] = useState<{
     readonly savedAt: string;
     readonly periods: readonly BudgetPeriodSummary[];
-    readonly categories: readonly CategorySummary[];
+    readonly budgets: readonly BudgetSummary[];
     readonly tags: readonly TagSummary[];
     readonly overviews: readonly BudgetOverviewCache[];
   } | null>(null);
@@ -79,7 +79,7 @@ export default function BudgetsRoute() {
       setCachedBudget({
         savedAt: snapshot.savedAt,
         periods: snapshot.budgetPeriods ?? [],
-        categories: snapshot.categories ?? [],
+        budgets: snapshot.budgets ?? [],
         tags: snapshot.tags ?? [],
         overviews: snapshot.budgetOverviews ?? [],
       });
@@ -89,7 +89,7 @@ export default function BudgetsRoute() {
     };
   }, [cache]);
   const periods = periodsQuery.data ?? cachedBudget?.periods ?? [];
-  const categories = categoriesQuery.data ?? cachedBudget?.categories ?? [];
+  const budgets = budgetsQuery.data ?? cachedBudget?.budgets ?? [];
   const tags = tagsQuery.data ?? cachedBudget?.tags ?? [];
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const month = selectedMonth || periods[0]?.month || "";
@@ -119,7 +119,7 @@ export default function BudgetsRoute() {
     if (!cache) return;
     if (
       periodsQuery.data === undefined &&
-      categoriesQuery.data === undefined &&
+      budgetsQuery.data === undefined &&
       tagsQuery.data === undefined &&
       overviewQuery.data === undefined
     ) {
@@ -127,7 +127,7 @@ export default function BudgetsRoute() {
     }
     void cache.write({
       ...(periodsQuery.data ? { budgetPeriods: periodsQuery.data } : {}),
-      ...(categoriesQuery.data ? { categories: categoriesQuery.data } : {}),
+      ...(budgetsQuery.data ? { budgets: budgetsQuery.data } : {}),
       ...(tagsQuery.data ? { tags: tagsQuery.data } : {}),
       ...(overviewQuery.data && month
         ? { budgetOverviews: [{ month, value: overviewQuery.data }] }
@@ -135,7 +135,7 @@ export default function BudgetsRoute() {
     });
   }, [
     cache,
-    categoriesQuery.data,
+    budgetsQuery.data,
     month,
     overviewQuery.data,
     periodsQuery.data,
@@ -143,9 +143,9 @@ export default function BudgetsRoute() {
   ]);
   const [newMonth, setNewMonth] = useState(todayMonth());
   const [base, setBase] = useState("");
-  const [categoryId, setCategoryId] = useState("");
-  const [categoryName, setCategoryName] = useState("");
-  const [parentCategoryId, setParentCategoryId] = useState("");
+  const [budgetId, setBudgetId] = useState("");
+  const [budgetName, setBudgetName] = useState("");
+  const [parentBudgetId, setParentBudgetId] = useState("");
   const [tagName, setTagName] = useState("");
   const [mode, setMode] = useState<"BY_CHILDREN" | "SHARED_POOL" | "HYBRID">(
     "SHARED_POOL",
@@ -161,10 +161,10 @@ export default function BudgetsRoute() {
       createBudgetPeriod(api, workspaceId as string, {
         month: newMonth.trim(),
         baseMinorUnits: base.trim(),
-        constraints: categoryId
+        constraints: budgetId
           ? [
               {
-                categoryId,
+                budgetId,
                 mode,
                 fixedMinorUnits: fixedMinorUnits.trim() || "0",
                 percentageBasisPoints: Number(percentageBasisPoints),
@@ -181,17 +181,17 @@ export default function BudgetsRoute() {
     },
     onError: (error: Error) => setFeedback(error.message),
   });
-  const createCategoryMutation = useMutation({
+  const createBudgetBucketMutation = useMutation({
     mutationFn: () =>
-      createCategory(api, workspaceId as string, {
-        name: categoryName.trim(),
-        ...(parentCategoryId ? { parentId: parentCategoryId } : {}),
+      createBudget(api, workspaceId as string, {
+        name: budgetName.trim(),
+        ...(parentBudgetId ? { parentId: parentBudgetId } : {}),
       }),
     onSuccess: async () => {
-      setCategoryName("");
-      setParentCategoryId("");
+      setBudgetName("");
+      setParentBudgetId("");
       await queryClient.invalidateQueries({
-        queryKey: ["categories", workspaceId],
+        queryKey: ["budgets", workspaceId],
       });
     },
     onError: (error: Error) => setFeedback(error.message),
@@ -218,7 +218,7 @@ export default function BudgetsRoute() {
     },
     onError: (error: Error) => setFeedback(error.message),
   });
-  function createBudget() {
+  function createMonthlyBudget() {
     if (
       !workspaceId ||
       !/^\d{4}-(0[1-9]|1[0-2])$/.test(newMonth.trim()) ||
@@ -257,35 +257,35 @@ export default function BudgetsRoute() {
               <InlineError message="Showing cached budget plans. Retry when the connection is restored." />
             ) : null}
             <Card>
-              <Header eyebrow="CLASSIFICATION" title="Categories & tags" />
+              <Header eyebrow="PLANNING" title="Budgets & tags" />
               <TextField
-                label="New category"
-                value={categoryName}
-                onChangeText={setCategoryName}
+                label="New budget"
+                value={budgetName}
+                onChangeText={setBudgetName}
                 placeholder="Food"
               />
-              {categories.length ? (
+              {budgets.length ? (
                 <SelectField
                   label="Parent (optional)"
-                  value={parentCategoryId}
-                  onChange={setParentCategoryId}
+                  value={parentBudgetId}
+                  onChange={setParentBudgetId}
                   options={[
-                    { label: "Root category", value: "" },
-                    ...categories
-                      .filter((category) => !category.parentId)
-                      .map((category) => ({
-                        label: category.name,
-                        value: category.id,
+                    { label: "Root budget", value: "" },
+                    ...budgets
+                      .filter((budget) => !budget.parentId)
+                      .map((budget) => ({
+                        label: budget.name,
+                        value: budget.id,
                       })),
                   ]}
                 />
               ) : null}
               <PrimaryButton
-                label="Create category"
+                label="Create budget"
                 disabled={
-                  createCategoryMutation.isPending || !categoryName.trim()
+                  createBudgetBucketMutation.isPending || !budgetName.trim()
                 }
-                onPress={() => createCategoryMutation.mutate()}
+                onPress={() => createBudgetBucketMutation.mutate()}
               />
               <TextField
                 label="New tag"
@@ -299,22 +299,22 @@ export default function BudgetsRoute() {
                 onPress={() => createTagMutation.mutate()}
               />
               <Text style={{ color: colors.muted, fontSize: 12 }}>
-                {categories.length} categories · {tags.length} tags
+                {budgets.length} budgets · {tags.length} tags
               </Text>
-              {categoriesQuery.isError ? (
-                <InlineError message="Categories could not load. Retry before creating a budget constraint." />
+              {budgetsQuery.isError ? (
+                <InlineError message="Budgets could not load. Retry before creating a budget constraint." />
               ) : null}
               {tagsQuery.isError ? (
                 <InlineError message="Tags could not load. Retry before applying classifications." />
               ) : null}
-              {categories.map((category) => (
-                <View key={category.id} style={{ gap: 3 }}>
+              {budgets.map((budget) => (
+                <View key={budget.id} style={{ gap: 3 }}>
                   <Text style={{ color: colors.ink, fontWeight: "700" }}>
-                    {category.parentId ? "↳ " : ""}
-                    {category.name}
+                    {budget.parentId ? "↳ " : ""}
+                    {budget.name}
                   </Text>
                   <Text style={{ color: colors.muted, fontSize: 12 }}>
-                    {category.status}
+                    {budget.status}
                   </Text>
                   <Divider />
                 </View>
@@ -340,21 +340,21 @@ export default function BudgetsRoute() {
                 keyboardType="number-pad"
                 placeholder="5000000"
               />
-              {categories.length ? (
+              {budgets.length ? (
                 <SelectField
-                  label="Optional category pool"
-                  value={categoryId}
-                  onChange={setCategoryId}
+                  label="Optional budget pool"
+                  value={budgetId}
+                  onChange={setBudgetId}
                   options={[
-                    { label: "No category", value: "" },
-                    ...categories.map((category) => ({
-                      label: category.name,
-                      value: category.id,
+                    { label: "No budget", value: "" },
+                    ...budgets.map((budget) => ({
+                      label: budget.name,
+                      value: budget.id,
                     })),
                   ]}
                 />
               ) : null}
-              {categoryId ? (
+              {budgetId ? (
                 <>
                   <SelectField
                     label="Allocation mode"
@@ -397,7 +397,7 @@ export default function BudgetsRoute() {
               <PrimaryButton
                 label={createMutation.isPending ? "Creating…" : "Create budget"}
                 disabled={createMutation.isPending}
-                onPress={createBudget}
+                onPress={createMonthlyBudget}
               />
               {feedback ? <InlineError message={feedback} /> : null}
             </Card>
@@ -437,11 +437,11 @@ export default function BudgetsRoute() {
                     </View>
                     <Divider />
                     {overview.constraints.map((constraint) => (
-                      <View key={constraint.categoryId} style={{ gap: 5 }}>
+                      <View key={constraint.budgetId} style={{ gap: 5 }}>
                         <Text style={{ color: colors.ink, fontWeight: "700" }}>
-                          {categories.find(
-                            (category) => category.id === constraint.categoryId,
-                          )?.name ?? "Category"}
+                          {budgets.find(
+                            (budget) => budget.id === constraint.budgetId,
+                          )?.name ?? "Budget"}
                         </Text>
                         <Text style={{ color: colors.muted, fontSize: 12 }}>
                           {constraint.mode} · {constraint.rolloverMode}

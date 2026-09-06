@@ -1,7 +1,7 @@
 # Finwise Software Requirements Specification (SRS)
 
-Status: Living draft  
-Last updated: 2026-08-26  
+Status: Living draft
+Last updated: 2026-08-26
 Primary audience: product owner, designers, engineers, and coding agents
 
 ## 1. Product vision
@@ -59,7 +59,7 @@ see transactions after confirmation unless a later delegation rule is approved.
 
 - **FR-WS-001** A user can belong to multiple workspaces.
 - **FR-WS-002** A workspace may represent personal finances or shared finances.
-- **FR-WS-003** Transactions, accounts, categories, budgets, reports, bank
+- **FR-WS-003** Transactions, accounts, budgets, reports, bank
   connections, imports, and other financial data are isolated by workspace.
 - **FR-WS-004** Membership in one workspace grants no access to another
   workspace.
@@ -87,17 +87,17 @@ see transactions after confirmation unless a later delegation rule is approved.
 - **FR-TXN-004** A transfer within one workspace must update both source and
   destination atomically.
 - **FR-TXN-005** The system must prevent a transaction from referencing
-  accounts, categories, budgets, or members in another workspace.
-- **FR-TXN-006** A transaction may be split into multiple category lines. The
+  accounts, budgets, or members in another workspace.
+- **FR-TXN-006** A transaction may be split into multiple budget lines. The
   line amounts must sum exactly to the transaction amount, while the account
   balance changes only once by the transaction total.
 - **FR-TXN-007** The MVP supports account reconciliation: comparing Finwise's
   cleared balance with the external real-world balance and recording an
   auditable reconciliation checkpoint.
 
-### 4.4 Categories and soft budgets
+### 4.4 Budgets and soft monthly plans
 
-- **FR-BUD-001** A workspace manages its own income and expense categories.
+- **FR-BUD-001** A workspace manages its own income and expense budgets.
 - **FR-BUD-002** The MVP uses soft budgets. A budget is a spending plan or limit,
   not a separate store of money.
 - **FR-BUD-003** Spending against a budget does not reserve or move money between
@@ -110,9 +110,9 @@ see transactions after confirmation unless a later delegation rule is approved.
   following period. Supported rollover modes are no rollover, positive-only
   rollover, and full-balance rollover including overspending.
 - **FR-TAG-001** The MVP supports workspace-scoped tags on transaction lines.
-  A line has exactly one category and zero or more tags.
+  A line has exactly one budget and zero or more tags.
 - **FR-TAG-002** Tags support create, rename, archive, assignment, filtering,
-  and reporting. Tags do not change balances or consume category budgets.
+  and reporting. Tags do not change balances or consume budget limits.
 
 ### 4.5 Workspace authorization
 
@@ -214,7 +214,7 @@ This section is **Proposed**, not yet confirmed as the final release boundary.
 - custom roles and permissions;
 - cash and bank accounts with opening balances;
 - manual income, expense, and same-workspace transfer;
-- categories and monthly soft budgets;
+- budgets and monthly soft budgets;
 - basic savings goals after their progress method is confirmed;
 - transaction list and monthly overview charts;
 - simple transaction-line tags and tag filters;

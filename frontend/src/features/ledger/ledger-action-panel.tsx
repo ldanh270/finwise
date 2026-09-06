@@ -2,11 +2,16 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { Icon } from "../../components/ui/icons";
-import type { AccountSummary, ApiError } from "../../lib/api/contracts";
+import type {
+  AccountSummary,
+  ApiError,
+  BudgetBucketSummary,
+} from "../../lib/api/contracts";
 import {
   accountOptions,
   createAccount,
   createTransaction,
+  listBudgets,
   postOpeningBalance,
 } from "./ledger-service";
 
@@ -44,6 +49,19 @@ export function LedgerActionPanel({
   const [amountMinorUnits, setAmountMinorUnits] = useState("");
   const [description, setDescription] = useState("");
   const [effectiveDate, setEffectiveDate] = useState(today());
+  const [budgetId, setBudgetId] = useState("");
+  const [budgets, setBudgets] = useState<BudgetBucketSummary[]>([]);
+
+  useEffect(() => {
+    if (!workspaceId || mode !== "transaction") return;
+    let active = true;
+    void listBudgets(workspaceId).then((result) => {
+      if (active && result.ok) setBudgets(result.value);
+    });
+    return () => {
+      active = false;
+    };
+  }, [mode, workspaceId]);
 
   useEffect(() => {
     if (visibleAccounts.some((account) => account.id === accountId)) return;
@@ -80,6 +98,7 @@ export function LedgerActionPanel({
               accountId,
               destinationAccountId:
                 type === "transfer" ? destinationAccountId : undefined,
+              budgetId: type !== "transfer" && budgetId ? budgetId : undefined,
               effectiveDate,
               description: description || undefined,
             });
@@ -188,6 +207,24 @@ export function LedgerActionPanel({
                     .map((account) => (
                       <option value={account.id} key={account.id}>
                         {account.name}
+                      </option>
+                    ))}
+                </select>
+              </label>
+            ) : null}
+            {mode === "transaction" && type !== "transfer" ? (
+              <label>
+                Budget
+                <select
+                  value={budgetId}
+                  onChange={(event) => setBudgetId(event.target.value)}
+                >
+                  <option value="">Unassigned</option>
+                  {budgets
+                    .filter((budget) => budget.status === "active")
+                    .map((budget) => (
+                      <option value={budget.id} key={budget.id}>
+                        {budget.name}
                       </option>
                     ))}
                 </select>

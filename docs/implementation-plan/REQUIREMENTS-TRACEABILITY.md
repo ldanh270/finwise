@@ -13,7 +13,7 @@ their phase is implemented.
 | FR-TXN-001, FR-TXN-002, FR-TXN-003, FR-TXN-004, FR-TXN-005 | 03 | transaction post/list/detail/void | balanced journal, atomic transfer, tenant isolation and audit tests |
 | FR-TXN-006 | 04 | classification lines on transaction commands | split-sum and single-account-delta tests |
 | FR-TXN-007 | 06 | reconciliation sessions/checkpoints | checkpoint and adjustment rebuild tests |
-| FR-BUD-001, FR-BUD-002, FR-BUD-003, FR-BUD-004, FR-BUD-005, FR-BUD-006 | 04 | category, budget and report resources | budget mode, rollover, late-correction and filtered-report tests |
+| FR-BUD-001, FR-BUD-002, FR-BUD-003, FR-BUD-004, FR-BUD-005, FR-BUD-006 | 04 | budget bucket, budget period and report resources | budget mode, rollover, late-correction and filtered-report tests |
 | FR-TAG-001, FR-TAG-002 | 04 | tag and classification-line resources | tag lifecycle and report-filter tests |
 | FR-AUTHZ-001, FR-AUTHZ-002, FR-AUTHZ-003, FR-AUTHZ-003A, FR-AUTHZ-004, FR-AUTHZ-005, FR-AUTHZ-006, FR-AUTHZ-007, FR-AUTHZ-008, FR-AUTHZ-009 | 02 | role, membership, account-scope and access-preview resources | allow-union, owner precedence, scope and `401`/`403` API tests |
 | FR-IMP-001 | 03 | manual transaction commands | manual income/expense/transfer e2e |

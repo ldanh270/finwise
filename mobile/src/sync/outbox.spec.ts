@@ -19,6 +19,7 @@ describe("ManualDraftOutbox", () => {
       accountId: "account-1",
       kind: "expense" as const,
       amount: { currency: "VND" as const, minorUnits: "125000" },
+      budgetId: "budget-1",
       effectiveDate: "2026-08-31",
       description: "Lunch",
     };
@@ -168,6 +169,7 @@ describe("ManualDraftOutbox", () => {
           type: "expense",
           accountId: "account-1",
           amount: { currency: "VND", minorUnits: "125000" },
+          budgetId: "budget-1",
           effectiveDate: "2026-08-31",
           description: "Lunch",
         },

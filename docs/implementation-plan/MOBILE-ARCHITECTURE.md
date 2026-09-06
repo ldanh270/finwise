@@ -352,7 +352,7 @@ Each draft contains:
 
 - local ID and immutable `clientCommandId`;
 - user and workspace partition keys;
-- account/category identifiers and safe display snapshots;
+- account/budget identifiers and safe display snapshots;
 - exact minor-unit amount as a string;
 - accounting date, created/edited time, and timezone context;
 - retry count and typed last-error classification;
@@ -366,7 +366,7 @@ Synchronization:
 3. Nest revalidates IDs, membership, permissions, visibility, date, and amount.
 4. Success links the draft to the server ID and refreshes affected queries.
 5. Removed access or archived resources become `NEEDS_USER_ACTION`; the client
-   never silently substitutes another account/category.
+   never silently substitutes another account/budget.
 6. Queued drafts do not change confirmed balance. UI may show a separate pending
    total.
 

@@ -3,14 +3,14 @@ import type {
   ApiResult,
   BudgetOverviewSummary,
   BudgetPeriodSummary,
-  CategorySummary,
+  BudgetBucketSummary,
   TagSummary,
 } from "../../lib/api/contracts";
 
 const api = createHttpFinwiseApi();
 
 export type PlanningSnapshot = {
-  categories: CategorySummary[];
+  budgets: BudgetBucketSummary[];
   tags: TagSummary[];
   periods: BudgetPeriodSummary[];
   overview: BudgetOverviewSummary | null;
@@ -21,12 +21,12 @@ export async function loadPlanning(
   workspaceId: string,
   selectedMonth?: string,
 ): Promise<ApiResult<PlanningSnapshot>> {
-  const [categories, tags, periods] = await Promise.all([
-    api.getCategories(workspaceId),
+  const [budgets, tags, periods] = await Promise.all([
+    api.getBudgets(workspaceId),
     api.getTags(workspaceId),
     api.getBudgetPeriods(workspaceId),
   ]);
-  if (!categories.ok) return categories;
+  if (!budgets.ok) return budgets;
   if (!tags.ok) return tags;
   if (!periods.ok) return periods;
   const month =
@@ -38,7 +38,7 @@ export async function loadPlanning(
     return {
       ok: true,
       value: {
-        categories: categories.value,
+        budgets: budgets.value,
         tags: tags.value,
         periods: periods.value,
         overview: null,
@@ -51,7 +51,7 @@ export async function loadPlanning(
   return {
     ok: true,
     value: {
-      categories: categories.value,
+      budgets: budgets.value,
       tags: tags.value,
       periods: periods.value,
       overview: overview.value,
@@ -60,11 +60,11 @@ export async function loadPlanning(
   };
 }
 
-export function createCategory(
+export function createBudget(
   workspaceId: string,
   input: { name: string; parentId?: string },
 ) {
-  return api.createCategory(workspaceId, input);
+  return api.createBudget(workspaceId, input);
 }
 
 export function createTag(workspaceId: string, input: { name: string }) {

@@ -22,6 +22,7 @@ export interface ManualDraftCommand {
   readonly accountId: string;
   readonly kind: DraftKind;
   readonly amount: MoneyDto;
+  readonly budgetId?: string;
   readonly effectiveDate: string;
   readonly description?: string;
 }
@@ -286,6 +287,7 @@ function sameCommand(left: OutboxRecord, right: ManualDraftCommand): boolean {
     left.kind === right.kind &&
     left.amount.currency === right.amount.currency &&
     left.amount.minorUnits === right.amount.minorUnits &&
+    left.budgetId === right.budgetId &&
     left.effectiveDate === right.effectiveDate &&
     left.description === right.description
   );

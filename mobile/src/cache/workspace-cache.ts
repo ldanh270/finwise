@@ -3,7 +3,7 @@ import type {
   BalanceViewSummary,
   BudgetOverviewSummary,
   BudgetPeriodSummary,
-  CategorySummary,
+  BudgetSummary,
   OverviewResponse,
   TagSummary,
   TransactionSummary,
@@ -19,7 +19,7 @@ export type WorkspaceCachedReads = {
   readonly transactions?: readonly TransactionSummary[];
   readonly balances?: readonly BalanceViewSummary[];
   readonly budgetPeriods?: readonly BudgetPeriodSummary[];
-  readonly categories?: readonly CategorySummary[];
+  readonly budgets?: readonly BudgetSummary[];
   readonly tags?: readonly TagSummary[];
   readonly budgetOverviews?: readonly BudgetOverviewCache[];
 };

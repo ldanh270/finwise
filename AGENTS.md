@@ -122,7 +122,7 @@ NestJS, HTTP, ORM entities, PostgreSQL, provider SDKs, or frontend types.
   transaction type determines whether money is added or removed.
 - A transfer must atomically debit the source fund and credit the destination
   fund.
-- A transaction must never reference a fund, category, or member from another
+- A transaction must never reference a fund, budget, or member from another
   workspace.
 - Do not hard-delete financial transactions. Void/archive them and keep an
   audit record with actor, timestamp, reason, and relevant before/after data.

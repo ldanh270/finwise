@@ -1,6 +1,6 @@
 # Finwise Requirements and Domain Specification (RDS)
 
-Status: Living draft  
+Status: Living draft
 Last updated: 2026-08-26
 
 This document defines Finwise domain language and business rules. It intentionally
@@ -24,7 +24,7 @@ and auditable balance effects.
 
 ### 1.4 Planning
 
-Owns categories, budget periods, soft budget limits, and budget-versus-actual
+Owns budgets, budget periods, soft budget limits, and budget-versus-actual
 calculation. A budget does not hold money.
 
 ### 1.5 Import and bank sync
@@ -64,7 +64,7 @@ Detailed context alternatives and recommendations are indexed in
 | Account | A place, obligation, or tracked position whose value/balance is measured |
 | Transaction | A confirmed business event that changes the financial ledger |
 | Transfer | One atomic transaction moving value between two accounts in one workspace |
-| Category | The purpose of income or expense; it does not hold money |
+| Budget bucket | The purpose of income or expense; it does not hold money |
 | Tag | A reusable cross-cutting label that may classify a transaction line along multiple dimensions |
 | Soft budget | A periodic target/limit compared with eligible confirmed spending |
 | Imported record | Provider/file data that has not necessarily become a ledger transaction |
@@ -176,7 +176,7 @@ Status: **Confirmed**, except where marked Proposed
 5. Voided transactions do not count toward actual spending.
 6. Remaining budget is `limit - eligible actual spending`; it may be negative.
 7. A budget may warn but does not block spending in the MVP.
-8. **Proposed:** budget scope is one or more expense categories, with optional
+8. **Proposed:** budget scope is one or more expense budgets, with optional
    rollover disabled for the first MVP.
 9. Rollover behavior is configurable per budget with three modes:
    `none`, `positive_only`, and `full_balance`.
@@ -205,33 +205,33 @@ full_balance  => remaining
 overspending. Rollover changes future planning availability; it never moves
 money between financial accounts.
 
-### 6.1 Category and budget relationship
+### 6.1 Budget bucket and budget-period relationship
 
 Status: **Proposed**
 
-Category answers “this spending was for what?” Budget answers “how much does the
-workspace plan to spend for a category during a period?” For the first version,
-the simplest model is a monthly budget plan containing allocations for expense
-categories. A category should contribute to at most one allocation in the same
+Budget bucket answers “this spending was for what?” A budget period answers “how
+much does the workspace plan to spend for a budget bucket during a period?” For
+the first version, the simplest model is a monthly budget plan containing
+allocations for expense budget buckets. A budget bucket should contribute to at most one allocation in the same
 plan so the same spending is not counted twice.
 
-A split transaction has one account-level payment and multiple category lines.
+A split transaction has one account-level payment and multiple budget lines.
 The sum of line amounts must equal the transaction amount. The account balance
 changes once by the full amount; each budget consumes only its matching line.
 
 Example: one 900,000 VND supermarket payment may contain 600,000 VND groceries,
 200,000 VND household supplies, and 100,000 VND personal care. The bank account
-decreases by 900,000 VND once, while three category budgets consume their own
+decreases by 900,000 VND once, while three budget buckets consume their own
 line amounts.
 
 ### 6.2 Proposed nested budget modes
 
-A transaction line is assigned to one leaf category. Its actual amount rolls up
-through every ancestor category for reporting. A parent and child may both show
+A transaction line is assigned to one leaf budget. Its actual amount rolls up
+through every ancestor budget for reporting. A parent and child may both show
 budget constraints, but their planned amounts are not added together as if they
 were separate spending; the child constraint is inside the parent's scope.
 
-A parent category can choose one of three planning modes:
+A parent budget can choose one of three planning modes:
 
 1. `by_children`: each child has its own budget and the parent is a derived
    rollup;
@@ -247,7 +247,7 @@ For a hybrid parent with a 15,000,000 VND base plan:
 Essential spending                         15,000,000
 |- Rent (fixed)                             7,000,000
 |- Food (30% of parent base)                4,500,000
-`- Flexible pool for remaining categories  3,500,000
+`- Flexible pool for remaining budgets  3,500,000
 ```
 
 Percentage rules use the parent's base planned amount, excluding rollover, so a
@@ -268,12 +268,12 @@ cap unless the parent also carries a balance.
 
 ### 6.3 Product research notes
 
-- Monarch documents both traditional category budgeting and a flex bucket for
-  variable categories. Its flex parent is standalone rather than the sum of
+- Monarch documents both traditional bucket budgeting and a flex bucket for
+  variable budgets. Its flex parent is standalone rather than the sum of
   optional child guardrails.
-- Monarch group budgeting lets a category group use a group-level budget instead
+- Monarch group budgeting lets a budget group use a group-level budget instead
   of separate child budgets.
-- YNAB attaches targets to categories and distinguishes adding the full planned
+- YNAB attaches targets to budgets and distinguishes adding the full planned
   amount again from refilling only to a target.
 - Goodbudget distinguishes adding a new period's amount to the prior balance
   from resetting the envelope, and its add behavior carries negative balances.
@@ -343,28 +343,28 @@ search, balances, dashboards, budget actuals, reports, exports, notifications,
 and aggregate totals. A future explicit aggregate-only permission may expose a
 total without details, but this is not MVP behavior.
 
-### 7.2 Category and tag
+### 7.2 budget and tag
 
 Status: **Confirmed**
 
-- Category is the primary budget/report classification. Each transaction line
-  has exactly one category.
+- budget is the primary budget/report classification. Each transaction line
+  has exactly one budget.
 - Tag is optional cross-cutting metadata. A line may have zero or more tags, and
-  the same tag may span unrelated categories and periods.
+  the same tag may span unrelated budgets and periods.
 
-Tags do not change balances and do not drive the MVP category budget. Attach
+Tags do not change balances and do not drive the MVP budget allocation. Attach
 them to transaction lines with a convenience action to apply one tag to every
 line of a transaction.
 
 Examples:
 
 ```text
-Category: Food
+budget: Food
 Tags: business, tax-deductible
 ```
 
 ```text
-Category: Transport
+budget: Transport
 Tags: reimbursable, da-lat-trip-2026
 ```
 
@@ -502,7 +502,7 @@ bank balance decreases and the group expense report increases.
 ### 10.2 Member-paid group expense note
 
 A member personally pays for something that benefited the group. The workspace
-may record an expense note with amount, category, payer, receipt, and whether it
+may record an expense note with amount, budget, payer, receipt, and whether it
 should be reimbursed. Because no money moved through a group-owned account, this
 record does not immediately change group cash/bank balances.
 
@@ -576,7 +576,7 @@ directly are:
 2. Confirm account-policy precedence when role and member exceptions conflict.
 3. Confirm guarded owner transfer and audited bank-custodian takeover.
 4. Confirm nested budget modes, percentage base, rollover ownership, and first
-   category depth.
+   budget depth.
 5. Confirm Group Treasury stops at collection + reimbursement for MVP rather
    than implementing full Splitwise-style settlement.
 6. Confirm when approved claims consume group budget and whether they create a

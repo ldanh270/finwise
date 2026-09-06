@@ -1,13 +1,13 @@
 import type {
   BudgetOverviewSummary,
   BudgetPeriodSummary,
-  CategorySummary,
+  BudgetSummary,
   FinwiseApiClient,
   TagSummary,
 } from "@finwise/api-client";
 
 export type BudgetConstraintInput = {
-  readonly categoryId: string;
+  readonly budgetId: string;
   readonly mode: "BY_CHILDREN" | "SHARED_POOL" | "HYBRID";
   readonly fixedMinorUnits: string;
   readonly percentageBasisPoints?: number;
@@ -21,11 +21,11 @@ export function getBudgetPeriods(
   return api.getBudgetPeriods(workspaceId);
 }
 
-export function getCategories(
+export function listBudgets(
   api: FinwiseApiClient,
   workspaceId: string,
-): Promise<readonly CategorySummary[]> {
-  return api.getCategories(workspaceId);
+): Promise<readonly BudgetSummary[]> {
+  return api.getBudgets(workspaceId);
 }
 
 export function getTags(
@@ -55,12 +55,12 @@ export function createBudgetPeriod(
   return api.createBudgetPeriod(workspaceId, input);
 }
 
-export function createCategory(
+export function createBudget(
   api: FinwiseApiClient,
   workspaceId: string,
   input: { readonly name: string; readonly parentId?: string },
-): Promise<CategorySummary> {
-  return api.createCategory(workspaceId, input);
+): Promise<BudgetSummary> {
+  return api.createBudget(workspaceId, input);
 }
 
 export function createTag(

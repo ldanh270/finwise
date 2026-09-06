@@ -1,6 +1,6 @@
 import type {
   AccountSummary,
-  CategorySummary,
+  BudgetSummary,
   ClassificationLineSummary,
   FinwiseApiClient,
   JournalSourceLinkSummary,
@@ -21,11 +21,11 @@ export function listAccounts(
   return api.getAccounts(workspaceId);
 }
 
-export function listCategories(
+export function listBudgets(
   api: FinwiseApiClient,
   workspaceId: string,
-): Promise<readonly CategorySummary[]> {
-  return api.getCategories(workspaceId);
+): Promise<readonly BudgetSummary[]> {
+  return api.getBudgets(workspaceId);
 }
 
 export function listTags(
@@ -88,7 +88,7 @@ export function classifyTransaction(
   transactionId: string,
   input: {
     readonly lines: readonly {
-      readonly categoryId: string;
+      readonly budgetId: string;
       readonly amountMinorUnits: string;
       readonly tagIds?: readonly string[];
     }[];
@@ -107,6 +107,7 @@ export function replaceTransaction(
     readonly amountMinorUnits: string;
     readonly accountId: string;
     readonly destinationAccountId?: string;
+    readonly budgetId?: string;
     readonly effectiveDate: string;
     readonly description?: string;
   },

@@ -73,9 +73,9 @@ describe("WorkspaceCache", () => {
   it("partitions reads by user and workspace", async () => {
     const storage = new MemoryJsonStorage();
     await new WorkspaceCache("user-1", "workspace-1", storage).write({
-      categories: [
+      budgets: [
         {
-          id: "category-1",
+          id: "budget-1",
           workspaceId: "workspace-1",
           name: "Food",
           status: "active",

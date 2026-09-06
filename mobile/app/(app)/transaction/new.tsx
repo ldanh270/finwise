@@ -21,6 +21,7 @@ import { WorkspaceCache } from "../../../src/cache/workspace-cache";
 import {
   createTransaction,
   listAccounts,
+  listBudgets,
 } from "../../../src/features/ledger/ledger-service";
 import type { ManualTransactionForm } from "../../../src/validation/forms";
 import {
@@ -41,6 +42,11 @@ export default function NewTransactionRoute() {
   const accountsQuery = useQuery({
     queryKey: ["accounts", workspaceId],
     queryFn: () => listAccounts(api, workspaceId as string),
+    enabled: Boolean(workspaceId),
+  });
+  const budgetsQuery = useQuery({
+    queryKey: ["budgets", workspaceId],
+    queryFn: () => listBudgets(api, workspaceId as string),
     enabled: Boolean(workspaceId),
   });
   const [cachedAccounts, setCachedAccounts] = useState<
@@ -120,6 +126,9 @@ export default function NewTransactionRoute() {
           ...(command.input.description
             ? { description: command.input.description }
             : {}),
+          ...(command.input.budgetId
+            ? { budgetId: command.input.budgetId }
+            : {}),
         });
         setFeedback(
           "Saved as an offline draft. It will sync when the connection returns.",
@@ -133,11 +142,19 @@ export default function NewTransactionRoute() {
   const accountOptions = accounts
     .filter((account) => account.status === "active")
     .map((account) => ({ label: account.name, value: account.id }));
+  const budgetOptions = [
+    { label: "Unassigned", value: "" },
+    ...(budgetsQuery.data ?? [])
+      .filter((budget) => budget.status === "active")
+      .map((budget) => ({ label: budget.name, value: budget.id })),
+  ];
+  const [budgetId, setBudgetId] = useState("");
   function submit() {
     const parsed = manualTransactionSchema.safeParse({
       type: kind,
       accountId,
       ...(kind === "transfer" ? { destinationAccountId } : {}),
+      ...(kind !== "transfer" && budgetId ? { budgetId } : {}),
       amountMinorUnits: amount.trim(),
       effectiveDate,
       ...(description.trim() ? { description: description.trim() } : {}),
@@ -227,6 +244,14 @@ export default function NewTransactionRoute() {
                 options={accountOptions.filter(
                   (option) => option.value !== accountId,
                 )}
+              />
+            ) : null}
+            {kind !== "transfer" ? (
+              <SelectField
+                label="Budget (optional)"
+                value={budgetId}
+                onChange={setBudgetId}
+                options={budgetOptions}
               />
             ) : null}
             <TextField

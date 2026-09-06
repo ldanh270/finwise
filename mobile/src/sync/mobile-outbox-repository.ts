@@ -40,6 +40,7 @@ export class MobileOutboxRepository {
               accountId: input.accountId,
               amountMinorUnits: input.amount.minorUnits,
               effectiveDate: input.effectiveDate,
+              ...(input.budgetId ? { budgetId: input.budgetId } : {}),
               ...(input.description ? { description: input.description } : {}),
             },
             idempotencyKey,

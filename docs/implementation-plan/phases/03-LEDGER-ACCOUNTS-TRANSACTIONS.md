@@ -17,7 +17,7 @@ posted event without destroying history.
   decrease. Internally every posted journal balances in VND with two or more
   positive entries, including hidden system accounts.
 - Account types include cash, bank, savings, investment cash, receivable, and
-  liability. System accounts (opening equity, income/expense categories,
+  liability. System accounts (opening equity, income/expense budgets,
   reconciliation, gain/loss) are hidden from normal lists and reports.
 - Opening balance is a dated journal against opening equity; never mutate an
   account balance field as the source of truth.
@@ -122,7 +122,7 @@ income/expense/transfer journals, idempotency replay, transaction listing,
 audit history, void-by-reversal, account archive, reversal/replacement
 correction, journal-based balance rebuild, scoped ledger/cleared/reconciled
 balance views, and visibility-checked journal source links through an
-in-memory adapter. PostgreSQL repositories, split/category lines, durable
+in-memory adapter. PostgreSQL repositories, split/budget lines, durable
 checkpoints, and durable source-link constraints remain before this phase can
 exit. See the [ledger correction walkthrough](../../reviews/2026-08-30-ledger-correction-projection-walkthrough.md),
 [balance views walkthrough](../../reviews/2026-08-31-balance-views-walkthrough.md),

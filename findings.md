@@ -231,7 +231,7 @@
 - IDs are mixed between UUID and unconstrained `varchar`.
 - PostgreSQL `timestamp` is used instead of `timestamptz`.
 - `workspace_id` is duplicated on domain rows but is not enforced together with
-  the referenced fund/category IDs.
+  the referenced fund/budget IDs.
 - Transfer invariants are documented in notes but not enforced with database
   constraints.
 - One `bank_connection` is currently limited to one fund, which does not model

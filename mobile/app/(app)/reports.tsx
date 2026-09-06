@@ -140,24 +140,21 @@ function ReportContent({ report }: { report: ReportsResponse }) {
           : null}
       </Card>
       <Card>
-        <Text style={styles.cardTitle}>Spending by category</Text>
-        {report.categories.length === 0 ? (
+        <Text style={styles.cardTitle}>Spending by budget</Text>
+        {report.budgets.length === 0 ? (
           <Text style={styles.muted}>
-            Classify a transaction to see category movement.
+            Assign a budget to a transaction to see budget movement.
           </Text>
         ) : (
-          report.categories.map((category) => (
-            <View
-              style={styles.row}
-              key={category.categoryId ?? "uncategorized"}
-            >
+          report.budgets.map((budget) => (
+            <View style={styles.row} key={budget.budgetId ?? "unassigned"}>
               <View>
-                <Text style={styles.rowTitle}>{category.name}</Text>
+                <Text style={styles.rowTitle}>{budget.name}</Text>
                 <Text style={styles.muted}>
-                  Net <Money value={category.net} compact />
+                  Net <Money value={budget.net} compact />
                 </Text>
               </View>
-              <Money value={category.spending} compact />
+              <Money value={budget.spending} compact />
             </View>
           ))
         )}

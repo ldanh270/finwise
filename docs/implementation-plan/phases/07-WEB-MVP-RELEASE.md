@@ -19,7 +19,7 @@ repeatable dev → staging → pilot release gate.
 - Financial actions invalidate affected transaction, balance, budget, report,
   group, and reconciliation queries together; no screen may show stale balance
   as a confirmed success.
-- MVP includes auth, personal/shared ledger, categories/tags, budgets, goals,
+- MVP includes auth, personal/shared ledger, budgets/tags, budgets, goals,
   Group Treasury core, CSV/reconciliation, audit, exports, and core reports.
   Bank API, mobile, loans, investments, recurring transactions, multi-currency,
   billing, and peer settlement remain outside the pilot gate.

@@ -254,7 +254,7 @@ describe("shared mobile API client", () => {
     await api.getTransaction("workspace/1", "transaction/1");
     await api.getTransactionClassification("workspace/1", "transaction/1");
     await api.classifyTransaction("workspace/1", "transaction/1", {
-      lines: [{ categoryId: "category/1", amountMinorUnits: "1000" }],
+      lines: [{ budgetId: "budget/1", amountMinorUnits: "1000" }],
     });
     await api.replaceTransaction(
       "workspace/1",

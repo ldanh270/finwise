@@ -1,5 +1,5 @@
 import type {
-  CategoryRecord,
+  BudgetRecord,
   ClassificationLineRecord,
   JournalTransactionRecord,
 } from './ledger.types';
@@ -14,9 +14,9 @@ export interface ReportMonth extends ReportMoney {
   readonly month: string;
 }
 
-export interface ReportCategory extends ReportMoney {
-  readonly categoryId: string | null;
-  readonly categoryName: string;
+export interface ReportBudget extends ReportMoney {
+  readonly budgetId: string | null;
+  readonly budgetName: string;
 }
 
 export interface ReportProjection {
@@ -24,7 +24,7 @@ export interface ReportProjection {
   readonly toMonth: string;
   readonly totals: ReportMoney;
   readonly monthly: readonly ReportMonth[];
-  readonly categories: readonly ReportCategory[];
+  readonly budgets: readonly ReportBudget[];
 }
 
 export interface ReportClassificationReader {
@@ -33,7 +33,7 @@ export interface ReportClassificationReader {
 
 export function buildReportProjection(
   transactions: readonly JournalTransactionRecord[],
-  categories: readonly CategoryRecord[],
+  budgets: readonly BudgetRecord[],
   fromMonth: string,
   toMonth: string,
   classifications: ReportClassificationReader,
@@ -48,10 +48,10 @@ export function buildReportProjection(
   const monthly = new Map<string, ReportMoney>(
     months.map((month) => [month, emptyMoney()]),
   );
-  const categoryNames = new Map(
-    categories.map((category) => [category.id, category.name] as const),
+  const budgetNames = new Map(
+    budgets.map((budget) => [budget.id, budget.name] as const),
   );
-  const categoryTotals = new Map<string | null, ReportMoney>();
+  const budgetTotals = new Map<string | null, ReportMoney>();
 
   for (const transaction of transactions) {
     const month = transaction.effectiveDate.slice(0, 7);
@@ -72,19 +72,15 @@ export function buildReportProjection(
     }
     const lines = classifications.getClassification(transaction.id);
     if (lines.length === 0) {
-      const currentCategory = categoryTotals.get(null) ?? emptyMoney();
-      categoryTotals.set(
-        null,
-        addMoney(currentCategory, transaction.kind, amount),
-      );
+      const currentBudget = budgetTotals.get(null) ?? emptyMoney();
+      budgetTotals.set(null, addMoney(currentBudget, transaction.kind, amount));
       continue;
     }
     for (const line of lines) {
-      const currentCategory =
-        categoryTotals.get(line.categoryId) ?? emptyMoney();
-      categoryTotals.set(
-        line.categoryId,
-        addMoney(currentCategory, transaction.kind, line.amountMinorUnits),
+      const currentBudget = budgetTotals.get(line.budgetId) ?? emptyMoney();
+      budgetTotals.set(
+        line.budgetId,
+        addMoney(currentBudget, transaction.kind, line.amountMinorUnits),
       );
     }
   }
@@ -107,20 +103,20 @@ export function buildReportProjection(
     netMinorUnits: totals.incomeMinorUnits - spendingTotals.spendingMinorUnits,
   };
 
-  const categoryRows = [...categoryTotals.entries()]
-    .map(([categoryId, money]) => ({
-      categoryId,
-      categoryName:
-        categoryId === null
-          ? 'Uncategorized'
-          : (categoryNames.get(categoryId) ?? 'Archived category'),
+  const budgetRows = [...budgetTotals.entries()]
+    .map(([budgetId, money]) => ({
+      budgetId,
+      budgetName:
+        budgetId === null
+          ? 'Unassigned'
+          : (budgetNames.get(budgetId) ?? 'Archived budget'),
       ...toNet(money),
     }))
     .sort((left, right) => {
       if (right.spendingMinorUnits !== left.spendingMinorUnits) {
         return right.spendingMinorUnits > left.spendingMinorUnits ? 1 : -1;
       }
-      return left.categoryName.localeCompare(right.categoryName);
+      return left.budgetName.localeCompare(right.budgetName);
     });
 
   return {
@@ -128,7 +124,7 @@ export function buildReportProjection(
     toMonth,
     totals: combinedTotals,
     monthly: monthlyRows,
-    categories: categoryRows,
+    budgets: budgetRows,
   };
 }
 

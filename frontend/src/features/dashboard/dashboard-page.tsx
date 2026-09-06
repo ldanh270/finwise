@@ -845,7 +845,7 @@ function SpendingPanel({
           </div>
           <strong>No budget plan yet</strong>
           <p>
-            Create a monthly category plan to compare what you intended to spend
+            Create a monthly budget plan to compare what you intended to spend
             with what actually moved.
           </p>
           <button className="text-button" type="button" onClick={onSetupBudget}>
@@ -874,7 +874,7 @@ function BudgetRow({ budget }: { budget: BudgetSummary }) {
   return (
     <div className="budget-row">
       <div className="budget-row-copy">
-        <strong>{budget.categoryName}</strong>
+        <strong>{budget.budgetName}</strong>
         <span>
           {formatMoney(budget.actual)} of {formatMoney(budget.available)}
         </span>
@@ -978,8 +978,7 @@ function TransactionRow({
       <span className="transaction-copy">
         <strong>{transaction.description}</strong>
         <small>
-          {transaction.categoryName ?? "Uncategorized"} ·{" "}
-          {transaction.accountName}
+          {transaction.budgetName ?? "Unassigned"} · {transaction.accountName}
         </small>
       </span>
       <span className="transaction-date">
@@ -1462,7 +1461,7 @@ function ResourceContent({
       <section className="resource-panel">
         <div className="resource-toolbar">
           <span>
-            {items.length} category allocation{items.length === 1 ? "" : "s"}
+            {items.length} budget allocation{items.length === 1 ? "" : "s"}
           </span>
           <span className="resource-hint">
             Soft budget · does not move cash

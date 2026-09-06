@@ -50,7 +50,7 @@ Expo route -> feature screen/hook -> repository
 ```
 
 SQLite commits a draft and outbox row atomically. Sync revalidates account,
-category, membership, visibility, date, and amount on Nest; success links the
+budget, membership, visibility, date, and amount on Nest; success links the
 server transaction and invalidates affected queries. Removed/archived resources
 become `NEEDS_USER_ACTION`; no silent substitution.
 
@@ -109,7 +109,7 @@ or managed runner.
   and [mobile sync walkthrough](../../reviews/2026-08-31-mobile-outbox-sync-walkthrough.md).
 
 - 2026-09-02: Reports now consumes the shared permission-filtered monthly and
-  category projection contract with loading, retry, empty, and partial-access
+  budget projection contract with loading, retry, empty, and partial-access
   states. Physical-device and signed-release verification remain external gates.
 - 2026-09-02: Expo Go smoke testing now has explicit LAN and offline commands;
   the default mobile command continues to target the installed development
@@ -304,7 +304,7 @@ matching description, type, status, date, ID, and exact VND minor-unit amount.
 The filter changes presentation only; server authorization and confirmed
 ledger data remain unchanged. See the [transaction search walkthrough](../../reviews/2026-09-01-mobile-transaction-search-walkthrough.md).
 
-Budget periods, categories, tags, and the selected monthly overview now use the
+Budget periods, budget buckets, tags, and the selected monthly overview now use the
 same user/workspace-partitioned SQLite read cache. When the API is unavailable,
 the mobile budget screen keeps an authorized snapshot visible with an explicit
 stale warning; mutations remain online-only and confirmed balances never come

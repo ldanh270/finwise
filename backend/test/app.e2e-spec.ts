@@ -282,26 +282,26 @@ describe('Finwise API (e2e)', () => {
       })
       .expect(201);
 
-    const categoryResponse = await request(app.getHttpServer())
-      .post(`/v1/workspaces/${workspaceId}/categories`)
+    const budgetResponse = await request(app.getHttpServer())
+      .post(`/v1/workspaces/${workspaceId}/budgets`)
       .set(authHeader)
       .send({ name: 'Journey food' })
       .expect(201);
-    const category = categoryResponse.body as { readonly id: string };
+    const budget = budgetResponse.body as { readonly id: string };
     await request(app.getHttpServer())
       .post(`/v1/workspaces/${workspaceId}/tags`)
       .set(authHeader)
       .send({ name: 'Journey tag' })
       .expect(201);
     await request(app.getHttpServer())
-      .post(`/v1/workspaces/${workspaceId}/budgets`)
+      .post(`/v1/workspaces/${workspaceId}/budget-periods`)
       .set(authHeader)
       .send({
         month: '2026-09',
         baseMinorUnits: '100000',
         constraints: [
           {
-            categoryId: category.id,
+            budgetId: budget.id,
             mode: 'SHARED_POOL',
             fixedMinorUnits: '10000',
             percentageBasisPoints: 0,
@@ -311,7 +311,7 @@ describe('Finwise API (e2e)', () => {
       })
       .expect(201);
     await request(app.getHttpServer())
-      .get(`/v1/workspaces/${workspaceId}/budgets/2026-09`)
+      .get(`/v1/workspaces/${workspaceId}/budget-periods/2026-09`)
       .set(authHeader)
       .expect(200);
 

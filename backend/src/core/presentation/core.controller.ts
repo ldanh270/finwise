@@ -42,30 +42,30 @@ export class CoreController {
     return this.coreService.listMembers(actor, workspaceId);
   }
 
-  @Get('workspaces/:workspaceId/categories')
-  listCategories(
+  @Get('workspaces/:workspaceId/budgets')
+  listBudgets(
     @CurrentActor() actor: AuthenticatedActor,
     @Param('workspaceId') workspaceId: string,
   ) {
-    return this.coreService.listCategories(actor, workspaceId);
+    return this.coreService.listBudgets(actor, workspaceId);
   }
 
-  @Post('workspaces/:workspaceId/categories')
-  createCategory(
+  @Post('workspaces/:workspaceId/budgets')
+  createBudget(
     @CurrentActor() actor: AuthenticatedActor,
     @Param('workspaceId') workspaceId: string,
     @Body() body: unknown,
   ) {
-    return this.coreService.createCategory(actor, workspaceId, body);
+    return this.coreService.createBudget(actor, workspaceId, body);
   }
 
-  @Post('workspaces/:workspaceId/categories/:categoryId/archive')
-  archiveCategory(
+  @Post('workspaces/:workspaceId/budgets/:budgetId/archive')
+  archiveBudget(
     @CurrentActor() actor: AuthenticatedActor,
     @Param('workspaceId') workspaceId: string,
-    @Param('categoryId') categoryId: string,
+    @Param('budgetId') budgetId: string,
   ) {
-    return this.coreService.archiveCategory(actor, workspaceId, categoryId);
+    return this.coreService.archiveBudget(actor, workspaceId, budgetId);
   }
 
   @Get('workspaces/:workspaceId/tags')
@@ -233,7 +233,7 @@ export class CoreController {
     return this.coreService.listAccounts(actor, workspaceId);
   }
 
-  @Get('workspaces/:workspaceId/budgets')
+  @Get('workspaces/:workspaceId/budget-periods')
   listBudgetPeriods(
     @CurrentActor() actor: AuthenticatedActor,
     @Param('workspaceId') workspaceId: string,
@@ -241,7 +241,7 @@ export class CoreController {
     return this.coreService.listBudgetPeriods(actor, workspaceId);
   }
 
-  @Post('workspaces/:workspaceId/budgets')
+  @Post('workspaces/:workspaceId/budget-periods')
   createBudgetPeriod(
     @CurrentActor() actor: AuthenticatedActor,
     @Param('workspaceId') workspaceId: string,
@@ -250,7 +250,7 @@ export class CoreController {
     return this.coreService.createBudgetPeriod(actor, workspaceId, body);
   }
 
-  @Get('workspaces/:workspaceId/budgets/:month')
+  @Get('workspaces/:workspaceId/budget-periods/:month')
   getBudgetOverview(
     @CurrentActor() actor: AuthenticatedActor,
     @Param('workspaceId') workspaceId: string,
@@ -259,7 +259,7 @@ export class CoreController {
     return this.coreService.getBudgetOverview(actor, workspaceId, month);
   }
 
-  @Post('workspaces/:workspaceId/budgets/:month/close')
+  @Post('workspaces/:workspaceId/budget-periods/:month/close')
   closeBudgetPeriod(
     @CurrentActor() actor: AuthenticatedActor,
     @Param('workspaceId') workspaceId: string,

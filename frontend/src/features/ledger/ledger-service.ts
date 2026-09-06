@@ -1,7 +1,17 @@
 import { createHttpFinwiseApi } from "../../lib/api/client";
-import type { ApiResult, AccountSummary } from "../../lib/api/contracts";
+import type {
+  AccountSummary,
+  ApiResult,
+  BudgetBucketSummary,
+} from "../../lib/api/contracts";
 
 const api = createHttpFinwiseApi();
+
+export function listBudgets(
+  workspaceId: string,
+): Promise<ApiResult<BudgetBucketSummary[]>> {
+  return api.getBudgets(workspaceId);
+}
 
 export function createAccount(
   workspaceId: string,
@@ -34,6 +44,7 @@ export function createTransaction(
     amountMinorUnits: string;
     accountId: string;
     destinationAccountId?: string;
+    budgetId?: string;
     effectiveDate: string;
     description?: string;
   },

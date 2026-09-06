@@ -57,6 +57,39 @@ describe('CoreService', () => {
     ).toBe('-1250000');
   });
 
+  it('allocates a quick-add expense to the selected budget', () => {
+    const service = createService();
+    const workspaceId = service.bootstrap(actor).suggestedWorkspaceId;
+    const account = service.createAccount(actor, workspaceId, {
+      name: 'Bank',
+      kind: 'bank',
+    });
+    const budget = service.createBudget(actor, workspaceId, {
+      name: 'Food',
+    });
+
+    const posted = service.createTransaction(
+      actor,
+      workspaceId,
+      {
+        type: 'expense',
+        accountId: account.id,
+        budgetId: budget.id,
+        amount: { currency: 'VND', minorUnits: '125000' },
+        effectiveDate: '2026-09-05',
+        description: 'Lunch',
+      },
+      'cmd-budgeted-expense',
+    );
+
+    expect(service.getClassification(actor, workspaceId, posted.id)).toEqual([
+      expect.objectContaining({
+        budgetId: budget.id,
+        amount: { currency: 'VND', minorUnits: '125000' },
+      }),
+    ]);
+  });
+
   it('exports only policy-visible transactions as escaped CSV', () => {
     const service = createService();
     const workspaceId = service.bootstrap(actor).suggestedWorkspaceId;
@@ -159,14 +192,14 @@ describe('CoreService', () => {
     expect(overview.recentTransactions).toHaveLength(2);
   });
 
-  it('builds permission-filtered report periods and category totals', () => {
+  it('builds permission-filtered report periods and budget totals', () => {
     const service = createService();
     const workspaceId = service.bootstrap(actor).suggestedWorkspaceId;
     const account = service.createAccount(actor, workspaceId, {
       name: 'Report cash',
       kind: 'cash',
     });
-    const category = service.createCategory(actor, workspaceId, {
+    const budget = service.createBudget(actor, workspaceId, {
       name: 'Food',
     });
     const expense = service.createTransaction(
@@ -183,7 +216,7 @@ describe('CoreService', () => {
     service.classifyTransaction(actor, workspaceId, expense.id, {
       lines: [
         {
-          categoryId: category.id,
+          budgetId: budget.id,
           amountMinorUnits: '300000',
           tagIds: [],
         },
@@ -207,8 +240,8 @@ describe('CoreService', () => {
       spending: { currency: 'VND', minorUnits: '300000' },
       net: { currency: 'VND', minorUnits: '700000' },
     });
-    expect(report.categories[0]).toEqual({
-      categoryId: category.id,
+    expect(report.budgets[0]).toEqual({
+      budgetId: budget.id,
       name: 'Food',
       income: { currency: 'VND', minorUnits: '0' },
       spending: { currency: 'VND', minorUnits: '300000' },
@@ -518,20 +551,20 @@ describe('CoreService', () => {
     ).toThrow('Archived accounts cannot receive postings.');
   });
 
-  it('enforces two-level categories and exact immutable transaction splits', () => {
+  it('enforces two-level budgets and exact immutable transaction splits', () => {
     const service = createService();
     const workspaceId = service.bootstrap(actor).suggestedWorkspaceId;
-    const parent = service.createCategory(actor, workspaceId, { name: 'Food' });
-    const groceries = service.createCategory(actor, workspaceId, {
+    const parent = service.createBudget(actor, workspaceId, { name: 'Food' });
+    const groceries = service.createBudget(actor, workspaceId, {
       name: 'Groceries',
       parentId: parent.id,
     });
-    const dining = service.createCategory(actor, workspaceId, {
+    const dining = service.createBudget(actor, workspaceId, {
       name: 'Dining',
       parentId: parent.id,
     });
     expect(() =>
-      service.createCategory(actor, workspaceId, {
+      service.createBudget(actor, workspaceId, {
         name: 'Too deep',
         parentId: groceries.id,
       }),
@@ -554,7 +587,7 @@ describe('CoreService', () => {
     );
     expect(() =>
       service.classifyTransaction(actor, workspaceId, transaction.id, {
-        lines: [{ categoryId: groceries.id, amountMinorUnits: '499999' }],
+        lines: [{ budgetId: groceries.id, amountMinorUnits: '499999' }],
       }),
     ).toThrow('equal the transaction amount');
     const lines = service.classifyTransaction(
@@ -564,11 +597,11 @@ describe('CoreService', () => {
       {
         lines: [
           {
-            categoryId: groceries.id,
+            budgetId: groceries.id,
             amountMinorUnits: '300000',
             tagIds: [tag.id],
           },
-          { categoryId: dining.id, amountMinorUnits: '200000' },
+          { budgetId: dining.id, amountMinorUnits: '200000' },
         ],
       },
     );
@@ -584,10 +617,10 @@ describe('CoreService', () => {
   it('calculates a descendant budget from classified expense lines', () => {
     const service = createService();
     const workspaceId = service.bootstrap(actor).suggestedWorkspaceId;
-    const parent = service.createCategory(actor, workspaceId, {
+    const parent = service.createBudget(actor, workspaceId, {
       name: 'Living',
     });
-    const child = service.createCategory(actor, workspaceId, {
+    const child = service.createBudget(actor, workspaceId, {
       name: 'Rent',
       parentId: parent.id,
     });
@@ -607,14 +640,14 @@ describe('CoreService', () => {
       'budget-expense',
     );
     service.classifyTransaction(actor, workspaceId, transaction.id, {
-      lines: [{ categoryId: child.id, amountMinorUnits: '500000' }],
+      lines: [{ budgetId: child.id, amountMinorUnits: '500000' }],
     });
     service.createBudgetPeriod(actor, workspaceId, {
       month: '2026-08',
       baseMinorUnits: '1000000',
       constraints: [
         {
-          categoryId: parent.id,
+          budgetId: parent.id,
           mode: 'BY_CHILDREN',
           fixedMinorUnits: '800000',
           rolloverMode: 'NONE',
@@ -634,14 +667,14 @@ describe('CoreService', () => {
   it('does not add nested budget constraints twice in period totals', () => {
     const service = createService();
     const workspaceId = service.bootstrap(actor).suggestedWorkspaceId;
-    const parent = service.createCategory(actor, workspaceId, {
+    const parent = service.createBudget(actor, workspaceId, {
       name: 'Essentials',
     });
-    const rent = service.createCategory(actor, workspaceId, {
+    const rent = service.createBudget(actor, workspaceId, {
       name: 'Rent',
       parentId: parent.id,
     });
-    const food = service.createCategory(actor, workspaceId, {
+    const food = service.createBudget(actor, workspaceId, {
       name: 'Food',
       parentId: parent.id,
     });
@@ -662,8 +695,8 @@ describe('CoreService', () => {
     );
     service.classifyTransaction(actor, workspaceId, transaction.id, {
       lines: [
-        { categoryId: rent.id, amountMinorUnits: '300000' },
-        { categoryId: food.id, amountMinorUnits: '200000' },
+        { budgetId: rent.id, amountMinorUnits: '300000' },
+        { budgetId: food.id, amountMinorUnits: '200000' },
       ],
     });
     service.createBudgetPeriod(actor, workspaceId, {
@@ -671,19 +704,19 @@ describe('CoreService', () => {
       baseMinorUnits: '1000000',
       constraints: [
         {
-          categoryId: parent.id,
+          budgetId: parent.id,
           mode: 'BY_CHILDREN',
           fixedMinorUnits: '0',
           rolloverMode: 'NONE',
         },
         {
-          categoryId: rent.id,
+          budgetId: rent.id,
           mode: 'BY_CHILDREN',
           fixedMinorUnits: '400000',
           rolloverMode: 'NONE',
         },
         {
-          categoryId: food.id,
+          budgetId: food.id,
           mode: 'BY_CHILDREN',
           fixedMinorUnits: '300000',
           rolloverMode: 'NONE',

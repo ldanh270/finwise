@@ -31,7 +31,7 @@ investments are expansion work.
 - Use an internally balanced immutable journal. VND money is bigint minor units
   in code and PostgreSQL; JSON serializes minor units as strings. Correct a
   posted event with reversal plus replacement, never an update or delete.
-- Categories are at most two levels. Budgets are soft monthly plans supporting
+- budgets are at most two levels. Budgets are soft monthly plans supporting
   `BY_CHILDREN`, `SHARED_POOL`, and `HYBRID`; rollover belongs to the funded cap
   owner. Reports exclude hidden data without leaking it through totals.
 - Group MVP covers participants, collections, submissions/verification,
@@ -91,7 +91,7 @@ states, and explicit loading/empty/error/partial behavior.
 Phase gates cover domain invariants, use cases with in-memory ports, persistence
 constraints, API authorization/contracts, web/mobile behavior, security, and
 rebuild/recovery evidence. A phase is not complete when an applicable test
-category has no named case in its phase document.
+budget has no named case in its phase document.
 
 ## Required preflight
 

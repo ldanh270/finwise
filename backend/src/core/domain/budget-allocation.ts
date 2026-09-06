@@ -2,7 +2,7 @@ import { BudgetConstraintMode } from './ledger.types';
 
 export interface BudgetAllocationConstraint {
   readonly id: string;
-  readonly categoryId: string;
+  readonly budgetId: string;
   readonly mode: BudgetConstraintMode;
   readonly fixedMinorUnits: bigint;
   readonly percentageBasisPoints: number;
@@ -15,14 +15,14 @@ export interface BudgetAllocation {
 }
 
 /**
- * Calculates recurring allocations without double-counting nested category
+ * Calculates recurring allocations without double-counting nested budget
  * constraints. Rollover is deliberately excluded from the percentage base.
  */
 export function calculateBudgetAllocations(
   baseMinorUnits: bigint,
   constraints: readonly BudgetAllocationConstraint[],
-  isWithin: (categoryId: string, ancestorId: string) => boolean,
-  categoryDepth: (categoryId: string) => number,
+  isWithin: (budgetId: string, ancestorId: string) => boolean,
+  budgetDepth: (budgetId: string) => number,
 ): readonly BudgetAllocation[] {
   if (baseMinorUnits <= 0n) {
     throw new Error('budget base must be positive');
@@ -30,12 +30,8 @@ export function calculateBudgetAllocations(
   const fixedRootTotal = constraints
     .filter(
       (constraint) =>
-        findParentConstraint(
-          constraint,
-          constraints,
-          isWithin,
-          categoryDepth,
-        ) === undefined,
+        findParentConstraint(constraint, constraints, isWithin, budgetDepth) ===
+        undefined,
     )
     .reduce((total, constraint) => total + constraint.fixedMinorUnits, 0n);
   const percentageBase = baseMinorUnits - fixedRootTotal;
@@ -54,13 +50,13 @@ export function calculateBudgetAllocations(
     const children = constraints.filter(
       (candidate) =>
         candidate.id !== constraint.id &&
-        isWithin(candidate.categoryId, constraint.categoryId),
+        isWithin(candidate.budgetId, constraint.budgetId),
     );
     const parent = findParentConstraint(
       constraint,
       constraints,
       isWithin,
-      categoryDepth,
+      budgetDepth,
     );
     const isRoot = parent === undefined;
     const childDirectTotal = children.reduce(
@@ -85,17 +81,16 @@ export function calculateBudgetAllocations(
 function findParentConstraint(
   constraint: BudgetAllocationConstraint,
   constraints: readonly BudgetAllocationConstraint[],
-  isWithin: (categoryId: string, ancestorId: string) => boolean,
-  categoryDepth: (categoryId: string) => number,
+  isWithin: (budgetId: string, ancestorId: string) => boolean,
+  budgetDepth: (budgetId: string) => number,
 ): BudgetAllocationConstraint | undefined {
   return constraints
     .filter(
       (candidate) =>
         candidate.id !== constraint.id &&
-        isWithin(constraint.categoryId, candidate.categoryId),
+        isWithin(constraint.budgetId, candidate.budgetId),
     )
     .sort(
-      (left, right) =>
-        categoryDepth(right.categoryId) - categoryDepth(left.categoryId),
+      (left, right) => budgetDepth(right.budgetId) - budgetDepth(left.budgetId),
     )[0];
 }

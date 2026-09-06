@@ -75,7 +75,7 @@ export type ClassificationLineSummary = {
   readonly id: string;
   readonly workspaceId: string;
   readonly transactionId: string;
-  readonly categoryId: string;
+  readonly budgetId: string;
   readonly amount: MoneyDto;
   readonly tagIds: readonly string[];
 };
@@ -125,7 +125,7 @@ export type OverviewResponse = {
     readonly status: "posted" | "voided";
     readonly amount: MoneyDto;
     readonly accountName: string;
-    readonly categoryName: string | null;
+    readonly budgetName: string | null;
   }[];
   readonly budgets: readonly unknown[];
   readonly totals: {
@@ -144,8 +144,8 @@ export type ReportMoneySummary = {
 export type ReportMonthSummary = ReportMoneySummary & {
   readonly month: string;
 };
-export type ReportCategorySummary = ReportMoneySummary & {
-  readonly categoryId: string | null;
+export type ReportBudgetSummary = ReportMoneySummary & {
+  readonly budgetId: string | null;
   readonly name: string;
 };
 export type ReportsResponse = {
@@ -154,7 +154,7 @@ export type ReportsResponse = {
   readonly toMonth: string;
   readonly totals: ReportMoneySummary;
   readonly monthly: readonly ReportMonthSummary[];
-  readonly categories: readonly ReportCategorySummary[];
+  readonly budgets: readonly ReportBudgetSummary[];
   readonly hasPartialAccess: boolean;
 };
 export type LoanScheduleItemSummary = {
@@ -224,7 +224,7 @@ export type InvestmentValuationSummary = {
   readonly marketPriceMinorUnits: string;
   readonly projection: InvestmentPositionSummary;
 };
-export type CategorySummary = {
+export type BudgetSummary = {
   readonly id: string;
   readonly workspaceId: string;
   readonly name: string;
@@ -246,7 +246,7 @@ export type BudgetPeriodSummary = {
   readonly status: string;
 };
 export type BudgetConstraintSummary = {
-  readonly categoryId: string;
+  readonly budgetId: string;
   readonly mode: string;
   readonly fixed: MoneyDto;
   readonly percentageBasisPoints: number;
@@ -613,7 +613,7 @@ export class FinwiseApiClient {
     transactionId: string,
     input: {
       readonly lines: readonly {
-        readonly categoryId: string;
+        readonly budgetId: string;
         readonly amountMinorUnits: string;
         readonly tagIds?: readonly string[];
       }[];
@@ -667,15 +667,15 @@ export class FinwiseApiClient {
   getBalanceViews(workspaceId: string): Promise<readonly BalanceViewSummary[]> {
     return this.get(`/v1/workspaces/${segment(workspaceId)}/balances`);
   }
-  getCategories(workspaceId: string): Promise<readonly CategorySummary[]> {
-    return this.get(`/v1/workspaces/${segment(workspaceId)}/categories`);
+  getBudgets(workspaceId: string): Promise<readonly BudgetSummary[]> {
+    return this.get(`/v1/workspaces/${segment(workspaceId)}/budgets`);
   }
-  createCategory(
+  createBudget(
     workspaceId: string,
     input: { name: string; parentId?: string },
-  ): Promise<CategorySummary> {
+  ): Promise<BudgetSummary> {
     return this.post(
-      `/v1/workspaces/${segment(workspaceId)}/categories`,
+      `/v1/workspaces/${segment(workspaceId)}/budgets`,
       input,
     );
   }
@@ -688,14 +688,14 @@ export class FinwiseApiClient {
   getBudgetPeriods(
     workspaceId: string,
   ): Promise<readonly BudgetPeriodSummary[]> {
-    return this.get(`/v1/workspaces/${segment(workspaceId)}/budgets`);
+    return this.get(`/v1/workspaces/${segment(workspaceId)}/budget-periods`);
   }
   getBudgetOverview(
     workspaceId: string,
     month: string,
   ): Promise<BudgetOverviewSummary> {
     return this.get(
-      `/v1/workspaces/${segment(workspaceId)}/budgets/${segment(month)}`,
+      `/v1/workspaces/${segment(workspaceId)}/budget-periods/${segment(month)}`,
     );
   }
   createBudgetPeriod(
@@ -704,7 +704,7 @@ export class FinwiseApiClient {
       month: string;
       baseMinorUnits: string;
       constraints: readonly {
-        categoryId: string;
+        budgetId: string;
         mode: "BY_CHILDREN" | "SHARED_POOL" | "HYBRID";
         fixedMinorUnits: string;
         percentageBasisPoints?: number;
@@ -712,14 +712,17 @@ export class FinwiseApiClient {
       }[];
     },
   ): Promise<BudgetPeriodSummary> {
-    return this.post(`/v1/workspaces/${segment(workspaceId)}/budgets`, input);
+    return this.post(
+      `/v1/workspaces/${segment(workspaceId)}/budget-periods`,
+      input,
+    );
   }
   closeBudgetPeriod(
     workspaceId: string,
     month: string,
   ): Promise<BudgetPeriodSummary> {
     return this.post(
-      `/v1/workspaces/${segment(workspaceId)}/budgets/${segment(month)}/close`,
+      `/v1/workspaces/${segment(workspaceId)}/budget-periods/${segment(month)}/close`,
       undefined,
     );
   }
@@ -756,6 +759,7 @@ export class FinwiseApiClient {
       amountMinorUnits: string;
       accountId: string;
       destinationAccountId?: string;
+      budgetId?: string;
       effectiveDate: string;
       description?: string;
     },

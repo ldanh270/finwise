@@ -12,7 +12,7 @@ import {
   WorkspaceKind,
   WorkspaceInvitationRecord,
   OwnerTransferRecord,
-  CategoryRecord,
+  BudgetRecord,
   TagRecord,
   ClassificationLineRecord,
   BudgetConstraintMode,
@@ -73,7 +73,7 @@ export interface BalanceViewsResponse {
   };
 }
 
-export interface CategoryResponse {
+export interface BudgetResponse {
   readonly id: string;
   readonly workspaceId: string;
   readonly name: string;
@@ -92,7 +92,7 @@ export interface ClassificationLineResponse {
   readonly id: string;
   readonly workspaceId: string;
   readonly transactionId: string;
-  readonly categoryId: string;
+  readonly budgetId: string;
   readonly amount: {
     readonly currency: typeof MVP_CURRENCY;
     readonly minorUnits: string;
@@ -117,7 +117,7 @@ export interface BudgetPeriodResponse {
 
 export interface BudgetOverviewResponse extends BudgetPeriodResponse {
   readonly constraints: readonly {
-    readonly categoryId: string;
+    readonly budgetId: string;
     readonly mode: string;
     readonly fixed: {
       readonly currency: typeof MVP_CURRENCY;
@@ -217,7 +217,7 @@ export interface OverviewResponse {
       readonly minorUnits: string;
     };
     readonly accountName: string;
-    readonly categoryName: string | null;
+    readonly budgetName: string | null;
   }[];
   readonly budgets: readonly [];
   readonly totals: {
@@ -256,8 +256,8 @@ export interface ReportsResponse {
     readonly spending: ReturnType<typeof moneyDto>;
     readonly net: ReturnType<typeof moneyDto>;
   }[];
-  readonly categories: readonly {
-    readonly categoryId: string | null;
+  readonly budgets: readonly {
+    readonly budgetId: string | null;
     readonly name: string;
     readonly income: ReturnType<typeof moneyDto>;
     readonly spending: ReturnType<typeof moneyDto>;
@@ -373,7 +373,7 @@ export class CoreService {
             minorUnits: transaction.amountMinorUnits.toString(),
           },
           accountName: visibleAccount?.name ?? 'Visible account',
-          categoryName: null,
+          budgetName: null,
         };
       }),
       budgets: [],
@@ -407,7 +407,7 @@ export class CoreService {
     }
     const projection = buildReportProjection(
       this.store.listTransactions(workspaceId, actor),
-      this.store.listCategories(workspaceId, actor),
+      this.store.listBudgets(workspaceId, actor),
       startMonth,
       endMonth,
       {
@@ -424,9 +424,9 @@ export class CoreService {
         month: row.month,
         ...reportMoneyResponse(row),
       })),
-      categories: projection.categories.map((row) => ({
-        categoryId: row.categoryId,
-        name: row.categoryName,
+      budgets: projection.budgets.map((row) => ({
+        budgetId: row.budgetId,
+        name: row.budgetName,
         ...reportMoneyResponse(row),
       })),
       hasPartialAccess: this.store.hasPartialAccountAccess(workspaceId, actor),
@@ -662,14 +662,14 @@ export class CoreService {
     return { member: this.memberResponse(member), accounts };
   }
 
-  createCategory(
+  createBudget(
     actor: AuthenticatedActor,
     workspaceId: string,
     body: unknown,
-  ): CategoryResponse {
+  ): BudgetResponse {
     const input = bodyRecord(body);
-    return this.categoryResponse(
-      this.store.createCategory(
+    return this.budgetResponse(
+      this.store.createBudget(
         workspaceId,
         actor,
         requiredString(input, 'name', 1, 100),
@@ -678,22 +678,22 @@ export class CoreService {
     );
   }
 
-  listCategories(
+  listBudgets(
     actor: AuthenticatedActor,
     workspaceId: string,
-  ): readonly CategoryResponse[] {
+  ): readonly BudgetResponse[] {
     return this.store
-      .listCategories(workspaceId, actor)
-      .map((category) => this.categoryResponse(category));
+      .listBudgets(workspaceId, actor)
+      .map((budget) => this.budgetResponse(budget));
   }
 
-  archiveCategory(
+  archiveBudget(
     actor: AuthenticatedActor,
     workspaceId: string,
-    categoryId: string,
-  ): CategoryResponse {
-    return this.categoryResponse(
-      this.store.archiveCategory(workspaceId, actor, categoryId),
+    budgetId: string,
+  ): BudgetResponse {
+    return this.budgetResponse(
+      this.store.archiveBudget(workspaceId, actor, budgetId),
     );
   }
 
@@ -945,6 +945,13 @@ export class CoreService {
       'accountId',
       'sourceAccountId',
     );
+    const budgetId = readOptionalString(input, 'budgetId', 100);
+    if (type === 'transfer' && budgetId !== undefined) {
+      throw FinwiseError.validation(
+        'budgetId is only valid for income or expense transactions.',
+        { field: 'budgetId' },
+      );
+    }
     const destinationAccountId = readOptionalAccountId(
       input,
       'destinationAccountId',
@@ -956,6 +963,7 @@ export class CoreService {
         effectiveDate,
         sourceAccountId,
         destinationAccountId,
+        budgetId,
         description: readOptionalString(input, 'description', 500),
       }),
     );
@@ -978,7 +986,7 @@ export class CoreService {
       destinationAccountId,
       money,
     );
-    const transaction = this.store.postJournal({
+    const journalDraft: JournalDraft = {
       workspaceId,
       kind: type,
       amountMinorUnits: money.minorUnits,
@@ -986,7 +994,17 @@ export class CoreService {
       description: readOptionalString(input, 'description', 500),
       createdByMemberId: memberId,
       entries,
-    });
+    };
+    const transaction =
+      budgetId === undefined
+        ? this.store.postJournal(journalDraft)
+        : this.store.postJournalWithClassification(journalDraft, [
+            {
+              budgetId,
+              amountMinorUnits: money.minorUnits,
+              tagIds: [],
+            },
+          ]);
     const response = this.transactionResponse(transaction);
     this.store.saveIdempotency(
       workspaceId,
@@ -1361,13 +1379,13 @@ export class CoreService {
     };
   }
 
-  private categoryResponse(category: CategoryRecord): CategoryResponse {
+  private budgetResponse(budget: BudgetRecord): BudgetResponse {
     return {
-      id: category.id,
-      workspaceId: category.workspaceId,
-      name: category.name,
-      parentId: category.parentId,
-      status: category.status,
+      id: budget.id,
+      workspaceId: budget.workspaceId,
+      name: budget.name,
+      parentId: budget.parentId,
+      status: budget.status,
     };
   }
 
@@ -1387,7 +1405,7 @@ export class CoreService {
       id: line.id,
       workspaceId: line.workspaceId,
       transactionId: line.transactionId,
-      categoryId: line.categoryId,
+      budgetId: line.budgetId,
       amount: moneyDto(line.amountMinorUnits),
       tagIds: line.tagIds,
     };
@@ -1412,7 +1430,7 @@ export class CoreService {
     return {
       ...this.budgetPeriodResponse(overview.period),
       constraints: overview.constraints.map((projection) => ({
-        categoryId: projection.constraint.categoryId,
+        budgetId: projection.constraint.budgetId,
         mode: projection.constraint.mode,
         fixed: moneyDto(projection.constraint.fixedMinorUnits),
         percentageBasisPoints: projection.constraint.percentageBasisPoints,
@@ -1565,7 +1583,7 @@ function parseClassificationLines(
       );
     }
     return {
-      categoryId: requiredString(input, 'categoryId', 1, 100),
+      budgetId: requiredString(input, 'budgetId', 1, 100),
       amountMinorUnits: requiredPositiveMinorUnits(
         input.amountMinorUnits,
         `lines[${index}].amountMinorUnits`,
@@ -1579,7 +1597,7 @@ function parseClassificationLines(
 }
 
 function parseBudgetConstraints(value: unknown): readonly {
-  readonly categoryId: string;
+  readonly budgetId: string;
   readonly mode: BudgetConstraintMode;
   readonly fixedMinorUnits: bigint;
   readonly percentageBasisPoints: number;
@@ -1623,7 +1641,7 @@ function parseBudgetConstraints(value: unknown): readonly {
       );
     }
     return {
-      categoryId: requiredString(input, 'categoryId', 1, 100),
+      budgetId: requiredString(input, 'budgetId', 1, 100),
       mode,
       fixedMinorUnits: nonNegativeMinorUnits(
         input.fixedMinorUnits ?? '0',

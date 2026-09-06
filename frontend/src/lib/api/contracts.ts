@@ -51,18 +51,18 @@ export type TransactionSummary = {
   status: TransactionStatus;
   amount: MoneyDto;
   accountName: string;
-  categoryName: string | null;
+  budgetName: string | null;
 };
 
 export type BudgetSummary = {
   id: string;
-  categoryName: string;
+  budgetName: string;
   available: MoneyDto;
   actual: MoneyDto;
   remaining: MoneyDto;
 };
 
-export type CategorySummary = {
+export type BudgetBucketSummary = {
   id: string;
   workspaceId: string;
   name: string;
@@ -87,7 +87,7 @@ export type BudgetPeriodSummary = {
 };
 
 export type BudgetConstraintSummary = {
-  categoryId: string;
+  budgetId: string;
   mode: string;
   fixed: MoneyDto;
   percentageBasisPoints: number;
@@ -212,8 +212,8 @@ export type ReportMonthSummary = ReportMoneySummary & {
   month: string;
 };
 
-export type ReportCategorySummary = ReportMoneySummary & {
-  categoryId: string | null;
+export type ReportBudgetSummary = ReportMoneySummary & {
+  budgetId: string | null;
   name: string;
 };
 
@@ -223,7 +223,7 @@ export type ReportsResponse = {
   toMonth: string;
   totals: ReportMoneySummary;
   monthly: ReportMonthSummary[];
-  categories: ReportCategorySummary[];
+  budgets: ReportBudgetSummary[];
   hasPartialAccess?: boolean;
 };
 
@@ -402,7 +402,9 @@ export function isReconciliationSummary(
   );
 }
 
-export function isCategorySummary(value: unknown): value is CategorySummary {
+export function isBudgetBucketSummary(
+  value: unknown,
+): value is BudgetBucketSummary {
   return (
     isRecord(value) &&
     typeof value.id === "string" &&
@@ -457,7 +459,7 @@ function isBudgetConstraintSummary(
 ): value is BudgetConstraintSummary {
   return (
     isRecord(value) &&
-    typeof value.categoryId === "string" &&
+    typeof value.budgetId === "string" &&
     typeof value.mode === "string" &&
     isMoneyDto(value.fixed) &&
     typeof value.percentageBasisPoints === "number" &&
@@ -525,12 +527,10 @@ function isReportMonthSummary(value: unknown): value is ReportMonthSummary {
   );
 }
 
-function isReportCategorySummary(
-  value: unknown,
-): value is ReportCategorySummary {
+function isReportBudgetSummary(value: unknown): value is ReportBudgetSummary {
   return (
     isRecord(value) &&
-    (typeof value.categoryId === "string" || value.categoryId === null) &&
+    (typeof value.budgetId === "string" || value.budgetId === null) &&
     typeof value.name === "string" &&
     isReportMoneySummary(value)
   );
@@ -545,8 +545,8 @@ export function isReportsResponse(value: unknown): value is ReportsResponse {
     isReportMoneySummary(value.totals) &&
     Array.isArray(value.monthly) &&
     value.monthly.every(isReportMonthSummary) &&
-    Array.isArray(value.categories) &&
-    value.categories.every(isReportCategorySummary)
+    Array.isArray(value.budgets) &&
+    value.budgets.every(isReportBudgetSummary)
   );
 }
 

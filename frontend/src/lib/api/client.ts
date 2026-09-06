@@ -7,7 +7,7 @@ import {
   type GroupCollectionSummary,
   type GroupDirectExpense,
   type GroupReportSummary,
-  type CategorySummary,
+  type BudgetBucketSummary,
   type TagSummary,
   type BudgetPeriodSummary,
   type BudgetOverviewSummary,
@@ -24,7 +24,7 @@ import {
   isGroupCollectionSummary,
   isGroupDirectExpense,
   isGroupReportSummary,
-  isCategorySummary,
+  isBudgetBucketSummary,
   isTagSummary,
   isBudgetPeriodSummary,
   isBudgetOverviewSummary,
@@ -45,11 +45,11 @@ export type FinwiseApi = {
     workspaceId: string,
     options?: { fromMonth?: string; toMonth?: string },
   ): Promise<ApiResult<ReportsResponse>>;
-  getCategories(workspaceId: string): Promise<ApiResult<CategorySummary[]>>;
-  createCategory(
+  getBudgets(workspaceId: string): Promise<ApiResult<BudgetBucketSummary[]>>;
+  createBudget(
     workspaceId: string,
     input: { name: string; parentId?: string },
-  ): Promise<ApiResult<CategorySummary>>;
+  ): Promise<ApiResult<BudgetBucketSummary>>;
   getTags(workspaceId: string): Promise<ApiResult<TagSummary[]>>;
   createTag(
     workspaceId: string,
@@ -68,7 +68,7 @@ export type FinwiseApi = {
       month: string;
       baseMinorUnits: string;
       constraints: readonly {
-        categoryId: string;
+        budgetId: string;
         mode: "BY_CHILDREN" | "SHARED_POOL" | "HYBRID";
         fixedMinorUnits: string;
         percentageBasisPoints?: number;
@@ -125,6 +125,7 @@ export type FinwiseApi = {
       amountMinorUnits: string;
       accountId: string;
       destinationAccountId?: string;
+      budgetId?: string;
       effectiveDate: string;
       description?: string;
     },
@@ -417,18 +418,18 @@ export function createHttpFinwiseApi(
         isReportsResponse,
       );
     },
-    getCategories: (workspaceId) =>
+    getBudgets: (workspaceId) =>
       getJson(
-        `/v1/workspaces/${encodeURIComponent(workspaceId)}/categories`,
-        (value): value is CategorySummary[] =>
-          Array.isArray(value) && value.every(isCategorySummary),
+        `/v1/workspaces/${encodeURIComponent(workspaceId)}/budgets`,
+        (value): value is BudgetBucketSummary[] =>
+          Array.isArray(value) && value.every(isBudgetBucketSummary),
       ),
-    createCategory: (workspaceId, input) =>
+    createBudget: (workspaceId, input) =>
       postJson(
-        `/v1/workspaces/${encodeURIComponent(workspaceId)}/categories`,
+        `/v1/workspaces/${encodeURIComponent(workspaceId)}/budgets`,
         input,
         undefined,
-        isCategorySummary,
+        isBudgetBucketSummary,
       ),
     getTags: (workspaceId) =>
       getJson(
@@ -445,25 +446,25 @@ export function createHttpFinwiseApi(
       ),
     getBudgetPeriods: (workspaceId) =>
       getJson(
-        `/v1/workspaces/${encodeURIComponent(workspaceId)}/budgets`,
+        `/v1/workspaces/${encodeURIComponent(workspaceId)}/budget-periods`,
         (value): value is BudgetPeriodSummary[] =>
           Array.isArray(value) && value.every(isBudgetPeriodSummary),
       ),
     getBudgetOverview: (workspaceId, month) =>
       getJson(
-        `/v1/workspaces/${encodeURIComponent(workspaceId)}/budgets/${encodeURIComponent(month)}`,
+        `/v1/workspaces/${encodeURIComponent(workspaceId)}/budget-periods/${encodeURIComponent(month)}`,
         isBudgetOverviewSummary,
       ),
     createBudgetPeriod: (workspaceId, input) =>
       postJson(
-        `/v1/workspaces/${encodeURIComponent(workspaceId)}/budgets`,
+        `/v1/workspaces/${encodeURIComponent(workspaceId)}/budget-periods`,
         input,
         undefined,
         isBudgetPeriodSummary,
       ),
     closeBudgetPeriod: (workspaceId, month) =>
       postJson(
-        `/v1/workspaces/${encodeURIComponent(workspaceId)}/budgets/${encodeURIComponent(month)}/close`,
+        `/v1/workspaces/${encodeURIComponent(workspaceId)}/budget-periods/${encodeURIComponent(month)}/close`,
         undefined,
         undefined,
         isBudgetPeriodSummary,

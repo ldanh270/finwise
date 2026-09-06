@@ -7,14 +7,14 @@ import {
 describe("transaction detail rules", () => {
   it("requires positive classification lines to exactly match the ledger amount", () => {
     const lines = [
-      { categoryId: "food", amountMinorUnits: "12500", tagIds: [] },
-      { categoryId: "home", amountMinorUnits: "7500", tagIds: [] },
+      { budgetId: "food", amountMinorUnits: "12500", tagIds: [] },
+      { budgetId: "home", amountMinorUnits: "7500", tagIds: [] },
     ];
     expect(classificationError(lines, "20000")).toBeNull();
     expect(classificationError(lines, "19000")).toContain("19000");
     expect(
       classificationError(
-        [{ categoryId: "food", amountMinorUnits: "0", tagIds: [] }],
+        [{ budgetId: "food", amountMinorUnits: "0", tagIds: [] }],
         "0",
       ),
     ).toContain("positive");
@@ -23,13 +23,13 @@ describe("transaction detail rules", () => {
   it("rejects malformed or incomplete classification lines", () => {
     expect(
       classificationError(
-        [{ categoryId: "", amountMinorUnits: "100", tagIds: [] }],
+        [{ budgetId: "", amountMinorUnits: "100", tagIds: [] }],
         "100",
       ),
-    ).toContain("category");
+    ).toContain("budget");
     expect(
       classificationError(
-        [{ categoryId: "food", amountMinorUnits: "10.5", tagIds: [] }],
+        [{ budgetId: "food", amountMinorUnits: "10.5", tagIds: [] }],
         "10",
       ),
     ).toContain("whole VND");

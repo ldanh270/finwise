@@ -49,7 +49,7 @@ Disadvantages:
 Each posted journal has two or more positive entries. Entry direction determines
 the debit/credit effect; entries balance in one currency. Finwise exposes
 friendly “income / expense / transfer” forms and generates balanced entries
-behind them. Categories may map to hidden income/expense ledger accounts while
+behind them. budgets may map to hidden income/expense ledger accounts while
 user-facing financial accounts represent assets/liabilities.
 
 Advantages:
@@ -81,7 +81,7 @@ Represents a workspace-owned financial position:
 
 - asset: cash, bank, savings, investment cash, loan receivable;
 - liability: borrowed money or other payable;
-- hidden system account: opening equity, income category, expense category,
+- hidden system account: opening equity, income budget, expense budget,
   reconciliation adjustment, realized gain/loss.
 
 An account has lifecycle state, normal balance behavior, VND currency, access
@@ -97,7 +97,7 @@ Recommended fields/concepts:
 - `recorded_at` and `posted_at` (when Finwise learned/committed it);
 - description, payee/counterparty snapshot, creator/poster;
 - immutable entries after posting;
-- category/tag allocation lines for the user-facing purpose;
+- budget/tag allocation lines for the user-facing purpose;
 - optional source links to import, group claim, loan payment, or investment
   trade;
 - reversal relationship and audit metadata.
@@ -111,7 +111,7 @@ direction carries the effect.
 ### ClassificationLine
 
 A transaction can be divided into lines whose amounts sum exactly to the
-user-facing transaction total. Each line has one category and zero or more tags.
+user-facing transaction total. Each line has one budget and zero or more tags.
 Classification controls budget/report meaning and must not repeat the account
 balance effect.
 
@@ -120,8 +120,8 @@ balance effect.
 | Business event | Balanced financial effect | Budget/classification effect |
 | --- | --- | --- |
 | Opening bank balance | Increase bank; offset opening-equity account | None |
-| Salary received | Increase bank; offset income-category account | Income category line |
-| Food paid from cash | Decrease cash; offset expense-category account | Expense category line |
+| Salary received | Increase bank; offset income-budget account | Income budget line |
+| Food paid from cash | Decrease cash; offset expense-budget account | Expense budget line |
 | Same-workspace transfer | Decrease source; increase destination | Excluded from income/expense and budget |
 | Lend another person money | Decrease bank; increase loan receivable | Not ordinary expense |
 | Receive loan repayment | Increase bank; decrease receivable for principal; interest to income | Only interest/fee is income |
@@ -171,7 +171,7 @@ replacement. Never hard-delete a posted journal.
 These require explicit links rather than generic negative expenses.
 
 - Refund: new receipt transaction linked to the original expense; default
-  classification reduces spending in the same category at the refund's
+  classification reduces spending in the same budget at the refund's
   effective date.
 - Chargeback/reversal: linked compensating transaction; preserve the provider's
   reason and lifecycle.

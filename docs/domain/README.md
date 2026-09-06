@@ -39,7 +39,7 @@ events; they must not import one another's persistence models.
 | Identity | Login identity, credentials/provider subject, user lifecycle | Workspace roles or financial access | Supplies `UserId` to Workspace |
 | Workspace & Access | Workspace, membership, invitations, roles, permissions, account-access policies | Authentication secrets or financial balances | Upstream policy provider for every workspace context |
 | Ledger & Transactions | Financial accounts, immutable posted journals, entries, reversals, balance checkpoints | Raw imports, budgets, loan schedules, market prices | Source of truth for money balances |
-| Classification & Planning | Categories, tags, budget plans/periods, goals | Account balances or bank data | Consumes posted ledger classification data |
+| Classification & Planning | Budget buckets, tags, budget plans/periods, goals | Account balances or bank data | Consumes posted ledger allocation data |
 | Ingestion & Reconciliation | Bank connections, file imports, normalized records, matching, inbox review, statement checkpoints | Posted financial history after confirmation | Creates or matches ledger transactions through a port |
 | Group Treasury | Participants, collections, obligations, submissions, claims, reimbursements | General peer-to-peer debt optimization | Requests ledger posting when group money really moves |
 | Lending | Loan contracts, schedule versions, due items, allocation rules | Assuming a due item was paid | Posts confirmed disbursement/repayment components to Ledger |
@@ -86,4 +86,3 @@ events; they must not import one another's persistence models.
 | Loan schedule item vs repayment | Schedule item is expected; repayment is an actual confirmed event |
 | Investment valuation vs income | Valuation estimates current worth; only realized proceeds/income produce appropriate financial postings |
 | Permission vs entitlement | Permission answers who may act in a workspace; entitlement answers whether the subscription includes the capability |
-

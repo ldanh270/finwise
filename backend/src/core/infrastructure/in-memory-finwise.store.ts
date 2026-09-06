@@ -7,7 +7,7 @@ import {
   AccountVisibilityMode,
   BudgetConstraintRecord,
   BudgetPeriodRecord,
-  CategoryRecord,
+  BudgetRecord,
   ClassificationLineRecord,
   TagRecord,
   ExternalIdentityRecord,
@@ -85,7 +85,7 @@ export class InMemoryFinwiseStore implements CoreStorePort {
     WorkspaceInvitationRecord
   >();
   private readonly ownerTransfers = new Map<string, OwnerTransferRecord>();
-  private readonly categories = new Map<string, CategoryRecord>();
+  private readonly budgets = new Map<string, BudgetRecord>();
   private readonly tags = new Map<string, TagRecord>();
   private readonly classifications = new Map<
     string,
@@ -1039,41 +1039,38 @@ export class InMemoryFinwiseStore implements CoreStorePort {
     }));
   }
 
-  createCategory(
+  createBudget(
     workspaceId: string,
     actor: AuthenticatedActor,
     name: string,
     parentId?: string,
-  ): CategoryRecord {
+  ): BudgetRecord {
     const member = this.requireMemberByUser(workspaceId, actor.userId, false);
-    this.requirePermission(member, PERMISSIONS.categoryManage);
-    const normalizedName = normalizeLabel(name, 'Category');
-    let parent: CategoryRecord | undefined;
+    this.requirePermission(member, PERMISSIONS.budgetManage);
+    const normalizedName = normalizeLabel(name, 'Budget');
+    let parent: BudgetRecord | undefined;
     if (parentId !== undefined) {
-      parent = this.requireCategory(workspaceId, parentId);
+      parent = this.requireBudget(workspaceId, parentId);
       if (parent.status !== 'active') {
         throw FinwiseError.businessState(
-          'Archived categories cannot receive children.',
+          'Archived budgets cannot receive children.',
         );
       }
       if (parent.parentId !== undefined) {
-        throw FinwiseError.validation(
-          'Categories may have at most two levels.',
-        );
+        throw FinwiseError.validation('Budgets may have at most two levels.');
       }
     }
-    const duplicate = [...this.categories.values()].some(
-      (category) =>
-        category.workspaceId === workspaceId &&
-        category.status === 'active' &&
-        category.parentId === parent?.id &&
-        category.name.toLocaleLowerCase() ===
-          normalizedName.toLocaleLowerCase(),
+    const duplicate = [...this.budgets.values()].some(
+      (budget) =>
+        budget.workspaceId === workspaceId &&
+        budget.status === 'active' &&
+        budget.parentId === parent?.id &&
+        budget.name.toLocaleLowerCase() === normalizedName.toLocaleLowerCase(),
     );
     if (duplicate) {
-      throw FinwiseError.conflict('A category with this name already exists.');
+      throw FinwiseError.conflict('A budget with this name already exists.');
     }
-    const category: CategoryRecord = {
+    const budget: BudgetRecord = {
       id: randomUUID(),
       workspaceId,
       name: normalizedName,
@@ -1081,43 +1078,43 @@ export class InMemoryFinwiseStore implements CoreStorePort {
       status: 'active',
       createdAt: new Date(),
     };
-    this.categories.set(category.id, category);
-    return category;
+    this.budgets.set(budget.id, budget);
+    return budget;
   }
 
-  listCategories(
+  listBudgets(
     workspaceId: string,
     actor: AuthenticatedActor,
-  ): readonly CategoryRecord[] {
+  ): readonly BudgetRecord[] {
     const member = this.requireMemberByUser(workspaceId, actor.userId, false);
-    this.requirePermission(member, PERMISSIONS.categoryRead);
-    return [...this.categories.values()]
-      .filter((category) => category.workspaceId === workspaceId)
+    this.requirePermission(member, PERMISSIONS.budgetRead);
+    return [...this.budgets.values()]
+      .filter((budget) => budget.workspaceId === workspaceId)
       .sort((left, right) => left.name.localeCompare(right.name));
   }
 
-  archiveCategory(
+  archiveBudget(
     workspaceId: string,
     actor: AuthenticatedActor,
-    categoryId: string,
-  ): CategoryRecord {
+    budgetId: string,
+  ): BudgetRecord {
     const member = this.requireMemberByUser(workspaceId, actor.userId, false);
-    this.requirePermission(member, PERMISSIONS.categoryManage);
-    const category = this.requireCategory(workspaceId, categoryId);
-    if (category.status === 'archived') {
-      throw FinwiseError.businessState('Category is already archived.');
+    this.requirePermission(member, PERMISSIONS.budgetManage);
+    const budget = this.requireBudget(workspaceId, budgetId);
+    if (budget.status === 'archived') {
+      throw FinwiseError.businessState('Budget is already archived.');
     }
-    const hasActiveChildren = [...this.categories.values()].some(
+    const hasActiveChildren = [...this.budgets.values()].some(
       (candidate) =>
-        candidate.parentId === category.id && candidate.status === 'active',
+        candidate.parentId === budget.id && candidate.status === 'active',
     );
     if (hasActiveChildren) {
       throw FinwiseError.conflict(
-        'Archive child categories before archiving their parent.',
+        'Archive child budgets before archiving their parent.',
       );
     }
-    category.status = 'archived';
-    return category;
+    budget.status = 'archived';
+    return budget;
   }
 
   createTag(
@@ -1126,7 +1123,7 @@ export class InMemoryFinwiseStore implements CoreStorePort {
     name: string,
   ): TagRecord {
     const member = this.requireMemberByUser(workspaceId, actor.userId, false);
-    this.requirePermission(member, PERMISSIONS.categoryManage);
+    this.requirePermission(member, PERMISSIONS.budgetManage);
     const normalizedName = normalizeLabel(name, 'Tag');
     const duplicate = [...this.tags.values()].some(
       (tag) =>
@@ -1153,7 +1150,7 @@ export class InMemoryFinwiseStore implements CoreStorePort {
     actor: AuthenticatedActor,
   ): readonly TagRecord[] {
     const member = this.requireMemberByUser(workspaceId, actor.userId, false);
-    this.requirePermission(member, PERMISSIONS.categoryRead);
+    this.requirePermission(member, PERMISSIONS.budgetRead);
     return [...this.tags.values()]
       .filter((tag) => tag.workspaceId === workspaceId)
       .sort((left, right) => left.name.localeCompare(right.name));
@@ -1184,6 +1181,63 @@ export class InMemoryFinwiseStore implements CoreStorePort {
       );
     }
     let total = 0n;
+    const records = this.buildClassificationRecords(
+      workspaceId,
+      transactionId,
+      transaction.amountMinorUnits,
+      lines,
+    );
+    total = records.reduce((sum, record) => sum + record.amountMinorUnits, 0n);
+    if (total !== transaction.amountMinorUnits) {
+      throw FinwiseError.validation(
+        'Classification line amounts must equal the transaction amount.',
+      );
+    }
+    this.classifications.set(transactionId, records);
+    return records;
+  }
+
+  postJournalWithClassification(
+    draft: JournalDraft,
+    lines: readonly ClassificationLineDraft[],
+  ): JournalTransactionRecord {
+    const transaction = this.postJournal(draft);
+    try {
+      const records = this.buildClassificationRecords(
+        draft.workspaceId,
+        transaction.id,
+        transaction.amountMinorUnits,
+        lines,
+      );
+      this.classifications.set(transaction.id, records);
+      return transaction;
+    } catch (error: unknown) {
+      this.reversePostedJournal(transaction);
+      throw error;
+    }
+  }
+
+  getClassification(
+    workspaceId: string,
+    actor: AuthenticatedActor,
+    transactionId: string,
+  ): readonly ClassificationLineRecord[] {
+    this.getTransaction(workspaceId, transactionId, actor);
+    return this.classifications.get(transactionId) ?? [];
+  }
+
+  private buildClassificationRecords(
+    workspaceId: string,
+    transactionId: string,
+    transactionAmountMinorUnits: bigint,
+    lines: readonly ClassificationLineDraft[],
+  ): readonly ClassificationLineRecord[] {
+    if (lines.length === 0 || lines.length > 50) {
+      throw FinwiseError.validation(
+        'Classification must contain between 1 and 50 lines.',
+      );
+    }
+    let total = 0n;
     const records: ClassificationLineRecord[] = [];
     for (const line of lines) {
       if (line.amountMinorUnits <= 0n) {
@@ -1191,15 +1245,15 @@ export class InMemoryFinwiseStore implements CoreStorePort {
           'Classification line amounts must be positive.',
         );
       }
-      const category = this.requireCategory(workspaceId, line.categoryId);
-      if (category.status !== 'active') {
+      const budget = this.requireBudget(workspaceId, line.budgetId);
+      if (budget.status !== 'active') {
         throw FinwiseError.businessState(
-          'Archived categories cannot classify new transactions.',
+          'Archived budgets cannot classify new transactions.',
         );
       }
-      if (this.categoryHasActiveChildren(category.id)) {
+      if (this.budgetHasActiveChildren(budget.id)) {
         throw FinwiseError.validation(
-          'Post to a leaf category or create an Other child category.',
+          'Allocate to a leaf budget or create an Other child budget.',
         );
       }
       const uniqueTagIds = [...new Set(line.tagIds)];
@@ -1218,28 +1272,34 @@ export class InMemoryFinwiseStore implements CoreStorePort {
         id: randomUUID(),
         workspaceId,
         transactionId,
-        categoryId: category.id,
+        budgetId: budget.id,
         amountMinorUnits: line.amountMinorUnits,
         tagIds: uniqueTagIds,
         createdAt: new Date(),
       });
     }
-    if (total !== transaction.amountMinorUnits) {
+    if (total !== transactionAmountMinorUnits) {
       throw FinwiseError.validation(
         'Classification line amounts must equal the transaction amount.',
       );
     }
-    this.classifications.set(transactionId, records);
     return records;
   }
 
-  getClassification(
-    workspaceId: string,
-    actor: AuthenticatedActor,
-    transactionId: string,
-  ): readonly ClassificationLineRecord[] {
-    this.getTransaction(workspaceId, transactionId, actor);
-    return this.classifications.get(transactionId) ?? [];
+  private reversePostedJournal(transaction: JournalTransactionRecord): void {
+    for (const entry of transaction.entries) {
+      const account = this.accounts.get(entry.accountId);
+      if (!account) continue;
+      const delta =
+        entry.direction === 'increase'
+          ? entry.amountMinorUnits
+          : -entry.amountMinorUnits;
+      account.balanceMinorUnits -= delta;
+    }
+    this.transactions.delete(transaction.id);
+    for (const [auditId, audit] of this.audits.entries()) {
+      if (audit.transactionId === transaction.id) this.audits.delete(auditId);
+    }
   }
 
   createBudgetPeriod(
@@ -1269,20 +1329,20 @@ export class InMemoryFinwiseStore implements CoreStorePort {
         'A budget period cannot exceed 100 constraints.',
       );
     }
-    const categoryIds = new Set<string>();
+    const budgetIds = new Set<string>();
     let fixedTotal = 0n;
     let percentageTotal = 0;
     for (const constraint of constraints) {
-      if (categoryIds.has(constraint.categoryId)) {
+      if (budgetIds.has(constraint.budgetId)) {
         throw FinwiseError.conflict(
-          'A category may only have one budget constraint per period.',
+          'A budget may only have one constraint per period.',
         );
       }
-      categoryIds.add(constraint.categoryId);
-      const category = this.requireCategory(workspaceId, constraint.categoryId);
-      if (category.status !== 'active') {
+      budgetIds.add(constraint.budgetId);
+      const budget = this.requireBudget(workspaceId, constraint.budgetId);
+      if (budget.status !== 'active') {
         throw FinwiseError.businessState(
-          'Archived categories cannot be budgeted.',
+          'Archived budgets cannot be budgeted.',
         );
       }
       if (constraint.fixedMinorUnits < 0n) {
@@ -1329,7 +1389,7 @@ export class InMemoryFinwiseStore implements CoreStorePort {
       const record: BudgetConstraintRecord = {
         id: randomUUID(),
         budgetPeriodId: period.id,
-        categoryId: constraint.categoryId,
+        budgetId: constraint.budgetId,
         mode: constraint.mode,
         fixedMinorUnits: constraint.fixedMinorUnits,
         percentageBasisPoints: constraint.percentageBasisPoints,
@@ -1376,8 +1436,8 @@ export class InMemoryFinwiseStore implements CoreStorePort {
     const allocations = calculateBudgetAllocations(
       period.baseMinorUnits,
       constraints,
-      (categoryId, ancestorId) => this.isCategoryWithin(categoryId, ancestorId),
-      (categoryId) => this.categoryDepth(categoryId),
+      (budgetId, ancestorId) => this.isBudgetWithin(budgetId, ancestorId),
+      (budgetId) => this.budgetDepth(budgetId),
     );
     const allocationById = new Map(
       allocations.map((allocation) => [allocation.constraintId, allocation]),
@@ -1399,7 +1459,7 @@ export class InMemoryFinwiseStore implements CoreStorePort {
           continue;
         }
         for (const line of lines) {
-          if (this.isCategoryWithin(line.categoryId, constraint.categoryId)) {
+          if (this.isBudgetWithin(line.budgetId, constraint.budgetId)) {
             actual += line.amountMinorUnits;
           }
         }
@@ -1597,40 +1657,37 @@ export class InMemoryFinwiseStore implements CoreStorePort {
     return role;
   }
 
-  private requireCategory(
-    workspaceId: string,
-    categoryId: string,
-  ): CategoryRecord {
-    const category = this.categories.get(categoryId);
-    if (!category || category.workspaceId !== workspaceId) {
-      throw FinwiseError.notFound('Category');
+  private requireBudget(workspaceId: string, budgetId: string): BudgetRecord {
+    const budget = this.budgets.get(budgetId);
+    if (!budget || budget.workspaceId !== workspaceId) {
+      throw FinwiseError.notFound('Budget');
     }
-    return category;
+    return budget;
   }
 
-  private categoryHasActiveChildren(categoryId: string): boolean {
-    return [...this.categories.values()].some(
+  private budgetHasActiveChildren(budgetId: string): boolean {
+    return [...this.budgets.values()].some(
       (candidate) =>
-        candidate.parentId === categoryId && candidate.status === 'active',
+        candidate.parentId === budgetId && candidate.status === 'active',
     );
   }
 
-  private isCategoryWithin(categoryId: string, ancestorId: string): boolean {
-    let current = this.categories.get(categoryId);
+  private isBudgetWithin(budgetId: string, ancestorId: string): boolean {
+    let current = this.budgets.get(budgetId);
     while (current) {
       if (current.id === ancestorId) return true;
       if (!current.parentId) return false;
-      current = this.categories.get(current.parentId);
+      current = this.budgets.get(current.parentId);
     }
     return false;
   }
 
-  private categoryDepth(categoryId: string): number {
+  private budgetDepth(budgetId: string): number {
     let depth = 0;
-    let current = this.categories.get(categoryId);
+    let current = this.budgets.get(budgetId);
     while (current?.parentId) {
       depth += 1;
-      current = this.categories.get(current.parentId);
+      current = this.budgets.get(current.parentId);
     }
     return depth;
   }

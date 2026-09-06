@@ -1,6 +1,6 @@
 # Classification, budgeting, and savings-goal domain
 
-Status: Proposed, except category/tag/soft-budget/rollover requirements already Confirmed  
+Status: Proposed, except budget/tag/soft-budget/rollover requirements already Confirmed
 Last updated: 2026-08-26
 
 ## 1. Business purpose
@@ -9,11 +9,11 @@ Classification explains **why** money moved. Budgeting compares eligible actual
 spending with a plan. Goals track intended progress toward a future target.
 None of these concepts is a financial account balance.
 
-## 2. Category, tag, and workspace distinction
+## 2. Budget bucket, tag, and workspace distinction
 
 | Concept | Cardinality/use | Changes balance? | Consumes budget? |
 | --- | --- | --- | --- |
-| Category | Exactly one per income/expense classification line; primary purpose such as Housing/Rent | No | Expense category may |
+| Budget bucket | Exactly one per income/expense classification line; primary purpose such as Housing/Rent | No | Expense budget may |
 | Tag | Zero to many per line; cross-cutting lens such as `vacation-2026` or `tax-deductible` | No | Not in MVP |
 | Workspace | Separate ownership, members, accounts, permissions, and reports | Contains ledger | Has its own budgets |
 | Goal | Target amount/date and progress rule | No by itself | No by itself |
@@ -22,9 +22,9 @@ Do not add Project now. Use a tag for an event/campaign that only needs filterin
 and reporting. Create a workspace when the activity needs its own shared money,
 participants, permissions, accounts, and treasury governance.
 
-## 3. Category hierarchy alternatives
+## 3. budget hierarchy alternatives
 
-### Flat category list
+### Flat budget list
 
 - Pros: simplest transaction entry and reporting.
 - Cons: cannot express Housing -> Rent/Utilities or Essential -> Food/Rent.
@@ -38,17 +38,17 @@ participants, permissions, accounts, and treasury governance.
 ### Shallow tree with stable historical IDs
 
 **Recommendation:** support parent + child, initially maximum two levels. The
-parent gives a reporting roll-up; the child is the normal posting category.
+parent gives a reporting roll-up; the child is the normal posting budget.
 Allow posting directly to a parent only when it has no active children, or use a
 visible `Other` child. Archive instead of delete. Renaming changes the label,
-while reports retain the stable category ID.
+while reports retain the stable budget ID.
 
 Parent and child can each have budget constraints, but calculation rules must
 avoid counting the same planned money twice.
 
 ## 4. Budget scope alternatives
 
-### One budget per category per month
+### One budget constraint per budget bucket per month
 
 - Pros: simple and understandable.
 - Cons: no nested/flexible pool; yearly or custom periods require redesign.
@@ -59,15 +59,15 @@ avoid counting the same planned money twice.
 - Cons: conflicts with confirmed soft-budget semantics; creates confusion with
   accounts and transfers.
 
-### Budget plan with category constraints
+### Budget plan with budget constraints
 
 A `BudgetPlan` defines period cadence and policy. A period contains constraints
-for category nodes. Money remains in accounts; actual is derived from eligible
+for budget nodes. Money remains in accounts; actual is derived from eligible
 posted expense lines.
 
-**Recommendation:** budget plan + category constraints. Start with monthly
+**Recommendation:** budget plan + budget constraints. Start with monthly
 periods, one active plan per workspace, and leave cadence extensible. Prevent two
-active constraints for the same category and period in one plan.
+active constraints for the same budget and period in one plan.
 
 ## 5. Nested budget model
 
@@ -156,7 +156,7 @@ Default inclusion:
 
 - posted expense classification lines;
 - effective date falls in the budget period;
-- category is the constrained category or descendant;
+- budget is the constrained budget or descendant;
 - account and transaction are not excluded by policy;
 - reversal/refund components reduce eligible actual at their own effective date.
 
@@ -186,7 +186,7 @@ Supermarket charge 1,000,000
 Rules:
 
 1. line amounts are positive and sum exactly to the transaction total;
-2. each expense/income line has exactly one category;
+2. each expense/income line has exactly one budget;
 3. tags attach to individual lines, allowing different purposes in one charge;
 4. account balance changes once by 1,000,000;
 5. budgets consume 750,000 and 250,000 separately;
@@ -241,7 +241,7 @@ allocation changes auditable.
 
 ## 11. Decisions still needing product-owner confirmation
 
-1. Confirm maximum two category levels for the first version.
+1. Confirm maximum two budget levels for the first version.
 2. Confirm parent allocation modes `BY_CHILDREN`, `SHARED_POOL`, and `HYBRID`.
 3. Confirm percentages exclude rollover and apply after fixed allocations.
 4. Confirm only the funded cap owner rolls over, preventing parent/child double
@@ -249,4 +249,3 @@ allocation changes auditable.
 5. Confirm one active monthly budget plan per workspace for MVP.
 6. Choose MVP goal progress: manual only, dedicated-account link, or both as
    recommended.
-

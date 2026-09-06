@@ -15,7 +15,7 @@ export type AccountKind =
   | 'liability'
   | 'system';
 export type AccountStatus = 'active' | 'archived';
-export type CategoryStatus = 'active' | 'archived';
+export type BudgetStatus = 'active' | 'archived';
 export type BudgetPeriodStatus = 'open' | 'closed';
 export type BudgetConstraintMode = 'BY_CHILDREN' | 'SHARED_POOL' | 'HYBRID';
 export type BudgetRolloverMode = 'NONE' | 'POSITIVE_ONLY' | 'FULL_BALANCE';
@@ -43,8 +43,6 @@ export const PERMISSIONS = {
   transactionRead: 'transaction.read',
   transactionCreate: 'transaction.create',
   transactionVoid: 'transaction.void',
-  categoryRead: 'category.read',
-  categoryManage: 'category.manage',
   budgetRead: 'budget.read',
   budgetManage: 'budget.manage',
   reportRead: 'report.read',
@@ -131,12 +129,12 @@ export interface AccountRecord {
   readonly createdAt: Date;
 }
 
-export interface CategoryRecord {
+export interface BudgetRecord {
   readonly id: string;
   readonly workspaceId: string;
   name: string;
   readonly parentId?: string;
-  status: CategoryStatus;
+  status: BudgetStatus;
   readonly createdAt: Date;
 }
 
@@ -144,7 +142,7 @@ export interface TagRecord {
   readonly id: string;
   readonly workspaceId: string;
   name: string;
-  status: CategoryStatus;
+  status: BudgetStatus;
   readonly createdAt: Date;
 }
 
@@ -152,7 +150,7 @@ export interface ClassificationLineRecord {
   readonly id: string;
   readonly workspaceId: string;
   readonly transactionId: string;
-  readonly categoryId: string;
+  readonly budgetId: string;
   readonly amountMinorUnits: bigint;
   readonly tagIds: readonly string[];
   readonly createdAt: Date;
@@ -161,7 +159,7 @@ export interface ClassificationLineRecord {
 export interface BudgetConstraintRecord {
   readonly id: string;
   readonly budgetPeriodId: string;
-  readonly categoryId: string;
+  readonly budgetId: string;
   readonly mode: BudgetConstraintMode;
   readonly fixedMinorUnits: bigint;
   readonly percentageBasisPoints: number;

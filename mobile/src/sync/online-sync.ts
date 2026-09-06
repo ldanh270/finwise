@@ -12,6 +12,7 @@ export interface ManualTransactionApi {
       type: "income" | "expense";
       accountId: string;
       amount: { currency: "VND"; minorUnits: string };
+      budgetId?: string;
       effectiveDate: string;
       description?: string;
     },
@@ -32,6 +33,7 @@ export class ApiManualDraftSync implements ManualDraftSyncPort {
         type: command.kind,
         accountId: command.accountId,
         amount: command.amount,
+        ...(command.budgetId ? { budgetId: command.budgetId } : {}),
         effectiveDate: command.effectiveDate,
         description: command.description,
       },

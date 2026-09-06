@@ -422,7 +422,7 @@ expected pilot traffic are known.
 
 ### Slice 3: classification and monthly planning
 
-- category tree, split lines, tags;
+- budget tree, split lines, tags;
 - monthly soft budget and selected rollover rules;
 - dashboard/read projections;
 - web budget setup; mobile monthly snapshot.

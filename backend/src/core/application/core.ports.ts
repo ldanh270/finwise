@@ -14,7 +14,7 @@ import {
   WorkspaceMemberRecord,
   WorkspaceInvitationRecord,
   OwnerTransferRecord,
-  CategoryRecord,
+  BudgetRecord,
   TagRecord,
   ClassificationLineRecord,
   BudgetConstraintMode,
@@ -94,13 +94,13 @@ export interface JournalDraft {
 }
 
 export interface ClassificationLineDraft {
-  readonly categoryId: string;
+  readonly budgetId: string;
   readonly amountMinorUnits: bigint;
   readonly tagIds: readonly string[];
 }
 
 export interface BudgetConstraintDraft {
-  readonly categoryId: string;
+  readonly budgetId: string;
   readonly mode: BudgetConstraintMode;
   readonly fixedMinorUnits: bigint;
   readonly percentageBasisPoints: number;
@@ -198,6 +198,10 @@ export interface CoreStorePort extends CoreMembershipPort {
   memberIdFor(workspaceId: string, userId: string): string;
   systemAccount(workspaceId: string, purpose: string): AccountRecord;
   postJournal(draft: JournalDraft): JournalTransactionRecord;
+  postJournalWithClassification(
+    draft: JournalDraft,
+    lines: readonly ClassificationLineDraft[],
+  ): JournalTransactionRecord;
   listTransactions(
     workspaceId: string,
     actor: AuthenticatedActor,
@@ -237,21 +241,21 @@ export interface CoreStorePort extends CoreMembershipPort {
     readonly accountId: string;
     readonly balanceMinorUnits: bigint;
   }[];
-  createCategory(
+  createBudget(
     workspaceId: string,
     actor: AuthenticatedActor,
     name: string,
     parentId?: string,
-  ): CategoryRecord;
-  listCategories(
+  ): BudgetRecord;
+  listBudgets(
     workspaceId: string,
     actor: AuthenticatedActor,
-  ): readonly CategoryRecord[];
-  archiveCategory(
+  ): readonly BudgetRecord[];
+  archiveBudget(
     workspaceId: string,
     actor: AuthenticatedActor,
-    categoryId: string,
-  ): CategoryRecord;
+    budgetId: string,
+  ): BudgetRecord;
   createTag(
     workspaceId: string,
     actor: AuthenticatedActor,
