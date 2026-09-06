@@ -10,6 +10,7 @@
 			"use": "@vercel/node"
 		}
 	],
+	"installCommand": "npm --prefix backend --ignore-scripts install --no-package-lock --no-audit --no-fund && npm --prefix frontend --ignore-scripts install --no-package-lock --no-audit --no-fund",
 	"rewrites": [
 		{
 			"source": "/v1/(.*)",
