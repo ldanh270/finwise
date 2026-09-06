@@ -378,7 +378,10 @@ so deeply that database constraints are never tested.
 
 ## 13. Deployment direction
 
-Deployment provider is Open. The architecture requires:
+The long-term deployment provider remains open for the worker and heavier
+infrastructure, but the current web pilot uses Vercel Services to deploy the
+Next.js frontend and NestJS API from the repository root as one deployment.
+The architecture requires:
 
 - Next-compatible web runtime or container;
 - long-running/container Nest API rather than relying exclusively on short-lived
@@ -392,9 +395,11 @@ Deployment provider is Open. The architecture requires:
 - TLS, custom domains, staging, centralized secrets, backups, and regional
   placement appropriate to target users.
 
-Vercel for Next plus a container platform for Nest/worker is a reasonable
-default, but should be chosen after budget, region, operational preference, and
-expected pilot traffic are known.
+The repository's `vercel.json` exposes `/v1/*` to the backend service and all
+other paths to the frontend service. Vercel Project Settings must keep the
+project root at the repository root and use the Services framework preset.
+Worker execution, PostgreSQL, secrets, backups, and production operational
+controls still require explicit platform choices and environment setup.
 
 ## 14. Technical delivery slices
 

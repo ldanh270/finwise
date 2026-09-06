@@ -1,12 +1,21 @@
 const LOCAL_DEVELOPMENT_API_URL = "http://localhost:3001";
 
 export function getClientApiUrl(): string {
-  return resolveApiUrl(process.env.NEXT_PUBLIC_FINWISE_API_URL);
+  const configuredUrl = resolveApiUrl(process.env.NEXT_PUBLIC_FINWISE_API_URL);
+  if (configuredUrl) return configuredUrl;
+
+  if (typeof window !== "undefined") {
+    return window.location.origin;
+  }
+
+  return resolveApiUrl(process.env.FINWISE_INTERNAL_API_URL);
 }
 
 export function getServerApiUrl(): string {
   return resolveApiUrl(
-    process.env.FINWISE_API_URL ?? process.env.NEXT_PUBLIC_FINWISE_API_URL,
+    process.env.FINWISE_API_URL ??
+      process.env.FINWISE_INTERNAL_API_URL ??
+      process.env.NEXT_PUBLIC_FINWISE_API_URL,
   );
 }
 
