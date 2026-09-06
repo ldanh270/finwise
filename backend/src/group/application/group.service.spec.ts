@@ -27,7 +27,19 @@ describe('GroupService', () => {
     const coreStore = new InMemoryFinwiseStore();
     const core = new CoreService(coreStore);
     const ownerBootstrap = core.bootstrap(owner);
-    const workspaceId = ownerBootstrap.suggestedWorkspaceId;
+    const setup = core.createWorkspace(owner, {
+      name: 'Group workspace',
+      kind: 'family',
+      defaultCurrency: 'VND',
+      initialAccount: {
+        name: 'Owner cash',
+        iconKey: 'cash',
+        kind: 'cash',
+        currency: 'VND',
+        openingBalanceMinorUnits: '0',
+      },
+    });
+    const workspaceId = setup.workspace.id;
     const guestBootstrap = core.bootstrap(guest);
     const invitation = core.createInvitation(owner, workspaceId, {
       invitedUserId: guestBootstrap.user.id,

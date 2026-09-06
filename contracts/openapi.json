@@ -155,7 +155,7 @@
             "description": "Workspace created",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/Workspace" }
+                "schema": { "$ref": "#/components/schemas/WorkspaceSetupResponse" }
               }
             }
           },
@@ -1809,11 +1809,15 @@
       }
     },
     "schemas": {
+      "CurrencyCode": {
+        "type": "string",
+        "enum": ["VND", "USD", "EUR", "GBP", "JPY", "KRW", "CNY", "SGD", "THB", "AUD"]
+      },
       "MoneyDto": {
         "type": "object",
         "required": ["currency", "minorUnits"],
         "properties": {
-          "currency": { "type": "string", "const": "VND" },
+          "currency": { "$ref": "#/components/schemas/CurrencyCode" },
           "minorUnits": { "type": "string", "pattern": "^-?(0|[1-9][0-9]*)$" }
         }
       },
@@ -1879,7 +1883,7 @@
           "name": { "type": "string" },
           "kind": { "type": "string" },
           "intent": { "type": "string", "enum": ["PERSONAL", "SHARED"] },
-          "currency": { "type": "string", "const": "VND" },
+          "currency": { "$ref": "#/components/schemas/CurrencyCode" },
           "status": { "type": "string" }
         }
       },
@@ -2497,13 +2501,35 @@
       },
       "CreateWorkspaceRequest": {
         "type": "object",
-        "required": ["name"],
+        "required": ["name", "defaultCurrency", "initialAccount"],
         "properties": {
           "name": { "type": "string", "minLength": 1, "maxLength": 100 },
           "kind": {
             "type": "string",
             "enum": ["personal", "family", "class_fund", "other"]
-          }
+          },
+          "defaultCurrency": { "$ref": "#/components/schemas/CurrencyCode" },
+          "initialAccount": { "$ref": "#/components/schemas/InitialAccountSetup" }
+        }
+      },
+      "InitialAccountSetup": {
+        "type": "object",
+        "required": ["name", "iconKey", "kind", "currency", "openingBalanceMinorUnits"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "iconKey": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,31}$" },
+          "kind": { "type": "string", "enum": ["cash", "bank", "savings", "investment_cash", "loan_receivable", "liability"] },
+          "currency": { "$ref": "#/components/schemas/CurrencyCode" },
+          "openingBalanceMinorUnits": { "type": "string", "pattern": "^(0|[1-9][0-9]*)$" }
+        }
+      },
+      "WorkspaceSetupResponse": {
+        "type": "object",
+        "required": ["workspace", "account", "budgets"],
+        "properties": {
+          "workspace": { "$ref": "#/components/schemas/Workspace" },
+          "account": { "$ref": "#/components/schemas/Account" },
+          "budgets": { "type": "array", "items": { "$ref": "#/components/schemas/BudgetBucket" } }
         }
       },
       "CreateAccountRequest": {
@@ -2522,7 +2548,10 @@
               "liability"
             ]
           },
-          "visibilityMode": { "type": "string" }
+          "visibilityMode": { "type": "string" },
+          "currency": { "$ref": "#/components/schemas/CurrencyCode" },
+          "iconKey": { "type": "string" },
+          "openingBalanceMinorUnits": { "type": "string", "pattern": "^(0|[1-9][0-9]*)$" }
         }
       },
       "Account": {
@@ -2531,6 +2560,7 @@
           "id",
           "workspaceId",
           "name",
+          "iconKey",
           "kind",
           "currency",
           "balanceMinorUnits",
@@ -2542,7 +2572,8 @@
           "workspaceId": { "type": "string" },
           "name": { "type": "string" },
           "kind": { "type": "string" },
-          "currency": { "type": "string", "const": "VND" },
+          "iconKey": { "type": "string" },
+          "currency": { "$ref": "#/components/schemas/CurrencyCode" },
           "balanceMinorUnits": { "type": "string" },
           "visibilityMode": { "type": "string" },
           "status": { "type": "string", "enum": ["active", "archived"] }
@@ -2570,6 +2601,9 @@
           "accountId": { "type": "string" },
           "sourceAccountId": { "type": "string" },
           "destinationAccountId": { "type": "string" },
+          "amount": { "$ref": "#/components/schemas/MoneyDto" },
+          "destinationAmount": { "$ref": "#/components/schemas/MoneyDto" },
+          "exchangeRate": { "type": "string" },
           "budgetId": { "type": "string", "format": "uuid" },
           "effectiveDate": { "type": "string", "format": "date" },
           "description": { "type": "string" }
@@ -2577,11 +2611,12 @@
       },
       "TransactionEntry": {
         "type": "object",
-        "required": ["id", "accountId", "amountMinorUnits", "direction"],
+        "required": ["id", "accountId", "amountMinorUnits", "currency", "direction"],
         "properties": {
           "id": { "type": "string" },
           "accountId": { "type": "string" },
           "amountMinorUnits": { "type": "string" },
+          "currency": { "$ref": "#/components/schemas/CurrencyCode" },
           "direction": { "type": "string", "enum": ["increase", "decrease"] }
         }
       },
@@ -2610,7 +2645,17 @@
           "entries": {
             "type": "array",
             "items": { "$ref": "#/components/schemas/TransactionEntry" }
-          }
+          },
+          "transfer": { "$ref": "#/components/schemas/TransferDetails" }
+        }
+      },
+      "TransferDetails": {
+        "type": "object",
+        "required": ["sourceAmount", "destinationAmount"],
+        "properties": {
+          "sourceAmount": { "$ref": "#/components/schemas/MoneyDto" },
+          "destinationAmount": { "$ref": "#/components/schemas/MoneyDto" },
+          "exchangeRate": { "type": "string" }
         }
       },
       "JournalSourceLink": {

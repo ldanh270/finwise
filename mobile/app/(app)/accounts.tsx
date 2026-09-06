@@ -27,6 +27,7 @@ import {
   stableCommandKey,
   type StableCommandKeyState,
 } from "../../src/sync/stable-command-key";
+import { SUPPORTED_CURRENCIES, type CurrencyCode } from "@finwise/api-client";
 
 export default function AccountsRoute() {
   const { api, session } = useAuth();
@@ -61,9 +62,12 @@ export default function AccountsRoute() {
     });
   }, [accountsQuery.data, session?.user.id, workspaceId]);
   const [name, setName] = useState("");
-  const [kind, setKind] = useState<"cash" | "bank" | "savings" | "other">(
+  const [kind, setKind] = useState<"cash" | "bank" | "savings" | "liability">(
     "cash",
   );
+  const [currency, setCurrency] = useState<CurrencyCode>("VND");
+  const [iconKey, setIconKey] = useState("cash");
+  const [initialAmount, setInitialAmount] = useState("");
   const [accountId, setAccountId] = useState("");
   const [opening, setOpening] = useState("");
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -75,9 +79,13 @@ export default function AccountsRoute() {
       createAccountRequest(api, workspaceId as string, {
         name: name.trim(),
         kind,
+        currency,
+        iconKey,
+        openingBalanceMinorUnits: initialAmount.trim() || "0",
       }),
     onSuccess: async () => {
       setName("");
+      setInitialAmount("");
       setFeedback("Account created.");
       await queryClient.invalidateQueries({
         queryKey: ["accounts", workspaceId],
@@ -92,6 +100,7 @@ export default function AccountsRoute() {
     mutationFn: (command: {
       accountId: string;
       amountMinorUnits: string;
+      currency: CurrencyCode;
       effectiveDate: string;
       idempotencyKey: string;
     }) =>
@@ -101,6 +110,7 @@ export default function AccountsRoute() {
         command.accountId,
         {
           amountMinorUnits: command.amountMinorUnits,
+          currency: command.currency,
           effectiveDate: command.effectiveDate,
         },
         command.idempotencyKey,
@@ -148,9 +158,12 @@ export default function AccountsRoute() {
       );
       return;
     }
+    const currency =
+      accounts.find((account) => account.id === accountId)?.currency ?? "VND";
     const commandInput = {
       accountId,
       amountMinorUnits: opening.trim(),
+      currency,
       effectiveDate: today(),
     };
     const commandKey = stableCommandKey(
@@ -162,6 +175,7 @@ export default function AccountsRoute() {
     openingMutation.mutate({
       accountId,
       amountMinorUnits: opening.trim(),
+      currency,
       effectiveDate: commandInput.effectiveDate,
       idempotencyKey: commandKey.key,
     });
@@ -211,8 +225,36 @@ export default function AccountsRoute() {
                   { label: "Cash", value: "cash" },
                   { label: "Bank", value: "bank" },
                   { label: "Savings", value: "savings" },
-                  { label: "Other", value: "other" },
+                  { label: "Other", value: "liability" },
                 ]}
+              />
+              <SelectField
+                label="Icon"
+                value={iconKey}
+                onChange={setIconKey}
+                options={[
+                  { label: "▣ Cash", value: "cash" },
+                  { label: "◉ Wallet", value: "wallet" },
+                  { label: "◉ Bank", value: "bank" },
+                  { label: "◉ Savings", value: "savings" },
+                  { label: "◉ Card", value: "card" },
+                ]}
+              />
+              <SelectField
+                label="Currency"
+                value={currency}
+                onChange={(value) => setCurrency(value as CurrencyCode)}
+                options={SUPPORTED_CURRENCIES.map((code) => ({
+                  label: code,
+                  value: code,
+                }))}
+              />
+              <TextField
+                label={`Opening amount (${currency} minor units)`}
+                value={initialAmount}
+                onChangeText={setInitialAmount}
+                keyboardType="number-pad"
+                placeholder="0"
               />
               <PrimaryButton
                 label={
@@ -237,7 +279,7 @@ export default function AccountsRoute() {
                     }))}
                 />
                 <TextField
-                  label="Amount (VND minor units)"
+                  label={`Amount (${accounts.find((account) => account.id === accountId)?.currency ?? "account currency"} minor units)`}
                   value={opening}
                   onChangeText={setOpening}
                   keyboardType="number-pad"
@@ -288,10 +330,17 @@ export default function AccountsRoute() {
                           {account.name}
                         </Text>
                         <Text style={{ color: colors.muted, fontSize: 12 }}>
-                          {account.kind} · {account.status}
+                          {account.iconKey} · {account.kind} ·{" "}
+                          {account.currency}
                         </Text>
                       </View>
-                      <Money value={account.balanceMinorUnits} compact />
+                      <Money
+                        value={{
+                          currency: account.currency,
+                          minorUnits: account.balanceMinorUnits,
+                        }}
+                        compact
+                      />
                     </View>
                     <Divider />
                   </View>

@@ -1,3 +1,4 @@
+import type { CurrencyCode } from "@finwise/api-client";
 import type { ManualDraftCommand, ManualDraftSyncPort } from "./outbox";
 
 /**
@@ -11,7 +12,7 @@ export interface ManualTransactionApi {
     input: {
       type: "income" | "expense";
       accountId: string;
-      amount: { currency: "VND"; minorUnits: string };
+      amount: { currency: CurrencyCode; minorUnits: string };
       budgetId?: string;
       effectiveDate: string;
       description?: string;

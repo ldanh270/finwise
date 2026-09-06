@@ -234,7 +234,7 @@ export default function BudgetsRoute() {
     createMutation.mutate();
   }
   return (
-    <AppShell active="budgets">
+    <AppShell active="other">
       <ScrollScreen>
         <Header
           eyebrow="PLANNING"

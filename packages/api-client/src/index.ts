@@ -6,8 +6,21 @@
  * state live in each client application.
  */
 
+export const SUPPORTED_CURRENCIES = [
+  "VND",
+  "USD",
+  "EUR",
+  "GBP",
+  "JPY",
+  "KRW",
+  "CNY",
+  "SGD",
+  "THB",
+  "AUD",
+] as const;
+export type CurrencyCode = (typeof SUPPORTED_CURRENCIES)[number];
 export type MoneyDto = {
-  readonly currency: "VND";
+  readonly currency: CurrencyCode;
   readonly minorUnits: string;
 };
 export type ErrorEnvelope = {
@@ -26,7 +39,7 @@ export type WorkspaceSummary = {
   readonly name: string;
   readonly intent: "PERSONAL" | "SHARED";
   readonly kind?: string;
-  readonly currency?: "VND";
+  readonly currency?: CurrencyCode;
   readonly status?: string;
 };
 export type WorkspaceMemberSummary = {
@@ -53,8 +66,15 @@ export type AccountSummary = {
   readonly id: string;
   readonly workspaceId: string;
   readonly name: string;
-  readonly kind: "cash" | "bank" | "savings" | "other";
-  readonly currency: "VND";
+  readonly iconKey: string;
+  readonly kind:
+    | "cash"
+    | "bank"
+    | "savings"
+    | "investment_cash"
+    | "loan_receivable"
+    | "liability";
+  readonly currency: CurrencyCode;
   readonly balanceMinorUnits: string;
   readonly visibilityMode: string;
   readonly status: "active" | "archived";
@@ -69,6 +89,7 @@ export type JournalEntrySummary = {
   readonly id: string;
   readonly accountId: string;
   readonly amountMinorUnits: string;
+  readonly currency?: CurrencyCode;
   readonly direction: "increase" | "decrease";
 };
 export type ClassificationLineSummary = {
@@ -106,10 +127,21 @@ export type TransactionSummary = {
   readonly description?: string;
   readonly reversalOfId?: string;
   readonly entries?: readonly JournalEntrySummary[];
+  readonly transfer?: {
+    readonly sourceAmount: MoneyDto;
+    readonly destinationAmount: MoneyDto;
+    readonly exchangeRate?: string;
+  };
+};
+export type WorkspaceSetupSummary = {
+  readonly workspace: WorkspaceSummary;
+  readonly account: AccountSummary;
+  readonly budgets: readonly BudgetSummary[];
 };
 export type OverviewResponse = {
   readonly workspaceId: string;
   readonly period: string;
+  readonly accountBalances: readonly MoneyDto[];
   readonly accounts: readonly {
     readonly id: string;
     readonly name: string;
@@ -471,6 +503,20 @@ export class FinwiseApiClient {
   getBootstrap(): Promise<BootstrapResponse> {
     return this.get("/v1/session/bootstrap");
   }
+  createWorkspace(input: {
+    name: string;
+    kind: "personal" | "family" | "class_fund" | "other";
+    defaultCurrency: CurrencyCode;
+    initialAccount: {
+      name: string;
+      iconKey: string;
+      kind: AccountSummary["kind"];
+      currency: CurrencyCode;
+      openingBalanceMinorUnits: string;
+    };
+  }): Promise<WorkspaceSetupSummary> {
+    return this.post("/v1/workspaces", input);
+  }
   getOverview(workspaceId: string): Promise<OverviewResponse> {
     return this.get(`/v1/workspaces/${segment(workspaceId)}/overview`);
   }
@@ -732,6 +778,9 @@ export class FinwiseApiClient {
       name: string;
       kind: AccountSummary["kind"];
       visibilityMode?: string;
+      currency?: CurrencyCode;
+      iconKey?: string;
+      openingBalanceMinorUnits?: string;
     },
   ): Promise<AccountSummary> {
     return this.post(`/v1/workspaces/${segment(workspaceId)}/accounts`, input);
@@ -741,6 +790,8 @@ export class FinwiseApiClient {
     accountId: string,
     input: {
       amountMinorUnits: string;
+      amount?: MoneyDto;
+      currency?: CurrencyCode;
       effectiveDate: string;
       description?: string;
     },
@@ -757,8 +808,11 @@ export class FinwiseApiClient {
     input: {
       type: "income" | "expense" | "transfer";
       amountMinorUnits: string;
+      amount?: MoneyDto;
       accountId: string;
       destinationAccountId?: string;
+      destinationAmount?: MoneyDto;
+      exchangeRate?: string;
       budgetId?: string;
       effectiveDate: string;
       description?: string;

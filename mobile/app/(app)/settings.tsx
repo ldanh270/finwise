@@ -12,6 +12,7 @@ import {
   PrimaryButton,
   ScrollScreen,
   SecondaryButton,
+  SelectField,
   StatePanel,
   colors,
   Divider,
@@ -23,11 +24,13 @@ import { MobileOutboxRepository } from "../../src/sync/mobile-outbox-repository"
 import type { OutboxRecord } from "../../src/sync/outbox";
 import { draftExportCsv } from "../../src/sync/draft-export";
 import { clearUserWorkspaceData } from "../../src/session/clear-user-data";
+import { usePreferences } from "../../src/preferences/preferences-context";
 
 export default function SettingsRoute() {
   const { api, session, signOut } = useAuth();
   const appLock = useAppLock();
   const { bootstrap, workspaceId } = useWorkspace();
+  const preferences = usePreferences();
   const [drafts, setDrafts] = useState<readonly OutboxRecord[]>([]);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
@@ -185,13 +188,43 @@ export default function SettingsRoute() {
   }
 
   return (
-    <AppShell active="settings">
+    <AppShell active="other">
       <ScrollScreen>
         <Header
           eyebrow="PROFILE & SECURITY"
           title="Settings"
           subtitle={session?.user.email ?? "Your Finwise session"}
         />
+        <Card>
+          <Header
+            eyebrow="PREFERENCES"
+            title="Make Finwise yours"
+            subtitle="These choices are saved securely for this user on this device."
+          />
+          <SelectField
+            label="Theme"
+            value={preferences.theme}
+            onChange={(value) =>
+              void preferences.setTheme(value as "system" | "light" | "dark")
+            }
+            options={[
+              { label: "System", value: "system" },
+              { label: "Light", value: "light" },
+              { label: "Dark", value: "dark" },
+            ]}
+          />
+          <SelectField
+            label="Language"
+            value={preferences.locale}
+            onChange={(value) =>
+              void preferences.setLocale(value as "en" | "vi")
+            }
+            options={[
+              { label: "English", value: "en" },
+              { label: "Tiếng Việt", value: "vi" },
+            ]}
+          />
+        </Card>
         <Card>
           <Header eyebrow="SESSION" title="Secure session" />
           <Text style={{ color: colors.muted, lineHeight: 20 }}>

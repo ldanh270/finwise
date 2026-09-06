@@ -15,6 +15,7 @@ import {
 import type { BootstrapResponse, WorkspaceSummary } from "@finwise/api-client";
 import { AuthProvider, useAuth } from "../auth/auth-context";
 import { AppLockProvider, useAppLock } from "../auth/app-lock-context";
+import { PreferenceProvider } from "../preferences/preferences-context";
 import { BootstrapCache } from "../cache/bootstrap-cache";
 import { WorkspaceSelectionStore } from "../cache/workspace-selection";
 import { sqliteJsonStorage } from "../sync/sqlite-storage";
@@ -45,9 +46,11 @@ export function AppProviders({ children }: PropsWithChildren) {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <AppLockProvider>
-          <WorkspaceProvider>{children}</WorkspaceProvider>
-        </AppLockProvider>
+        <PreferenceProvider>
+          <AppLockProvider>
+            <WorkspaceProvider>{children}</WorkspaceProvider>
+          </AppLockProvider>
+        </PreferenceProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

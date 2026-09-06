@@ -11,7 +11,7 @@ export type OutboxState =
   | "NEEDS_USER_ACTION";
 
 export type MoneyDto = {
-  readonly currency: "VND";
+  readonly currency: import("@finwise/api-client").CurrencyCode;
   readonly minorUnits: string;
 };
 

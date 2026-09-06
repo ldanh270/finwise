@@ -26,6 +26,7 @@ import {
   WorkspaceMemberRecord,
   WorkspaceRecord,
 } from '../domain/ledger.types';
+import type { CurrencyCode } from '../domain/currency';
 import { MVP_CURRENCY } from '../../shared/domain/money';
 import { calculateBudgetAllocations } from '../domain/budget-allocation';
 import {
@@ -35,6 +36,8 @@ import {
   CoreStorePort,
   ClassificationLineDraft,
   JournalDraft,
+  WorkspaceSetupDraft,
+  WorkspaceSetupResult,
 } from '../application/core.ports';
 
 interface AccountAccessOverride {
@@ -65,6 +68,17 @@ function normalizeLabel(value: string, resource: string): string {
   return name;
 }
 
+const DEFAULT_WORKSPACE_BUDGETS = [
+  'Food',
+  'Shopping',
+  'Education',
+  'Transport',
+  'Housing',
+  'Health',
+  'Bills',
+  'Other',
+] as const;
+
 export class InMemoryFinwiseStore implements CoreStorePort {
   private readonly users = new Map<string, UserRecord>();
   private readonly identities = new Map<string, ExternalIdentityRecord>();
@@ -78,7 +92,6 @@ export class InMemoryFinwiseStore implements CoreStorePort {
   private readonly sourceLinks = new Map<string, JournalSourceLinkRecord>();
   private readonly idempotencies = new Map<string, IdempotencyRecord>();
   private readonly accountAccess = new Map<string, AccountAccessOverride>();
-  private readonly personalWorkspaceByUser = new Map<string, string>();
   private readonly invitations = new Map<string, WorkspaceInvitationRecord>();
   private readonly invitationsByToken = new Map<
     string,
@@ -98,56 +111,7 @@ export class InMemoryFinwiseStore implements CoreStorePort {
   >();
 
   bootstrap(actor: AuthenticatedActor): BootstrapResult {
-    const identityKey = `${actor.providerIssuer}:${actor.providerSubject}`;
-    const now = new Date();
-    let identity = this.identities.get(identityKey);
-    let user = identity ? this.users.get(identity.userId) : undefined;
-
-    if (!identity || !user) {
-      const userId = randomUUID();
-      user = {
-        id: userId,
-        displayName: actor.displayName,
-        emailSnapshot: actor.email,
-        createdAt: now,
-      };
-      identity = {
-        providerIssuer: actor.providerIssuer,
-        providerSubject: actor.providerSubject,
-        userId,
-        emailSnapshot: actor.email,
-        lastSeenAt: now,
-      };
-      this.users.set(userId, user);
-      this.identities.set(identityKey, identity);
-    } else {
-      user.displayName = actor.displayName ?? user.displayName;
-      user.emailSnapshot = actor.email ?? user.emailSnapshot;
-      identity.lastSeenAt = now;
-      identity.emailSnapshot = actor.email ?? identity.emailSnapshot;
-    }
-
-    if (!user) {
-      throw FinwiseError.provisioning(
-        'Could not provision the internal identity.',
-      );
-    }
-
-    let personalWorkspaceId = this.personalWorkspaceByUser.get(user.id);
-    if (!personalWorkspaceId) {
-      const workspace = this.createWorkspaceInternal('Personal', 'personal');
-      const ownerMember = this.createMemberInternal(
-        workspace.id,
-        user.id,
-        true,
-      );
-      this.assignRoleInternal(
-        ownerMember.id,
-        this.requireOwnerRole(workspace.id).id,
-      );
-      personalWorkspaceId = workspace.id;
-      this.personalWorkspaceByUser.set(user.id, workspace.id);
-    }
+    const user = this.ensureUser(actor);
 
     const userWorkspaces = [...this.members.values()]
       .filter(
@@ -162,8 +126,68 @@ export class InMemoryFinwiseStore implements CoreStorePort {
     return {
       user,
       workspaces: userWorkspaces,
-      suggestedWorkspaceId: personalWorkspaceId,
+      suggestedWorkspaceId: userWorkspaces[0]?.id ?? '',
     };
+  }
+
+  createWorkspaceSetup(
+    actor: AuthenticatedActor,
+    input: WorkspaceSetupDraft,
+  ): WorkspaceSetupResult {
+    const user = this.ensureUser(actor);
+    const workspace = this.createWorkspaceInternal(
+      input.name,
+      input.kind,
+      input.defaultCurrency,
+    );
+    const ownerMember = this.createMemberInternal(workspace.id, user.id, true);
+
+    try {
+      this.assignRoleInternal(
+        ownerMember.id,
+        this.requireOwnerRole(workspace.id).id,
+      );
+      const account = this.createAccountInternal(
+        workspace.id,
+        input.initialAccount.name,
+        input.initialAccount.kind,
+        input.initialAccount.currency,
+        input.initialAccount.iconKey,
+      );
+      const budgets = DEFAULT_WORKSPACE_BUDGETS.map((name) =>
+        this.createBudgetForMember(workspace.id, ownerMember, name),
+      );
+      if (input.initialAccount.openingBalanceMinorUnits > 0n) {
+        const systemAccount = this.systemAccount(
+          workspace.id,
+          'Opening equity',
+          input.initialAccount.currency,
+        );
+        this.postJournal({
+          workspaceId: workspace.id,
+          kind: 'opening_balance',
+          amountMinorUnits: input.initialAccount.openingBalanceMinorUnits,
+          effectiveDate: new Date().toISOString().slice(0, 10),
+          createdByMemberId: ownerMember.id,
+          entries: [
+            {
+              accountId: account.id,
+              amountMinorUnits: input.initialAccount.openingBalanceMinorUnits,
+              direction: 'increase',
+            },
+            {
+              accountId: systemAccount.id,
+              amountMinorUnits: input.initialAccount.openingBalanceMinorUnits,
+              direction: 'decrease',
+            },
+          ],
+        });
+      }
+      return { workspace, account, budgets };
+    } catch (error: unknown) {
+      this.rollbackWorkspaceSetup(workspace.id, ownerMember.id);
+      throw error;
+    }
   }
 
   createWorkspace(
@@ -684,29 +708,72 @@ export class InMemoryFinwiseStore implements CoreStorePort {
     name: string,
     kind: AccountKind,
     visibilityMode: AccountVisibilityMode,
+    currency?: CurrencyCode,
+    iconKey = 'cash',
+    openingBalanceMinorUnits = 0n,
   ): AccountRecord {
     const member = this.requireMemberByUser(workspaceId, actor.userId, false);
     this.requirePermission(member, PERMISSIONS.accountCreate);
-    this.requireWritableWorkspace(workspaceId);
+    const workspace = this.requireWritableWorkspace(workspaceId);
     if (kind === 'system') {
       throw FinwiseError.validation(
         'System accounts are managed by the ledger.',
       );
     }
-    const account: AccountRecord = {
-      id: randomUUID(),
+    if (openingBalanceMinorUnits < 0n) {
+      throw FinwiseError.validation(
+        'openingBalanceMinorUnits must not be negative.',
+      );
+    }
+    const account = this.createAccountInternal(
       workspaceId,
       name,
       kind,
-      currency: MVP_CURRENCY,
-      status: 'active',
-      visibilityMode,
-      isSystem: false,
-      balanceMinorUnits: 0n,
-      createdAt: new Date(),
-    };
-    this.accounts.set(account.id, account);
-    return account;
+      currency ?? workspace.defaultCurrency,
+      iconKey,
+    );
+    let createdSystemAccountId: string | undefined;
+    try {
+      if (openingBalanceMinorUnits > 0n) {
+        const existingSystemAccount = [...this.accounts.values()].find(
+          (candidate) =>
+            candidate.workspaceId === workspaceId &&
+            candidate.isSystem &&
+            candidate.name === 'Opening equity' &&
+            candidate.currency === account.currency,
+        );
+        const systemAccount = this.systemAccount(
+          workspaceId,
+          'Opening equity',
+          account.currency,
+        );
+        if (!existingSystemAccount) createdSystemAccountId = systemAccount.id;
+        this.postJournal({
+          workspaceId,
+          kind: 'opening_balance',
+          amountMinorUnits: openingBalanceMinorUnits,
+          effectiveDate: new Date().toISOString().slice(0, 10),
+          createdByMemberId: member.id,
+          entries: [
+            {
+              accountId: account.id,
+              amountMinorUnits: openingBalanceMinorUnits,
+              direction: 'increase',
+            },
+            {
+              accountId: systemAccount.id,
+              amountMinorUnits: openingBalanceMinorUnits,
+              direction: 'decrease',
+            },
+          ],
+        });
+      }
+      return account;
+    } catch (error: unknown) {
+      this.accounts.delete(account.id);
+      if (createdSystemAccountId) this.accounts.delete(createdSystemAccountId);
+      throw error;
+    }
   }
 
   listAccounts(
@@ -771,12 +838,19 @@ export class InMemoryFinwiseStore implements CoreStorePort {
     return account;
   }
 
-  systemAccount(workspaceId: string, purpose: string): AccountRecord {
+  systemAccount(
+    workspaceId: string,
+    purpose: string,
+    currency: CurrencyCode = MVP_CURRENCY,
+  ): AccountRecord {
+    const accountName =
+      currency === MVP_CURRENCY ? purpose : `${purpose} (${currency})`;
     const existing = [...this.accounts.values()].find(
       (account) =>
         account.workspaceId === workspaceId &&
         account.isSystem &&
-        account.name === purpose,
+        account.name === accountName &&
+        account.currency === currency,
     );
     if (existing) {
       return existing;
@@ -784,9 +858,10 @@ export class InMemoryFinwiseStore implements CoreStorePort {
     const account: AccountRecord = {
       id: randomUUID(),
       workspaceId,
-      name: purpose,
+      name: accountName,
+      iconKey: 'system',
       kind: 'system',
-      currency: MVP_CURRENCY,
+      currency,
       status: 'active',
       visibilityMode: 'owner_only',
       isSystem: true,
@@ -816,16 +891,23 @@ export class InMemoryFinwiseStore implements CoreStorePort {
     }
     let increases = 0n;
     let decreases = 0n;
-    for (const entry of draft.entries) {
+    const normalizedEntries = draft.entries.map((entry) => {
+      const account = this.requireAccount(draft.workspaceId, entry.accountId);
       if (entry.amountMinorUnits <= 0n) {
         throw FinwiseError.validation(
           'Journal entry amounts must be positive.',
         );
       }
-      const account = this.requireAccount(draft.workspaceId, entry.accountId);
       if (account.status !== 'active') {
         throw FinwiseError.businessState(
           'Archived accounts cannot receive postings.',
+        );
+      }
+      const currency = entry.currency ?? account.currency;
+      if (currency !== account.currency) {
+        throw FinwiseError.validation(
+          'Journal entry currency must match its account currency.',
+          { field: 'entries.currency' },
         );
       }
       if (entry.direction === 'increase') {
@@ -833,25 +915,53 @@ export class InMemoryFinwiseStore implements CoreStorePort {
       } else {
         decreases += entry.amountMinorUnits;
       }
-    }
-    if (increases !== decreases || increases !== draft.amountMinorUnits) {
+      return { ...entry, currency };
+    });
+    const currencies = new Set(
+      normalizedEntries.map((entry) => entry.currency),
+    );
+    const isCrossCurrencyTransfer =
+      currencies.size > 1 &&
+      (draft.kind === 'transfer' || draft.kind === 'adjustment') &&
+      normalizedEntries.length === 2 &&
+      normalizedEntries.filter((entry) => entry.direction === 'decrease')
+        .length === 1 &&
+      decreases === draft.amountMinorUnits;
+    if (
+      (!isCrossCurrencyTransfer &&
+        (increases !== decreases || increases !== draft.amountMinorUnits)) ||
+      (isCrossCurrencyTransfer &&
+        draft.currency !== undefined &&
+        draft.currency !==
+          normalizedEntries.find((entry) => entry.direction === 'decrease')
+            ?.currency)
+    ) {
       throw FinwiseError.validation(
         'Journal entries must balance to the transaction amount.',
       );
     }
+    const transactionCurrency =
+      draft.currency ??
+      normalizedEntries.find((entry) => entry.direction === 'decrease')
+        ?.currency ??
+      MVP_CURRENCY;
     const transaction: JournalTransactionRecord = {
       id: randomUUID(),
       workspaceId: draft.workspaceId,
       kind: draft.kind,
       status: 'posted',
       amountMinorUnits: draft.amountMinorUnits,
-      currency: MVP_CURRENCY,
+      currency: transactionCurrency,
+      exchangeRate: draft.exchangeRate,
       effectiveDate: draft.effectiveDate,
       recordedAt: new Date(),
       description: draft.description,
       createdByMemberId: draft.createdByMemberId,
       reversalOfId: draft.reversalOfId,
-      entries: draft.entries.map((entry) => ({ ...entry, id: randomUUID() })),
+      entries: normalizedEntries.map((entry) => ({
+        ...entry,
+        id: randomUUID(),
+      })),
     };
 
     for (const entry of transaction.entries) {
@@ -933,6 +1043,8 @@ export class InMemoryFinwiseStore implements CoreStorePort {
       workspaceId,
       kind: 'adjustment',
       amountMinorUnits: original.amountMinorUnits,
+      currency: original.currency,
+      exchangeRate: original.exchangeRate,
       effectiveDate,
       description: `Void ${original.id}: ${reason}`,
       createdByMemberId: member.id,
@@ -940,6 +1052,7 @@ export class InMemoryFinwiseStore implements CoreStorePort {
       entries: original.entries.map((entry) => ({
         accountId: entry.accountId,
         amountMinorUnits: entry.amountMinorUnits,
+        currency: entry.currency,
         direction: entry.direction === 'increase' ? 'decrease' : 'increase',
       })),
     });
@@ -976,6 +1089,8 @@ export class InMemoryFinwiseStore implements CoreStorePort {
       workspaceId,
       kind: 'adjustment',
       amountMinorUnits: original.amountMinorUnits,
+      currency: original.currency,
+      exchangeRate: original.exchangeRate,
       effectiveDate,
       description: `Reverse ${original.id}: ${reason}`,
       createdByMemberId: member.id,
@@ -983,6 +1098,7 @@ export class InMemoryFinwiseStore implements CoreStorePort {
       entries: original.entries.map((entry) => ({
         accountId: entry.accountId,
         amountMinorUnits: entry.amountMinorUnits,
+        currency: entry.currency,
         direction: entry.direction === 'increase' ? 'decrease' : 'increase',
       })),
     });
@@ -1628,6 +1744,7 @@ export class InMemoryFinwiseStore implements CoreStorePort {
   private createWorkspaceInternal(
     name: string,
     kind: WorkspaceKind,
+    defaultCurrency: CurrencyCode = MVP_CURRENCY,
   ): WorkspaceRecord {
     const trimmedName = name.trim();
     if (trimmedName.length < 1 || trimmedName.length > 100) {
@@ -1639,7 +1756,7 @@ export class InMemoryFinwiseStore implements CoreStorePort {
       id: randomUUID(),
       name: trimmedName,
       kind,
-      defaultCurrency: MVP_CURRENCY,
+      defaultCurrency,
       status: 'active',
       createdAt: new Date(),
     };
@@ -1647,6 +1764,116 @@ export class InMemoryFinwiseStore implements CoreStorePort {
     const role = this.ownerRole(workspace.id);
     this.roles.set(role.id, role);
     return workspace;
+  }
+
+  private ensureUser(actor: AuthenticatedActor): UserRecord {
+    const identityKey = `${actor.providerIssuer}:${actor.providerSubject}`;
+    const now = new Date();
+    let identity = this.identities.get(identityKey);
+    let user = identity ? this.users.get(identity.userId) : undefined;
+
+    if (!identity || !user) {
+      const userId = randomUUID();
+      user = {
+        id: userId,
+        displayName: actor.displayName,
+        emailSnapshot: actor.email,
+        createdAt: now,
+      };
+      identity = {
+        providerIssuer: actor.providerIssuer,
+        providerSubject: actor.providerSubject,
+        userId,
+        emailSnapshot: actor.email,
+        lastSeenAt: now,
+      };
+      this.users.set(userId, user);
+      this.identities.set(identityKey, identity);
+    } else {
+      user.displayName = actor.displayName ?? user.displayName;
+      user.emailSnapshot = actor.email ?? user.emailSnapshot;
+      identity.lastSeenAt = now;
+      identity.emailSnapshot = actor.email ?? identity.emailSnapshot;
+    }
+
+    if (!user) {
+      throw FinwiseError.provisioning(
+        'Could not provision the internal identity.',
+      );
+    }
+    return user;
+  }
+
+  private createAccountInternal(
+    workspaceId: string,
+    name: string,
+    kind: AccountKind,
+    currency: CurrencyCode,
+    iconKey: string,
+  ): AccountRecord {
+    const account: AccountRecord = {
+      id: randomUUID(),
+      workspaceId,
+      name: normalizeLabel(name, 'Account'),
+      iconKey,
+      kind,
+      currency,
+      status: 'active',
+      visibilityMode: 'workspace_default',
+      isSystem: false,
+      balanceMinorUnits: 0n,
+      createdAt: new Date(),
+    };
+    this.accounts.set(account.id, account);
+    return account;
+  }
+
+  private createBudgetForMember(
+    workspaceId: string,
+    member: WorkspaceMemberRecord,
+    name: string,
+  ): BudgetRecord {
+    this.requirePermission(member, PERMISSIONS.budgetManage);
+    const budget: BudgetRecord = {
+      id: randomUUID(),
+      workspaceId,
+      name: normalizeLabel(name, 'Budget'),
+      status: 'active',
+      createdAt: new Date(),
+    };
+    this.budgets.set(budget.id, budget);
+    return budget;
+  }
+
+  private rollbackWorkspaceSetup(
+    workspaceId: string,
+    ownerMemberId: string,
+  ): void {
+    for (const budget of [...this.budgets.values()]) {
+      if (budget.workspaceId === workspaceId) this.budgets.delete(budget.id);
+    }
+    for (const transaction of [...this.transactions.values()]) {
+      if (transaction.workspaceId === workspaceId) {
+        this.transactions.delete(transaction.id);
+        for (const audit of [...this.audits.values()]) {
+          if (audit.transactionId === transaction.id) {
+            this.audits.delete(audit.id);
+          }
+        }
+      }
+    }
+    for (const account of [...this.accounts.values()]) {
+      if (account.workspaceId === workspaceId) this.accounts.delete(account.id);
+    }
+    const member = this.members.get(ownerMemberId);
+    if (member) {
+      this.membersByWorkspaceUser.delete(`${workspaceId}:${member.userId}`);
+    }
+    this.members.delete(ownerMemberId);
+    for (const role of [...this.roles.values()]) {
+      if (role.workspaceId === workspaceId) this.roles.delete(role.id);
+    }
+    this.workspaces.delete(workspaceId);
   }
 
   private requireRole(workspaceId: string, roleId: string): RoleRecord {

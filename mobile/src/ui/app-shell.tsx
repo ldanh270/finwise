@@ -16,16 +16,13 @@ import {
 } from "./bottom-navigation-layout";
 import { MobileOutboxRepository } from "../sync/mobile-outbox-repository";
 import { isWorkspaceQueryFor } from "../app/workspace-query-scope";
+import {
+  usePreferences,
+  useTranslation,
+} from "../preferences/preferences-context";
 
 export type MobileSection =
-  | "overview"
-  | "transactions"
-  | "budgets"
-  | "reports"
-  | "group"
-  | "inbox"
-  | "accounts"
-  | "settings";
+  "overview" | "accounts" | "create" | "reports" | "other";
 
 export function AppShell({
   active,
@@ -45,6 +42,8 @@ export function AppShell({
   } = useWorkspace();
   const queryClient = useQueryClient();
   const [syncError, setSyncError] = useState<string | null>(null);
+  const t = useTranslation();
+  const { resolvedTheme } = usePreferences();
 
   const syncPendingDrafts = useCallback(async () => {
     if (!session?.user.id || !workspace?.id) return;
@@ -114,7 +113,13 @@ export function AppShell({
   }
 
   return (
-    <SafeAreaView edges={["top", "left", "right"]} style={styles.safe}>
+    <SafeAreaView
+      edges={["top", "left", "right"]}
+      style={[
+        styles.safe,
+        resolvedTheme === "dark" && { backgroundColor: "#102524" },
+      ]}
+    >
       <View style={styles.topbar}>
         <View>
           <Text style={styles.brand}>finwise</Text>
@@ -179,67 +184,93 @@ export function AppShell({
       <View
         style={[
           styles.nav,
+          resolvedTheme === "dark" && {
+            backgroundColor: "#173331",
+            borderTopColor: "#2b4d49",
+          },
           { paddingBottom: insets.bottom > 0 ? insets.bottom : 8 },
         ]}
       >
         <View style={styles.navContent}>
-          {(
-            [
-              "overview",
-              "accounts",
-              "transactions",
-              "budgets",
-              "reports",
-              "group",
-              "inbox",
-            ] as MobileSection[]
-          ).map((section) => (
-            <Pressable
-              key={section}
-              accessibilityRole="button"
-              accessibilityState={{ selected: active === section }}
-              onPress={() =>
-                router.replace(
-                  section === "overview" ? "/(app)" : `/(app)/${section}`,
-                )
-              }
-              style={styles.navItem}
+          {(["overview", "accounts"] as Exclude<MobileSection, "create">[]).map(
+            (section) => (
+              <NavItem
+                key={section}
+                active={active === section}
+                section={section}
+                label={section === "overview" ? t("home") : t("accounts")}
+                onPress={() =>
+                  router.replace(
+                    section === "overview" ? "/(app)" : "/(app)/accounts",
+                  )
+                }
+              />
+            ),
+          )}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t("add")}
+            accessibilityState={{ selected: active === "create" }}
+            onPress={() => router.push("/(app)/transaction/new")}
+            style={styles.plusItem}
+          >
+            <View
+              style={[styles.plus, active === "create" && styles.plusActive]}
             >
-              <View
-                style={[
-                  styles.navIconPill,
-                  active === section && styles.navIconPillActive,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.navIcon,
-                    active === section && styles.navIconActive,
-                  ]}
-                >
-                  {navGlyph(section)}
-                </Text>
-              </View>
-              <Text
-                numberOfLines={1}
-                style={[
-                  styles.navLabel,
-                  active === section && styles.navLabelActive,
-                ]}
-              >
-                {section === "group"
-                  ? "Group"
-                  : section === "inbox"
-                    ? "Inbox"
-                    : section === "transactions"
-                      ? "Activity"
-                      : section[0]?.toUpperCase() + section.slice(1)}
-              </Text>
-            </Pressable>
-          ))}
+              <Text style={styles.plusText}>+</Text>
+            </View>
+          </Pressable>
+          {(["reports", "other"] as Exclude<MobileSection, "create">[]).map(
+            (section) => (
+              <NavItem
+                key={section}
+                active={active === section}
+                section={section}
+                label={section === "reports" ? t("reports") : t("other")}
+                onPress={() =>
+                  router.replace(
+                    section === "reports" ? "/(app)/reports" : "/(app)/other",
+                  )
+                }
+              />
+            ),
+          )}
         </View>
       </View>
     </SafeAreaView>
+  );
+}
+
+function NavItem({
+  active,
+  section,
+  label,
+  onPress,
+}: {
+  readonly active: boolean;
+  readonly section: Exclude<MobileSection, "create">;
+  readonly label: string;
+  readonly onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      onPress={onPress}
+      style={styles.navItem}
+    >
+      <View style={[styles.navIconPill, active && styles.navIconPillActive]}>
+        <Text style={[styles.navIcon, active && styles.navIconActive]}>
+          {navGlyph(section)}
+        </Text>
+      </View>
+      <Text
+        numberOfLines={1}
+        style={[styles.navLabel, active && styles.navLabelActive]}
+      >
+        {label}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -254,17 +285,13 @@ function initials(value: string): string {
       .join("") || "FW"
   );
 }
-function navGlyph(section: MobileSection): string {
+function navGlyph(section: Exclude<MobileSection, "create">): string {
   return (
     {
       overview: "⊞",
       accounts: "▣",
-      transactions: "⇄",
-      budgets: "◔",
       reports: "▤",
-      group: "◎",
-      inbox: "✉",
-      settings: "⚙",
+      other: "☷",
     }[section] ?? "•"
   );
 }
@@ -344,6 +371,29 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 1,
+  },
+  plusItem: {
+    ...bottomNavigationItemStyle,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  plus: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: colors.teal,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: -18,
+    borderWidth: 4,
+    borderColor: colors.surface,
+  },
+  plusActive: { backgroundColor: colors.ink },
+  plusText: {
+    color: colors.surface,
+    fontSize: 34,
+    fontWeight: "300",
+    lineHeight: 38,
   },
   navIconPill: {
     width: 44,

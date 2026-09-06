@@ -69,16 +69,34 @@ export function Money({
   compact?: boolean;
 }) {
   const minorUnits = typeof value === "string" ? value : value.minorUnits;
-  const formatted = formatVnd(minorUnits);
+  const currency =
+    typeof value === "string" ? "VND" : (value.currency ?? "VND");
+  const formatted = formatMoney(minorUnits, currency);
   return (
     <Text style={[styles.money, compact && styles.moneyCompact]}>
-      {formatted} ₫
+      {formatted} {currency}
     </Text>
   );
 }
 export function formatVnd(minorUnits: string): string {
+  return formatMoney(minorUnits, "VND");
+}
+export function formatMoney(minorUnits: string, currency: string): string {
   try {
-    return BigInt(minorUnits).toLocaleString("vi-VN");
+    const scale = ["USD", "EUR", "GBP", "CNY", "SGD", "THB", "AUD"].includes(
+      currency,
+    )
+      ? 2
+      : 0;
+    const parsed = BigInt(minorUnits);
+    const locale = currency === "VND" ? "vi-VN" : "en-US";
+    if (scale === 0) return parsed.toLocaleString(locale);
+    const negative = parsed < 0n;
+    const digits = (negative ? -parsed : parsed)
+      .toString()
+      .padStart(scale + 1, "0");
+    const whole = BigInt(digits.slice(0, -scale)).toLocaleString(locale);
+    return `${negative ? "-" : ""}${whole}.${digits.slice(-scale)}`;
   } catch {
     return "—";
   }

@@ -8,19 +8,181 @@ const actor = {
 };
 
 describe('CoreService', () => {
-  function createService(): CoreService {
-    return new CoreService(new InMemoryFinwiseStore());
+  function createService(withWorkspace = true): CoreService {
+    const service = new CoreService(new InMemoryFinwiseStore());
+    if (withWorkspace) {
+      const setup = service.createWorkspace(actor, {
+        name: 'Test workspace',
+        kind: 'personal',
+        defaultCurrency: 'VND',
+        initialAccount: {
+          name: 'Test cash',
+          iconKey: 'cash',
+          kind: 'cash',
+          currency: 'VND',
+          openingBalanceMinorUnits: '0',
+        },
+      });
+      service.archiveAccount(actor, setup.workspace.id, setup.account.id);
+      for (const budget of setup.budgets) {
+        service.archiveBudget(actor, setup.workspace.id, budget.id);
+      }
+    }
+    return service;
   }
 
-  it('provisions one personal workspace for repeated bootstrap calls', () => {
-    const service = createService();
+  it('keeps bootstrap empty until a first workspace is created', () => {
+    const service = createService(false);
 
     const first = service.bootstrap(actor);
     const second = service.bootstrap(actor);
 
     expect(first.user.id).toBe(second.user.id);
-    expect(second.workspaces).toHaveLength(1);
-    expect(first.suggestedWorkspaceId).toBe(second.suggestedWorkspaceId);
+    expect(second.workspaces).toHaveLength(0);
+    expect(first.suggestedWorkspaceId).toBe('');
+    expect(second.suggestedWorkspaceId).toBe('');
+  });
+
+  it('creates the initial account and default budgets during workspace setup', () => {
+    const service = createService(false);
+
+    const result = service.createWorkspace(actor, {
+      name: 'Ducan Home',
+      kind: 'personal',
+      defaultCurrency: 'VND',
+      initialAccount: {
+        name: 'Cash',
+        iconKey: 'cash',
+        kind: 'cash',
+        currency: 'VND',
+        openingBalanceMinorUnits: '450000',
+      },
+    });
+
+    expect(result.account.balanceMinorUnits).toBe('450000');
+    expect(result.budgets.map((budget) => budget.name)).toEqual([
+      'Food',
+      'Shopping',
+      'Education',
+      'Transport',
+      'Housing',
+      'Health',
+      'Bills',
+      'Other',
+    ]);
+  });
+
+  it('groups overview balances by currency instead of mixing currencies', () => {
+    const service = createService(false);
+    const setup = service.createWorkspace(actor, {
+      name: 'Currency workspace',
+      kind: 'personal',
+      defaultCurrency: 'VND',
+      initialAccount: {
+        name: 'Cash',
+        iconKey: 'cash',
+        kind: 'cash',
+        currency: 'VND',
+        openingBalanceMinorUnits: '450000',
+      },
+    });
+    service.createAccount(actor, setup.workspace.id, {
+      name: 'USD wallet',
+      iconKey: 'wallet',
+      kind: 'cash',
+      currency: 'USD',
+      openingBalanceMinorUnits: '12500',
+    });
+
+    const overview = service.overview(actor, setup.workspace.id);
+
+    expect(overview.accountBalances).toEqual([
+      { currency: 'USD', minorUnits: '12500' },
+      { currency: 'VND', minorUnits: '450000' },
+    ]);
+    expect(overview.totals.accountBalance).toEqual({
+      currency: 'VND',
+      minorUnits: '450000',
+    });
+  });
+
+  it('uses one amount for same-currency transfers', () => {
+    const service = createService(false);
+    const setup = service.createWorkspace(actor, {
+      name: 'Transfer workspace',
+      kind: 'personal',
+      defaultCurrency: 'VND',
+      initialAccount: {
+        name: 'Cash',
+        iconKey: 'cash',
+        kind: 'cash',
+        currency: 'VND',
+        openingBalanceMinorUnits: '0',
+      },
+    });
+    const destination = service.createAccount(actor, setup.workspace.id, {
+      name: 'Savings',
+      iconKey: 'savings',
+      kind: 'savings',
+      currency: 'VND',
+      openingBalanceMinorUnits: '0',
+    });
+
+    const result = service.createTransaction(
+      actor,
+      setup.workspace.id,
+      {
+        type: 'transfer',
+        accountId: setup.account.id,
+        destinationAccountId: destination.id,
+        amount: { currency: 'VND', minorUnits: '100000' },
+        effectiveDate: '2026-09-06',
+      },
+      'same-currency-transfer',
+    );
+
+    expect(result.transfer?.destinationAmount).toEqual({
+      currency: 'VND',
+      minorUnits: '100000',
+    });
+  });
+
+  it('requires a destination amount or exchange rate for cross-currency transfers', () => {
+    const service = createService(false);
+    const setup = service.createWorkspace(actor, {
+      name: 'FX workspace',
+      kind: 'personal',
+      defaultCurrency: 'VND',
+      initialAccount: {
+        name: 'Cash',
+        iconKey: 'cash',
+        kind: 'cash',
+        currency: 'VND',
+        openingBalanceMinorUnits: '0',
+      },
+    });
+    const destination = service.createAccount(actor, setup.workspace.id, {
+      name: 'USD wallet',
+      iconKey: 'wallet',
+      kind: 'cash',
+      currency: 'USD',
+      openingBalanceMinorUnits: '0',
+    });
+
+    expect(() =>
+      service.createTransaction(
+        actor,
+        setup.workspace.id,
+        {
+          type: 'transfer',
+          accountId: setup.account.id,
+          destinationAccountId: destination.id,
+          amount: { currency: 'VND', minorUnits: '20000000' },
+          effectiveDate: '2026-09-06',
+        },
+        'missing-fx',
+      ),
+    ).toThrow('destination amount or exchange rate');
   });
 
   it('posts an exact-money expense and replays the same idempotent response', () => {

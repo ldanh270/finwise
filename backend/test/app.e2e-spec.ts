@@ -57,7 +57,7 @@ describe('Finwise API (e2e)', () => {
       });
   });
 
-  it('bootstraps a dev identity and personal workspace', async () => {
+  it('bootstraps a dev identity and creates a workspace setup', async () => {
     const response = await request(app.getHttpServer())
       .get('/v1/session/bootstrap')
       .set('x-finwise-user-id', 'e2e-user')
@@ -70,11 +70,45 @@ describe('Finwise API (e2e)', () => {
     };
 
     expect(body.user.id).toEqual(expect.any(String));
-    expect(body.workspaces).toHaveLength(1);
-    expect(body.suggestedWorkspaceId).toBe(body.workspaces[0]?.id);
+    expect(body.workspaces).toHaveLength(0);
+    expect(body.suggestedWorkspaceId).toBe('');
+
+    const setupResponse = await request(app.getHttpServer())
+      .post('/v1/workspaces')
+      .set('x-finwise-user-id', 'e2e-user')
+      .send({
+        name: 'E2E Home',
+        kind: 'personal',
+        defaultCurrency: 'VND',
+        initialAccount: {
+          name: 'Cash',
+          iconKey: 'cash',
+          kind: 'cash',
+          currency: 'VND',
+          openingBalanceMinorUnits: '0',
+        },
+      })
+      .expect(201);
+    const setup = setupResponse.body as {
+      readonly workspace: { readonly id: string };
+      readonly account: { readonly id: string };
+      readonly budgets: readonly { readonly name: string }[];
+    };
+    const workspaceId = setup.workspace.id;
+    const account = setup.account;
+    expect(setup.budgets.map((budget) => budget.name)).toEqual([
+      'Food',
+      'Shopping',
+      'Education',
+      'Transport',
+      'Housing',
+      'Health',
+      'Bills',
+      'Other',
+    ]);
 
     await request(app.getHttpServer())
-      .get(`/v1/workspaces/${body.suggestedWorkspaceId}/overview`)
+      .get(`/v1/workspaces/${workspaceId}/overview`)
       .set('x-finwise-user-id', 'e2e-user')
       .expect(200)
       .expect((overviewResponse) => {
@@ -83,13 +117,13 @@ describe('Finwise API (e2e)', () => {
           readonly accounts: readonly unknown[];
           readonly recentTransactions: readonly unknown[];
         };
-        expect(overview.workspaceId).toBe(body.suggestedWorkspaceId);
-        expect(overview.accounts).toHaveLength(0);
+        expect(overview.workspaceId).toBe(workspaceId);
+        expect(overview.accounts).toHaveLength(1);
         expect(overview.recentTransactions).toHaveLength(0);
       });
 
     const roleResponse = await request(app.getHttpServer())
-      .post(`/v1/workspaces/${body.suggestedWorkspaceId}/roles`)
+      .post(`/v1/workspaces/${workspaceId}/roles`)
       .set('x-finwise-user-id', 'e2e-user')
       .send({ name: 'Reviewer', permissions: ['workspace.read'] })
       .expect(201);
@@ -98,13 +132,13 @@ describe('Finwise API (e2e)', () => {
     );
 
     const rolesResponse = await request(app.getHttpServer())
-      .get(`/v1/workspaces/${body.suggestedWorkspaceId}/roles`)
+      .get(`/v1/workspaces/${workspaceId}/roles`)
       .set('x-finwise-user-id', 'e2e-user')
       .expect(200);
     expect(rolesResponse.body as readonly unknown[]).toHaveLength(2);
 
     const membersResponse = await request(app.getHttpServer())
-      .get(`/v1/workspaces/${body.suggestedWorkspaceId}/members`)
+      .get(`/v1/workspaces/${workspaceId}/members`)
       .set('x-finwise-user-id', 'e2e-user')
       .expect(200);
     const members = membersResponse.body as readonly {
@@ -114,23 +148,15 @@ describe('Finwise API (e2e)', () => {
     expect(members).toHaveLength(1);
     expect(members[0]?.isOwner).toBe(true);
 
-    const accountResponse = await request(app.getHttpServer())
-      .post(`/v1/workspaces/${body.suggestedWorkspaceId}/accounts`)
-      .set('x-finwise-user-id', 'e2e-user')
-      .send({ name: 'Cash', kind: 'cash' })
-      .expect(201);
-    const account = accountResponse.body as { readonly id: string };
     await request(app.getHttpServer())
-      .post(
-        `/v1/workspaces/${body.suggestedWorkspaceId}/accounts/${account.id}/access`,
-      )
+      .post(`/v1/workspaces/${workspaceId}/accounts/${account.id}/access`)
       .set('x-finwise-user-id', 'e2e-user')
       .send({ visibilityMode: 'owner_only' })
       .expect(201);
 
     await request(app.getHttpServer())
       .get(
-        `/v1/workspaces/${body.suggestedWorkspaceId}/members/${members[0]?.id}/access-preview`,
+        `/v1/workspaces/${workspaceId}/members/${members[0]?.id}/access-preview`,
       )
       .set('x-finwise-user-id', 'e2e-user')
       .expect(200)
@@ -148,7 +174,7 @@ describe('Finwise API (e2e)', () => {
     const invitedUserId = (invitedBootstrap.body as { user: { id: string } })
       .user.id;
     const invitationResponse = await request(app.getHttpServer())
-      .post(`/v1/workspaces/${body.suggestedWorkspaceId}/invitations`)
+      .post(`/v1/workspaces/${workspaceId}/invitations`)
       .set('x-finwise-user-id', 'e2e-user')
       .send({ invitedUserId })
       .expect(201);
@@ -162,7 +188,7 @@ describe('Finwise API (e2e)', () => {
       .expect(201);
 
     const membersAfterInvite = await request(app.getHttpServer())
-      .get(`/v1/workspaces/${body.suggestedWorkspaceId}/members`)
+      .get(`/v1/workspaces/${workspaceId}/members`)
       .set('x-finwise-user-id', 'e2e-user')
       .expect(200);
     const invitedMember = (
@@ -171,7 +197,7 @@ describe('Finwise API (e2e)', () => {
     expect(invitedMember).toBeDefined();
 
     const transferResponse = await request(app.getHttpServer())
-      .post(`/v1/workspaces/${body.suggestedWorkspaceId}/owner-transfers`)
+      .post(`/v1/workspaces/${workspaceId}/owner-transfers`)
       .set('x-finwise-user-id', 'e2e-user')
       .send({ targetMemberId: invitedMember?.id })
       .expect(201);
@@ -182,7 +208,7 @@ describe('Finwise API (e2e)', () => {
       .expect(201);
 
     await request(app.getHttpServer())
-      .post(`/v1/workspaces/${body.suggestedWorkspaceId}/archive`)
+      .post(`/v1/workspaces/${workspaceId}/archive`)
       .set('x-finwise-user-id', 'e2e-invited-user')
       .expect(201);
   });
@@ -196,7 +222,28 @@ describe('Finwise API (e2e)', () => {
     const bootstrap = bootstrapResponse.body as {
       readonly suggestedWorkspaceId: string;
     };
-    const workspaceId = bootstrap.suggestedWorkspaceId;
+    expect(bootstrap.suggestedWorkspaceId).toBe('');
+    const setupResponse = await request(app.getHttpServer())
+      .post('/v1/workspaces')
+      .set(authHeader)
+      .send({
+        name: 'Journey workspace',
+        kind: 'personal',
+        defaultCurrency: 'VND',
+        initialAccount: {
+          name: 'Journey cash',
+          iconKey: 'cash',
+          kind: 'cash',
+          currency: 'VND',
+          openingBalanceMinorUnits: '0',
+        },
+      })
+      .expect(201);
+    const setup = setupResponse.body as {
+      readonly workspace: { readonly id: string };
+      readonly account: { readonly id: string };
+    };
+    const workspaceId = setup.workspace.id;
 
     const membersResponse = await request(app.getHttpServer())
       .get(`/v1/workspaces/${workspaceId}/members`)
@@ -207,12 +254,7 @@ describe('Finwise API (e2e)', () => {
     )[0];
     expect(member).toBeDefined();
 
-    const accountResponse = await request(app.getHttpServer())
-      .post(`/v1/workspaces/${workspaceId}/accounts`)
-      .set(authHeader)
-      .send({ name: 'Journey cash', kind: 'cash' })
-      .expect(201);
-    const account = accountResponse.body as { readonly id: string };
+    const account = setup.account;
 
     const secondAccountResponse = await request(app.getHttpServer())
       .post(`/v1/workspaces/${workspaceId}/accounts`)

@@ -238,7 +238,7 @@ export default function InboxRoute() {
     );
   }
   return (
-    <AppShell active="inbox">
+    <AppShell active="other">
       <ScrollScreen>
         <Header
           eyebrow="INBOX & CONTROL"
@@ -455,7 +455,7 @@ function InboxGate({
   onRetry?: () => void;
 }) {
   return (
-    <AppShell active="inbox">
+    <AppShell active="other">
       <ScrollScreen>
         <Header
           eyebrow="INBOX & CONTROL"

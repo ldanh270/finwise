@@ -135,7 +135,7 @@ export default function TransactionsRoute() {
   const allTransactions = query.data ?? cachedTransactions;
   const visibleTransactions = filterTransactions(allTransactions, search);
   return (
-    <AppShell active="transactions">
+    <AppShell active="other">
       <ScrollScreen>
         <Header
           eyebrow="MONEY"

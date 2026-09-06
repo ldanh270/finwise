@@ -13,6 +13,7 @@ import { protectedPathForLogin } from "../../src/navigation/deep-link";
 import { AppLockGate } from "../../src/ui/app-lock-gate";
 import { clearUserWorkspaceData } from "../../src/session/clear-user-data";
 import { useState } from "react";
+import { OnboardingScreen } from "../../src/features/onboarding/onboarding-screen";
 
 export default function AuthenticatedLayout() {
   const { status, session, signOut } = useAuth();
@@ -59,7 +60,7 @@ export default function AuthenticatedLayout() {
     );
   }
   if (bootstrapStatus === "loading") return <BootstrapGate kind="loading" />;
-  if (bootstrapStatus === "empty") return <BootstrapGate kind="empty" />;
+  if (bootstrapStatus === "empty") return <OnboardingScreen />;
   if (bootstrapStatus === "error") {
     return (
       <BootstrapGate

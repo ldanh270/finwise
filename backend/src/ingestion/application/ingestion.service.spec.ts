@@ -10,10 +10,25 @@ const actor = {
 };
 
 describe('IngestionService', () => {
+  function createWorkspace(core: CoreService, name: string): string {
+    return core.createWorkspace(actor, {
+      name,
+      kind: 'personal',
+      defaultCurrency: 'VND',
+      initialAccount: {
+        name: 'Opening cash',
+        iconKey: 'cash',
+        kind: 'cash',
+        currency: 'VND',
+        openingBalanceMinorUnits: '0',
+      },
+    }).workspace.id;
+  }
+
   it('deduplicates a CSV session, confirms one row, and reconciles by adjustment', () => {
     const coreStore = new InMemoryFinwiseStore();
     const core = new CoreService(coreStore);
-    const workspaceId = core.bootstrap(actor).suggestedWorkspaceId;
+    const workspaceId = createWorkspace(core, 'Import workspace');
     const account = core.createAccount(actor, workspaceId, {
       name: 'Imported bank',
       kind: 'bank',
@@ -126,7 +141,7 @@ describe('IngestionService', () => {
   it('matches without posting and blocks terminal ignored confirmation', () => {
     const coreStore = new InMemoryFinwiseStore();
     const core = new CoreService(coreStore);
-    const workspaceId = core.bootstrap(actor).suggestedWorkspaceId;
+    const workspaceId = createWorkspace(core, 'Match workspace');
     const account = core.createAccount(actor, workspaceId, {
       name: 'Checking',
       kind: 'bank',
@@ -190,7 +205,7 @@ describe('IngestionService', () => {
   it('bulk confirms valid rows while returning independent row errors', () => {
     const coreStore = new InMemoryFinwiseStore();
     const core = new CoreService(coreStore);
-    const workspaceId = core.bootstrap(actor).suggestedWorkspaceId;
+    const workspaceId = createWorkspace(core, 'Bulk workspace');
     const account = core.createAccount(actor, workspaceId, {
       name: 'Bulk import account',
       kind: 'bank',

@@ -12,7 +12,7 @@ import {
   StatePanel,
   colors,
   Divider,
-  formatVnd,
+  formatMoney,
 } from "../../src/ui/components";
 import { useAuth } from "../../src/auth/auth-context";
 import { useWorkspace } from "../../src/app/providers";
@@ -185,9 +185,22 @@ export default function OverviewRoute() {
                           lineHeight: 16,
                         }}
                       >
-                        Ledger {formatVnd(balance.ledger.minorUnits)} · Cleared{" "}
-                        {formatVnd(balance.cleared.minorUnits)} · Reconciled{" "}
-                        {formatVnd(balance.reconciled.minorUnits)} ₫
+                        Ledger{" "}
+                        {formatMoney(
+                          balance.ledger.minorUnits,
+                          balance.ledger.currency,
+                        )}{" "}
+                        {balance.ledger.currency} · Cleared{" "}
+                        {formatMoney(
+                          balance.cleared.minorUnits,
+                          balance.cleared.currency,
+                        )}{" "}
+                        {balance.cleared.currency} · Reconciled{" "}
+                        {formatMoney(
+                          balance.reconciled.minorUnits,
+                          balance.reconciled.currency,
+                        )}{" "}
+                        {balance.reconciled.currency}
                       </Text>
                       <Divider />
                     </View>
@@ -229,6 +242,23 @@ function ViewCards({
       >
         <TextMuted text="Total balance" />
         <Money value={overview.totals.accountBalance} />
+        {overview.accountBalances.length > 1 ? (
+          <View style={{ gap: 4 }}>
+            <TextMuted text="Balances by currency" />
+            {overview.accountBalances.map((balance) => (
+              <View
+                key={balance.currency}
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                }}
+              >
+                <TextMuted text={balance.currency} />
+                <Money value={balance} compact />
+              </View>
+            ))}
+          </View>
+        ) : null}
       </Card>
       <View style={{ flexDirection: "row", gap: 10 }}>
         <Card style={{ flex: 1 }}>

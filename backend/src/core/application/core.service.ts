@@ -19,11 +19,17 @@ import {
   BudgetRolloverMode,
 } from '../domain/ledger.types';
 import {
+  currencyMetadata,
+  isCurrencyCode,
+  type CurrencyCode,
+} from '../domain/currency';
+import {
   BootstrapResult,
   BudgetOverviewProjection,
   ClassificationLineDraft,
   CoreStorePort,
   JournalDraft,
+  WorkspaceSetupDraft,
 } from './core.ports';
 import { buildReportProjection } from '../domain/report';
 
@@ -32,7 +38,7 @@ export interface WorkspaceResponse {
   readonly name: string;
   readonly kind: WorkspaceKind;
   readonly intent: 'PERSONAL' | 'SHARED';
-  readonly currency: typeof MVP_CURRENCY;
+  readonly currency: CurrencyCode;
   readonly status: string;
 }
 
@@ -40,11 +46,18 @@ export interface AccountResponse {
   readonly id: string;
   readonly workspaceId: string;
   readonly name: string;
+  readonly iconKey: string;
   readonly kind: AccountKind;
-  readonly currency: typeof MVP_CURRENCY;
+  readonly currency: CurrencyCode;
   readonly balanceMinorUnits: string;
   readonly visibilityMode: AccountVisibilityMode;
   readonly status: string;
+}
+
+export interface WorkspaceSetupResponse {
+  readonly workspace: WorkspaceResponse;
+  readonly account: AccountResponse;
+  readonly budgets: readonly BudgetResponse[];
 }
 
 export interface BalanceProjectionResponse {
@@ -60,15 +73,15 @@ export interface BalanceProjectionResponse {
 export interface BalanceViewsResponse {
   readonly accountId: string;
   readonly ledger: {
-    readonly currency: typeof MVP_CURRENCY;
+    readonly currency: CurrencyCode;
     readonly minorUnits: string;
   };
   readonly cleared: {
-    readonly currency: typeof MVP_CURRENCY;
+    readonly currency: CurrencyCode;
     readonly minorUnits: string;
   };
   readonly reconciled: {
-    readonly currency: typeof MVP_CURRENCY;
+    readonly currency: CurrencyCode;
     readonly minorUnits: string;
   };
 }
@@ -94,7 +107,7 @@ export interface ClassificationLineResponse {
   readonly transactionId: string;
   readonly budgetId: string;
   readonly amount: {
-    readonly currency: typeof MVP_CURRENCY;
+    readonly currency: CurrencyCode;
     readonly minorUnits: string;
   };
   readonly tagIds: readonly string[];
@@ -105,11 +118,11 @@ export interface BudgetPeriodResponse {
   readonly workspaceId: string;
   readonly month: string;
   readonly base: {
-    readonly currency: typeof MVP_CURRENCY;
+    readonly currency: CurrencyCode;
     readonly minorUnits: string;
   };
   readonly carry: {
-    readonly currency: typeof MVP_CURRENCY;
+    readonly currency: CurrencyCode;
     readonly minorUnits: string;
   };
   readonly status: string;
@@ -120,35 +133,35 @@ export interface BudgetOverviewResponse extends BudgetPeriodResponse {
     readonly budgetId: string;
     readonly mode: string;
     readonly fixed: {
-      readonly currency: typeof MVP_CURRENCY;
+      readonly currency: CurrencyCode;
       readonly minorUnits: string;
     };
     readonly percentageBasisPoints: number;
     readonly rolloverMode: string;
     readonly allocated: {
-      readonly currency: typeof MVP_CURRENCY;
+      readonly currency: CurrencyCode;
       readonly minorUnits: string;
     };
     readonly actual: {
-      readonly currency: typeof MVP_CURRENCY;
+      readonly currency: CurrencyCode;
       readonly minorUnits: string;
     };
     readonly remaining: {
-      readonly currency: typeof MVP_CURRENCY;
+      readonly currency: CurrencyCode;
       readonly minorUnits: string;
     };
   }[];
   readonly totals: {
     readonly allocated: {
-      readonly currency: typeof MVP_CURRENCY;
+      readonly currency: CurrencyCode;
       readonly minorUnits: string;
     };
     readonly actual: {
-      readonly currency: typeof MVP_CURRENCY;
+      readonly currency: CurrencyCode;
       readonly minorUnits: string;
     };
     readonly remaining: {
-      readonly currency: typeof MVP_CURRENCY;
+      readonly currency: CurrencyCode;
       readonly minorUnits: string;
     };
   };
@@ -160,7 +173,7 @@ export interface TransactionResponse {
   readonly kind: JournalKind;
   readonly status: string;
   readonly amount: {
-    readonly currency: typeof MVP_CURRENCY;
+    readonly currency: CurrencyCode;
     readonly minorUnits: string;
   };
   readonly effectiveDate: string;
@@ -171,8 +184,20 @@ export interface TransactionResponse {
     readonly id: string;
     readonly accountId: string;
     readonly amountMinorUnits: string;
+    readonly currency: CurrencyCode;
     readonly direction: string;
   }[];
+  readonly transfer?: {
+    readonly sourceAmount: {
+      readonly currency: CurrencyCode;
+      readonly minorUnits: string;
+    };
+    readonly destinationAmount: {
+      readonly currency: CurrencyCode;
+      readonly minorUnits: string;
+    };
+    readonly exchangeRate?: string;
+  };
 }
 
 export interface JournalSourceLinkResponse {
@@ -196,12 +221,16 @@ export interface BootstrapResponse {
 export interface OverviewResponse {
   readonly workspaceId: string;
   readonly period: string;
+  readonly accountBalances: readonly {
+    readonly currency: CurrencyCode;
+    readonly minorUnits: string;
+  }[];
   readonly accounts: readonly {
     readonly id: string;
     readonly name: string;
     readonly type: 'CASH' | 'BANK' | 'SAVINGS' | 'OTHER';
     readonly balance: {
-      readonly currency: typeof MVP_CURRENCY;
+      readonly currency: CurrencyCode;
       readonly minorUnits: string;
     };
     readonly isArchived: boolean;
@@ -213,7 +242,7 @@ export interface OverviewResponse {
     readonly type: 'INCOME' | 'EXPENSE' | 'TRANSFER';
     readonly status: 'posted' | 'voided';
     readonly amount: {
-      readonly currency: typeof MVP_CURRENCY;
+      readonly currency: CurrencyCode;
       readonly minorUnits: string;
     };
     readonly accountName: string;
@@ -222,19 +251,19 @@ export interface OverviewResponse {
   readonly budgets: readonly [];
   readonly totals: {
     readonly accountBalance: {
-      readonly currency: typeof MVP_CURRENCY;
+      readonly currency: CurrencyCode;
       readonly minorUnits: string;
     };
     readonly budgetRemaining: {
-      readonly currency: typeof MVP_CURRENCY;
+      readonly currency: CurrencyCode;
       readonly minorUnits: string;
     };
     readonly income: {
-      readonly currency: typeof MVP_CURRENCY;
+      readonly currency: CurrencyCode;
       readonly minorUnits: string;
     };
     readonly spending: {
-      readonly currency: typeof MVP_CURRENCY;
+      readonly currency: CurrencyCode;
       readonly minorUnits: string;
     };
   };
@@ -328,6 +357,7 @@ export class CoreService {
 
   overview(actor: AuthenticatedActor, workspaceId: string): OverviewResponse {
     const accounts = this.store.listAccounts(workspaceId, actor);
+    const reportingCurrency = accounts[0]?.currency ?? MVP_CURRENCY;
     const accountById = new Map(
       accounts.map((account) => [account.id, account]),
     );
@@ -337,17 +367,29 @@ export class CoreService {
     let spending = 0n;
     for (const transaction of transactions) {
       if (!transaction.effectiveDate.startsWith(period)) continue;
+      if (transaction.currency !== reportingCurrency) continue;
       if (transaction.kind === 'income') income += transaction.amountMinorUnits;
       if (transaction.kind === 'expense')
         spending += transaction.amountMinorUnits;
     }
-    const accountBalance = accounts.reduce(
-      (total, account) => total + account.balanceMinorUnits,
-      0n,
-    );
+    const balancesByCurrency = new Map<CurrencyCode, bigint>();
+    for (const account of accounts) {
+      balancesByCurrency.set(
+        account.currency,
+        (balancesByCurrency.get(account.currency) ?? 0n) +
+          account.balanceMinorUnits,
+      );
+    }
+    const accountBalance = balancesByCurrency.get(reportingCurrency) ?? 0n;
     return {
       workspaceId,
       period,
+      accountBalances: [...balancesByCurrency.entries()]
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([currency, minorUnits]) => ({
+          currency,
+          minorUnits: minorUnits.toString(),
+        })),
       accounts: accounts.map((account) => ({
         id: account.id,
         name: account.name,
@@ -378,10 +420,10 @@ export class CoreService {
       }),
       budgets: [],
       totals: {
-        accountBalance: moneyDto(accountBalance),
-        budgetRemaining: moneyDto(0n),
-        income: moneyDto(income),
-        spending: moneyDto(spending),
+        accountBalance: moneyDto(accountBalance, reportingCurrency),
+        budgetRemaining: moneyDto(0n, reportingCurrency),
+        income: moneyDto(income, reportingCurrency),
+        spending: moneyDto(spending, reportingCurrency),
       },
       hasPartialAccess: this.store.hasPartialAccountAccess(workspaceId, actor),
     };
@@ -433,14 +475,36 @@ export class CoreService {
     };
   }
 
-  createWorkspace(actor: AuthenticatedActor, body: unknown): WorkspaceResponse {
+  createWorkspace(
+    actor: AuthenticatedActor,
+    body: unknown,
+  ): WorkspaceSetupResponse {
     const input = bodyRecord(body);
-    const workspace = this.store.createWorkspace(
-      actor,
-      requiredString(input, 'name', 1, 100),
-      workspaceKind(input.kind),
-    );
-    return this.workspaceResponse(workspace);
+    const initialAccount = bodyRecord(input.initialAccount);
+    const setup: WorkspaceSetupDraft = {
+      name: requiredString(input, 'name', 1, 100),
+      kind: workspaceKind(input.kind),
+      defaultCurrency: requiredCurrency(
+        input.defaultCurrency,
+        'defaultCurrency',
+      ),
+      initialAccount: {
+        name: requiredString(initialAccount, 'name', 1, 100),
+        iconKey: requiredIconKey(initialAccount.iconKey),
+        kind: accountKind(initialAccount.kind),
+        currency: requiredCurrency(initialAccount.currency, 'currency'),
+        openingBalanceMinorUnits: nonNegativeMinorUnits(
+          initialAccount.openingBalanceMinorUnits ?? '0',
+          'initialAccount.openingBalanceMinorUnits',
+        ),
+      },
+    };
+    const result = this.store.createWorkspaceSetup(actor, setup);
+    return {
+      workspace: this.workspaceResponse(result.workspace),
+      account: this.accountResponse(result.account),
+      budgets: result.budgets.map((budget) => this.budgetResponse(budget)),
+    };
   }
 
   getWorkspace(
@@ -816,6 +880,14 @@ export class CoreService {
       requiredString(input, 'name', 1, 100),
       accountKind(input.kind),
       visibilityMode(input.visibilityMode),
+      input.currency === undefined
+        ? undefined
+        : requiredCurrency(input.currency, 'currency'),
+      input.iconKey === undefined ? undefined : requiredIconKey(input.iconKey),
+      nonNegativeMinorUnits(
+        input.openingBalanceMinorUnits ?? '0',
+        'openingBalanceMinorUnits',
+      ),
     );
     return this.accountResponse(account);
   }
@@ -855,7 +927,12 @@ export class CoreService {
     workspaceId: string,
   ): readonly BalanceViewsResponse[] {
     return this.store.rebuildBalances(workspaceId, actor).map((projection) => {
-      const balance = moneyDto(projection.balanceMinorUnits);
+      const account = this.store.getAccount(
+        workspaceId,
+        projection.accountId,
+        actor,
+      );
+      const balance = moneyDto(projection.balanceMinorUnits, account.currency);
       return {
         accountId: projection.accountId,
         ledger: balance,
@@ -880,6 +957,7 @@ export class CoreService {
       JSON.stringify({
         accountId,
         amount: money.toMinorUnitsString(),
+        currency: money.currency,
         effectiveDate,
       }),
     );
@@ -893,15 +971,18 @@ export class CoreService {
       return previous;
     }
     const account = this.store.getAccount(workspaceId, accountId, actor);
+    requireMatchingCurrency(money.currency, account.currency, 'amount');
     const memberId = this.store.memberIdFor(workspaceId, actor.userId);
     const systemAccount = this.store.systemAccount(
       workspaceId,
       'Opening equity',
+      account.currency,
     );
     const transaction = this.store.postJournal({
       workspaceId,
       kind: 'opening_balance',
       amountMinorUnits: money.minorUnits,
+      currency: money.currency,
       effectiveDate,
       description: readOptionalString(input, 'description', 500),
       createdByMemberId: memberId,
@@ -956,13 +1037,26 @@ export class CoreService {
       input,
       'destinationAccountId',
     );
+    const destinationAmount = readOptionalMoney(input, 'destinationAmount');
+    const exchangeRate = readOptionalExchangeRate(input.exchangeRate);
     const requestHash = this.store.hashRequest(
       JSON.stringify({
         type,
-        amount: money.toMinorUnitsString(),
+        amount: {
+          currency: money.currency,
+          minorUnits: money.toMinorUnitsString(),
+        },
         effectiveDate,
         sourceAccountId,
         destinationAccountId,
+        destinationAmount:
+          destinationAmount === undefined
+            ? undefined
+            : {
+                currency: destinationAmount.currency,
+                minorUnits: destinationAmount.toMinorUnitsString(),
+              },
+        exchangeRate,
         budgetId,
         description: readOptionalString(input, 'description', 500),
       }),
@@ -977,6 +1071,7 @@ export class CoreService {
       return previous;
     }
     const source = this.store.getAccount(workspaceId, sourceAccountId, actor);
+    requireMatchingCurrency(money.currency, source.currency, 'amount');
     const memberId = this.store.memberIdFor(workspaceId, actor.userId);
     const entries = this.entriesFor(
       workspaceId,
@@ -985,11 +1080,15 @@ export class CoreService {
       source.id,
       destinationAccountId,
       money,
+      destinationAmount,
+      exchangeRate,
     );
     const journalDraft: JournalDraft = {
       workspaceId,
       kind: type,
       amountMinorUnits: money.minorUnits,
+      currency: money.currency,
+      exchangeRate,
       effectiveDate,
       description: readOptionalString(input, 'description', 500),
       createdByMemberId: memberId,
@@ -1145,6 +1244,8 @@ export class CoreService {
       input,
       'destinationAccountId',
     );
+    const destinationAmount = readOptionalMoney(input, 'destinationAmount');
+    const exchangeRate = readOptionalExchangeRate(input.exchangeRate);
     const description = readOptionalString(input, 'description', 500);
     const requestHash = this.store.hashRequest(
       JSON.stringify({
@@ -1152,9 +1253,12 @@ export class CoreService {
         reason,
         type,
         amount: money.toMinorUnitsString(),
+        currency: money.currency,
         effectiveDate,
         sourceAccountId,
         destinationAccountId,
+        destinationAmount: destinationAmount?.toMinorUnitsString(),
+        exchangeRate,
         description,
       }),
     );
@@ -1167,6 +1271,7 @@ export class CoreService {
       return previous;
     }
     const source = this.store.getAccount(workspaceId, sourceAccountId, actor);
+    requireMatchingCurrency(money.currency, source.currency, 'amount');
     const memberId = this.store.memberIdFor(workspaceId, actor.userId);
     const result = this.store.replaceTransaction(
       workspaceId,
@@ -1176,6 +1281,8 @@ export class CoreService {
         workspaceId,
         kind: type,
         amountMinorUnits: money.minorUnits,
+        currency: money.currency,
+        exchangeRate,
         effectiveDate,
         description,
         createdByMemberId: memberId,
@@ -1186,6 +1293,8 @@ export class CoreService {
           source.id,
           destinationAccountId,
           money,
+          destinationAmount,
+          exchangeRate,
         ),
       },
       reason,
@@ -1245,6 +1354,8 @@ export class CoreService {
     sourceAccountId: string,
     destinationAccountId: string | undefined,
     money: Money,
+    requestedDestinationAmount?: Money,
+    exchangeRate?: string,
   ): JournalDraft['entries'] {
     if (type === 'transfer') {
       if (!destinationAccountId || destinationAccountId === sourceAccountId) {
@@ -1252,16 +1363,28 @@ export class CoreService {
           'A transfer needs two different accounts.',
         );
       }
-      this.store.getAccount(workspaceId, destinationAccountId, actor);
+      const destination = this.store.getAccount(
+        workspaceId,
+        destinationAccountId,
+        actor,
+      );
+      const destinationMoney = destinationAmountForTransfer(
+        money,
+        destination.currency,
+        requestedDestinationAmount,
+        exchangeRate,
+      );
       return [
         {
           accountId: sourceAccountId,
           amountMinorUnits: money.minorUnits,
+          currency: money.currency,
           direction: 'decrease',
         },
         {
           accountId: destinationAccountId,
-          amountMinorUnits: money.minorUnits,
+          amountMinorUnits: destinationMoney.minorUnits,
+          currency: destinationMoney.currency,
           direction: 'increase',
         },
       ];
@@ -1272,17 +1395,23 @@ export class CoreService {
       );
     }
     const systemPurpose = type === 'income' ? 'Income' : 'Expense';
-    const systemAccount = this.store.systemAccount(workspaceId, systemPurpose);
+    const systemAccount = this.store.systemAccount(
+      workspaceId,
+      systemPurpose,
+      money.currency,
+    );
     return type === 'income'
       ? [
           {
             accountId: sourceAccountId,
             amountMinorUnits: money.minorUnits,
+            currency: money.currency,
             direction: 'increase',
           },
           {
             accountId: systemAccount.id,
             amountMinorUnits: money.minorUnits,
+            currency: money.currency,
             direction: 'decrease',
           },
         ]
@@ -1290,11 +1419,13 @@ export class CoreService {
           {
             accountId: sourceAccountId,
             amountMinorUnits: money.minorUnits,
+            currency: money.currency,
             direction: 'decrease',
           },
           {
             accountId: systemAccount.id,
             amountMinorUnits: money.minorUnits,
+            currency: money.currency,
             direction: 'increase',
           },
         ];
@@ -1318,6 +1449,7 @@ export class CoreService {
       id: account.id,
       workspaceId: account.workspaceId,
       name: account.name,
+      iconKey: account.iconKey,
       kind: account.kind,
       currency: account.currency,
       balanceMinorUnits: account.balanceMinorUnits.toString(),
@@ -1467,8 +1599,14 @@ export class CoreService {
         id: entry.id,
         accountId: entry.accountId,
         amountMinorUnits: entry.amountMinorUnits.toString(),
+        currency: entry.currency,
         direction: entry.direction,
       })),
+      ...(transaction.kind === 'transfer'
+        ? {
+            transfer: transferResponse(transaction),
+          }
+        : {}),
     };
   }
 }
@@ -1705,7 +1843,9 @@ function parseMoney(input: Record<string, unknown>): Money {
     return Money.fromMinorUnits(minorUnits, currency);
   }
   if (typeof input.amountMinorUnits === 'string') {
-    return Money.fromMinorUnits(input.amountMinorUnits, MVP_CURRENCY);
+    const currency =
+      typeof input.currency === 'string' ? input.currency : MVP_CURRENCY;
+    return Money.fromMinorUnits(input.amountMinorUnits, currency);
   }
   if (typeof structured === 'string') {
     return Money.fromMinorUnits(structured, MVP_CURRENCY);
@@ -1713,6 +1853,182 @@ function parseMoney(input: Record<string, unknown>): Money {
   throw FinwiseError.validation(
     'Provide amountMinorUnits or amount { currency, minorUnits }.',
   );
+}
+
+function readOptionalMoney(
+  input: Record<string, unknown>,
+  field: string,
+): Money | undefined {
+  const value = input[field];
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw FinwiseError.validation(
+      `${field} must contain currency and minorUnits.`,
+      {
+        field,
+      },
+    );
+  }
+  const amount = value as Record<string, unknown>;
+  if (typeof amount.currency !== 'string') {
+    throw FinwiseError.validation(
+      `${field}.currency must be a currency code.`,
+      {
+        field: `${field}.currency`,
+      },
+    );
+  }
+  if (typeof amount.minorUnits !== 'string') {
+    throw FinwiseError.validation(`${field}.minorUnits must be a string.`, {
+      field: `${field}.minorUnits`,
+    });
+  }
+  return Money.fromMinorUnits(amount.minorUnits, amount.currency);
+}
+
+function readOptionalExchangeRate(value: unknown): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (
+    typeof value !== 'string' ||
+    !/^(?:0|[1-9][0-9]*)(?:\.[0-9]{1,12})?$/.test(value) ||
+    BigInt(value.replace('.', '')) <= 0n
+  ) {
+    throw FinwiseError.validation(
+      'exchangeRate must be a positive decimal string.',
+      { field: 'exchangeRate' },
+    );
+  }
+  return value;
+}
+
+function requireMatchingCurrency(
+  amountCurrency: CurrencyCode,
+  accountCurrency: CurrencyCode,
+  field: string,
+): void {
+  if (amountCurrency !== accountCurrency) {
+    throw FinwiseError.validation(
+      `${field}.currency must match the source account currency.`,
+      { field: `${field}.currency` },
+    );
+  }
+}
+
+function destinationAmountForTransfer(
+  sourceAmount: Money,
+  destinationCurrency: CurrencyCode,
+  requestedDestinationAmount: Money | undefined,
+  exchangeRate: string | undefined,
+): Money {
+  if (sourceAmount.currency === destinationCurrency) {
+    if (
+      requestedDestinationAmount !== undefined &&
+      (requestedDestinationAmount.currency !== destinationCurrency ||
+        requestedDestinationAmount.minorUnits !== sourceAmount.minorUnits)
+    ) {
+      throw FinwiseError.validation(
+        'A same-currency transfer must use the source amount as its destination amount.',
+        { field: 'destinationAmount' },
+      );
+    }
+    return sourceAmount;
+  }
+  if (
+    requestedDestinationAmount !== undefined &&
+    requestedDestinationAmount.currency !== destinationCurrency
+  ) {
+    throw FinwiseError.validation(
+      'destinationAmount.currency must match the destination account currency.',
+      { field: 'destinationAmount.currency' },
+    );
+  }
+  if (requestedDestinationAmount !== undefined && exchangeRate !== undefined) {
+    const calculated = convertMinorUnits(
+      sourceAmount,
+      destinationCurrency,
+      exchangeRate,
+    );
+    if (calculated.minorUnits !== requestedDestinationAmount.minorUnits) {
+      throw FinwiseError.validation(
+        'destinationAmount does not match the supplied exchangeRate.',
+        { field: 'destinationAmount' },
+      );
+    }
+  }
+  if (requestedDestinationAmount !== undefined) {
+    return requestedDestinationAmount;
+  }
+  if (exchangeRate === undefined) {
+    throw FinwiseError.validation(
+      'A cross-currency transfer needs destination amount or exchange rate.',
+      { field: 'destinationAmount' },
+    );
+  }
+  return convertMinorUnits(sourceAmount, destinationCurrency, exchangeRate);
+}
+
+function convertMinorUnits(
+  sourceAmount: Money,
+  destinationCurrency: CurrencyCode,
+  exchangeRate: string,
+): Money {
+  const [whole, fraction = ''] = exchangeRate.split('.');
+  const rateNumerator = BigInt(`${whole}${fraction}`);
+  const rateDenominator = 10n ** BigInt(fraction.length);
+  const sourceScale = BigInt(currencyMetadata(sourceAmount.currency).scale);
+  const destinationScale = BigInt(currencyMetadata(destinationCurrency).scale);
+  const numerator =
+    sourceAmount.minorUnits * rateNumerator * 10n ** destinationScale;
+  const denominator = rateDenominator * 10n ** sourceScale;
+  const roundedMinorUnits = (numerator + denominator / 2n) / denominator;
+  if (roundedMinorUnits <= 0n) {
+    throw FinwiseError.validation(
+      'exchangeRate must produce a positive destination amount.',
+      { field: 'exchangeRate' },
+    );
+  }
+  return Money.fromBigInt(roundedMinorUnits, destinationCurrency);
+}
+
+function transferResponse(transaction: JournalTransactionRecord): {
+  readonly sourceAmount: {
+    readonly currency: CurrencyCode;
+    readonly minorUnits: string;
+  };
+  readonly destinationAmount: {
+    readonly currency: CurrencyCode;
+    readonly minorUnits: string;
+  };
+  readonly exchangeRate?: string;
+} {
+  const sourceEntry = transaction.entries.find(
+    (entry) => entry.direction === 'decrease',
+  );
+  const destinationEntry = transaction.entries.find(
+    (entry) => entry.direction === 'increase',
+  );
+  if (sourceEntry === undefined || destinationEntry === undefined) {
+    throw FinwiseError.businessState(
+      'Transfer transaction is missing source or destination entries.',
+    );
+  }
+  return {
+    sourceAmount: {
+      currency: sourceEntry.currency,
+      minorUnits: sourceEntry.amountMinorUnits.toString(),
+    },
+    destinationAmount: {
+      currency: destinationEntry.currency,
+      minorUnits: destinationEntry.amountMinorUnits.toString(),
+    },
+    ...(transaction.exchangeRate === undefined
+      ? {}
+      : { exchangeRate: transaction.exchangeRate }),
+  };
 }
 
 function parseDate(value: unknown): string {
@@ -1755,11 +2071,14 @@ function transactionTypeForOverview(
   return 'TRANSFER';
 }
 
-function moneyDto(minorUnits: bigint): {
-  readonly currency: typeof MVP_CURRENCY;
+function moneyDto(
+  minorUnits: bigint,
+  currency: CurrencyCode = MVP_CURRENCY,
+): {
+  readonly currency: CurrencyCode;
   readonly minorUnits: string;
 } {
-  return { currency: MVP_CURRENCY, minorUnits: minorUnits.toString() };
+  return { currency, minorUnits: minorUnits.toString() };
 }
 
 function reportMoneyResponse(value: {
@@ -1851,6 +2170,28 @@ function workspaceKind(value: unknown): WorkspaceKind {
     'kind must be personal, family, class_fund, or other.',
     { field: 'kind' },
   );
+}
+
+function requiredCurrency(value: unknown, field: string): CurrencyCode {
+  if (!isCurrencyCode(value)) {
+    throw FinwiseError.validation(`${field} must be a supported currency.`, {
+      field,
+    });
+  }
+  return value;
+}
+
+function requiredIconKey(value: unknown): string {
+  if (
+    typeof value !== 'string' ||
+    !/^[a-z][a-z0-9-]{1,31}$/.test(value.trim())
+  ) {
+    throw FinwiseError.validation(
+      'iconKey must be a supported account icon key.',
+      { field: 'iconKey' },
+    );
+  }
+  return value.trim();
 }
 
 function accountKind(value: unknown): AccountKind {

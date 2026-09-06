@@ -12,6 +12,10 @@
 
 ## Global Constraints
 
+Implementation status: Tasks 1–9 are implemented and their focused gates are
+green. Task 10 is in progress pending the final repository-wide verification,
+walkthrough update, and commit.
+
 - Supported MVP currencies are exactly `VND`, `USD`, `EUR`, `GBP`, `JPY`, `KRW`, `CNY`, `SGD`, `THB`, and `AUD`.
 - Amounts remain integer minor-unit strings/`bigint`; never use JavaScript floating-point arithmetic for financial calculations.
 - Workspace setup creates the workspace owner, required initial account, opening journal when non-zero, and default budgets as one successful application operation.
@@ -27,6 +31,8 @@
 ---
 
 ### Task 1: Add the typed currency and account metadata foundation
+
+Status: complete.
 
 **Files:**
 - Create: `backend/src/core/domain/currency.ts`
@@ -76,6 +82,8 @@ Run: `npm --prefix backend test -- --runInBand src/core/domain/currency.spec.ts 
 - [ ] **Step 5: Refactor only after green and inspect the diff for floating-point calculations or accidental currency widening.**
 
 ### Task 2: Implement atomic workspace setup and seeded defaults
+
+Status: complete.
 
 **Files:**
 - Modify: `backend/src/core/application/core.ports.ts`
@@ -151,6 +159,8 @@ Run: `npm --prefix backend run test:e2e -- --runInBand`
 
 ### Task 3: Add per-account currency, icon, and opening-balance creation
 
+Status: complete.
+
 **Files:**
 - Modify: `backend/src/core/application/core.ports.ts`
 - Modify: `backend/src/core/application/core.service.ts`
@@ -205,6 +215,8 @@ Run: `npm --prefix backend test -- --runInBand src/core/application/core.service
 Run: `npm --prefix backend run typecheck`
 
 ### Task 4: Extend transaction contracts for account currencies and manual FX transfers
+
+Status: complete.
 
 **Files:**
 - Modify: `backend/src/core/application/core.ports.ts`
@@ -269,6 +281,8 @@ Run: `npm --prefix backend run typecheck`
 
 ### Task 5: Update shared API client and OpenAPI contracts
 
+Status: complete.
+
 **Files:**
 - Modify: `packages/api-client/src/index.ts`
 - Test: `mobile/src/api-client.spec.ts`
@@ -325,6 +339,8 @@ Run: `pnpm typecheck:api-client`
 
 ### Task 6: Add mobile preference, theme, and translation services
 
+Status: complete.
+
 **Files:**
 - Create: `mobile/src/preferences/preferences.ts`
 - Test: `mobile/src/preferences/preferences.spec.ts`
@@ -372,6 +388,8 @@ Run: `pnpm --filter mobile test -- preferences.spec.ts i18n.spec.ts --runInBand`
 Run: `pnpm --filter mobile typecheck`
 
 ### Task 7: Implement onboarding and account screens
+
+Status: complete.
 
 **Files:**
 - Create: `mobile/src/features/onboarding/onboarding-screen.tsx`
@@ -429,6 +447,8 @@ Run: `pnpm --filter mobile test -- workspace-bootstrap.spec.ts onboarding-servic
 Run: `pnpm --filter mobile typecheck`
 
 ### Task 8: Replace the bottom navigation and implement the amount-first plus flow
+
+Status: complete.
 
 **Files:**
 - Modify: `mobile/src/ui/app-shell.tsx`
@@ -494,6 +514,8 @@ Run: `pnpm --filter mobile typecheck`
 Run: `pnpm --filter mobile format:check`
 
 ### Task 9: Add settings UI and apply preferences to the shell
+
+Status: complete.
 
 **Files:**
 - Modify: `mobile/app/(app)/settings.tsx`

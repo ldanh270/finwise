@@ -5,12 +5,19 @@ const minorUnits = z
   .regex(/^\d+$/, "Use VND minor units as a whole number.")
   .refine((value) => BigInt(value) > 0n, "Amount must be greater than zero.");
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD.");
+const currency = z
+  .enum(["VND", "USD", "EUR", "GBP", "JPY", "KRW", "CNY", "SGD", "THB", "AUD"])
+  .default("VND");
 
 export const manualTransactionSchema = z.object({
   type: z.enum(["income", "expense", "transfer"]),
   accountId: z.string().min(1),
   destinationAccountId: z.string().optional(),
   budgetId: z.string().optional(),
+  currency,
+  destinationAmountMinorUnits: minorUnits.optional(),
+  destinationCurrency: currency.optional(),
+  exchangeRate: z.string().optional(),
   amountMinorUnits: minorUnits,
   effectiveDate: isoDate,
   description: z.string().max(500).optional(),

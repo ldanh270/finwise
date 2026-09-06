@@ -76,6 +76,8 @@ export default function NewTransactionRoute() {
   const [accountId, setAccountId] = useState("");
   const [destinationAccountId, setDestinationAccountId] = useState("");
   const [amount, setAmount] = useState("");
+  const [destinationAmount, setDestinationAmount] = useState("");
+  const [exchangeRate, setExchangeRate] = useState("");
   const [description, setDescription] = useState("");
   const [effectiveDate, setEffectiveDate] = useState(today());
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -119,7 +121,7 @@ export default function NewTransactionRoute() {
           accountId: command.input.accountId,
           kind: command.input.type,
           amount: {
-            currency: "VND",
+            currency: command.input.currency,
             minorUnits: command.input.amountMinorUnits,
           },
           effectiveDate: command.input.effectiveDate,
@@ -141,7 +143,10 @@ export default function NewTransactionRoute() {
   const accounts = accountsQuery.data ?? cachedAccounts;
   const accountOptions = accounts
     .filter((account) => account.status === "active")
-    .map((account) => ({ label: account.name, value: account.id }));
+    .map((account) => ({
+      label: `${account.name} (${account.currency})`,
+      value: account.id,
+    }));
   const budgetOptions = [
     { label: "Unassigned", value: "" },
     ...(budgetsQuery.data ?? [])
@@ -149,12 +154,31 @@ export default function NewTransactionRoute() {
       .map((budget) => ({ label: budget.name, value: budget.id })),
   ];
   const [budgetId, setBudgetId] = useState("");
+  const sourceAccount = accounts.find((account) => account.id === accountId);
+  const destinationAccount = accounts.find(
+    (account) => account.id === destinationAccountId,
+  );
+  const crossCurrency =
+    kind === "transfer" &&
+    sourceAccount !== undefined &&
+    destinationAccount !== undefined &&
+    sourceAccount.currency !== destinationAccount.currency;
   function submit() {
     const parsed = manualTransactionSchema.safeParse({
       type: kind,
       accountId,
       ...(kind === "transfer" ? { destinationAccountId } : {}),
       ...(kind !== "transfer" && budgetId ? { budgetId } : {}),
+      currency: sourceAccount?.currency ?? "VND",
+      ...(kind === "transfer" && destinationAccount
+        ? { destinationCurrency: destinationAccount.currency }
+        : {}),
+      ...(kind === "transfer" && destinationAmount.trim()
+        ? { destinationAmountMinorUnits: destinationAmount.trim() }
+        : {}),
+      ...(kind === "transfer" && exchangeRate.trim()
+        ? { exchangeRate: exchangeRate.trim() }
+        : {}),
       amountMinorUnits: amount.trim(),
       effectiveDate,
       ...(description.trim() ? { description: description.trim() } : {}),
@@ -172,6 +196,14 @@ export default function NewTransactionRoute() {
       return;
     }
     const input: ManualTransactionForm = parsed.data;
+    if (
+      crossCurrency &&
+      !input.destinationAmountMinorUnits &&
+      !input.exchangeRate
+    ) {
+      setFeedback("Enter the received amount or an exchange rate.");
+      return;
+    }
     const command = stableCommandKey(
       commandRef.current,
       "mobile-transaction",
@@ -184,7 +216,7 @@ export default function NewTransactionRoute() {
     });
   }
   return (
-    <AppShell active="transactions">
+    <AppShell active="create">
       <ScrollScreen>
         <Header
           eyebrow="QUICK ADD"
@@ -220,6 +252,14 @@ export default function NewTransactionRoute() {
             {accountsQuery.isError ? (
               <InlineError message="Showing cached accounts. The draft can sync when the connection returns." />
             ) : null}
+            <TextField
+              label={`Amount (${sourceAccount?.currency ?? "account currency"} minor units)`}
+              value={amount}
+              onChangeText={setAmount}
+              keyboardType="number-pad"
+              placeholder="125000"
+              autoFocus
+            />
             <SelectField
               label="Type"
               value={kind}
@@ -246,6 +286,24 @@ export default function NewTransactionRoute() {
                 )}
               />
             ) : null}
+            {crossCurrency ? (
+              <>
+                <TextField
+                  label={`Received amount (${destinationAccount?.currency ?? "destination currency"} minor units, optional)`}
+                  value={destinationAmount}
+                  onChangeText={setDestinationAmount}
+                  keyboardType="number-pad"
+                  placeholder="2000000"
+                />
+                <TextField
+                  label={`Exchange rate (1 ${sourceAccount?.currency ?? "source currency"} = ${destinationAccount?.currency ?? "destination currency"}, optional)`}
+                  value={exchangeRate}
+                  onChangeText={setExchangeRate}
+                  keyboardType="decimal-pad"
+                  placeholder="20000"
+                />
+              </>
+            ) : null}
             {kind !== "transfer" ? (
               <SelectField
                 label="Budget (optional)"
@@ -254,13 +312,6 @@ export default function NewTransactionRoute() {
                 options={budgetOptions}
               />
             ) : null}
-            <TextField
-              label="Amount (VND minor units)"
-              value={amount}
-              onChangeText={setAmount}
-              keyboardType="number-pad"
-              placeholder="125000"
-            />
             <TextField
               label="Description (optional)"
               value={description}

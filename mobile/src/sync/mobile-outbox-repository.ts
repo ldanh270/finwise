@@ -39,6 +39,7 @@ export class MobileOutboxRepository {
               type: input.type,
               accountId: input.accountId,
               amountMinorUnits: input.amount.minorUnits,
+              amount: input.amount,
               effectiveDate: input.effectiveDate,
               ...(input.budgetId ? { budgetId: input.budgetId } : {}),
               ...(input.description ? { description: input.description } : {}),

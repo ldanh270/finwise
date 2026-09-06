@@ -22,11 +22,33 @@ import {
   BudgetPeriodRecord,
   BudgetConstraintRecord,
 } from '../domain/ledger.types';
+import type { CurrencyCode } from '../domain/currency';
 
 export interface BootstrapResult {
   readonly user: UserRecord;
   readonly workspaces: readonly WorkspaceRecord[];
   readonly suggestedWorkspaceId: string;
+}
+
+export interface InitialAccountSetupDraft {
+  readonly name: string;
+  readonly iconKey: string;
+  readonly kind: AccountKind;
+  readonly currency: CurrencyCode;
+  readonly openingBalanceMinorUnits: bigint;
+}
+
+export interface WorkspaceSetupDraft {
+  readonly name: string;
+  readonly kind: WorkspaceKind;
+  readonly defaultCurrency: CurrencyCode;
+  readonly initialAccount: InitialAccountSetupDraft;
+}
+
+export interface WorkspaceSetupResult {
+  readonly workspace: WorkspaceRecord;
+  readonly account: AccountRecord;
+  readonly budgets: readonly BudgetRecord[];
 }
 
 export interface InvitationCommandResult {
@@ -82,12 +104,15 @@ export interface JournalDraft {
   readonly workspaceId: string;
   readonly kind: JournalKind;
   readonly amountMinorUnits: bigint;
+  readonly currency?: CurrencyCode;
+  readonly exchangeRate?: string;
   readonly effectiveDate: string;
   readonly description?: string;
   readonly createdByMemberId: string;
   readonly entries: readonly {
     readonly accountId: string;
     readonly amountMinorUnits: bigint;
+    readonly currency?: CurrencyCode;
     readonly direction: 'increase' | 'decrease';
   }[];
   readonly reversalOfId?: string;
@@ -124,6 +149,10 @@ export interface BudgetOverviewProjection {
 
 export interface CoreStorePort extends CoreMembershipPort {
   bootstrap(actor: AuthenticatedActor): BootstrapResult;
+  createWorkspaceSetup(
+    actor: AuthenticatedActor,
+    input: WorkspaceSetupDraft,
+  ): WorkspaceSetupResult;
   createWorkspace(
     actor: AuthenticatedActor,
     name: string,
@@ -184,6 +213,9 @@ export interface CoreStorePort extends CoreMembershipPort {
     name: string,
     kind: AccountKind,
     visibilityMode: AccountVisibilityMode,
+    currency?: CurrencyCode,
+    iconKey?: string,
+    openingBalanceMinorUnits?: bigint,
   ): AccountRecord;
   getAccount(
     workspaceId: string,
@@ -196,7 +228,11 @@ export interface CoreStorePort extends CoreMembershipPort {
     actor: AuthenticatedActor,
   ): AccountRecord;
   memberIdFor(workspaceId: string, userId: string): string;
-  systemAccount(workspaceId: string, purpose: string): AccountRecord;
+  systemAccount(
+    workspaceId: string,
+    purpose: string,
+    currency?: CurrencyCode,
+  ): AccountRecord;
   postJournal(draft: JournalDraft): JournalTransactionRecord;
   postJournalWithClassification(
     draft: JournalDraft,

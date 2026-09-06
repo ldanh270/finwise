@@ -1,4 +1,4 @@
-import { MVP_CURRENCY } from '../../shared/domain/money';
+import type { CurrencyCode } from './currency';
 
 export type WorkspaceKind = 'personal' | 'family' | 'class_fund' | 'other';
 export type WorkspaceStatus = 'active' | 'archived';
@@ -87,7 +87,7 @@ export interface WorkspaceRecord {
   readonly id: string;
   name: string;
   readonly kind: WorkspaceKind;
-  readonly defaultCurrency: typeof MVP_CURRENCY;
+  readonly defaultCurrency: CurrencyCode;
   status: WorkspaceStatus;
   readonly createdAt: Date;
 }
@@ -120,8 +120,9 @@ export interface AccountRecord {
   readonly id: string;
   readonly workspaceId: string;
   name: string;
+  readonly iconKey: string;
   readonly kind: AccountKind;
-  readonly currency: typeof MVP_CURRENCY;
+  readonly currency: CurrencyCode;
   status: AccountStatus;
   visibilityMode: AccountVisibilityMode;
   readonly isSystem: boolean;
@@ -183,6 +184,7 @@ export interface JournalEntryRecord {
   readonly id: string;
   readonly accountId: string;
   readonly amountMinorUnits: bigint;
+  readonly currency: CurrencyCode;
   readonly direction: EntryDirection;
 }
 
@@ -192,7 +194,8 @@ export interface JournalTransactionRecord {
   readonly kind: JournalKind;
   status: JournalStatus;
   readonly amountMinorUnits: bigint;
-  readonly currency: typeof MVP_CURRENCY;
+  readonly currency: CurrencyCode;
+  readonly exchangeRate?: string;
   readonly effectiveDate: string;
   readonly recordedAt: Date;
   readonly description?: string;

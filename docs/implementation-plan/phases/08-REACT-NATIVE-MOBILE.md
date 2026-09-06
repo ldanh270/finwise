@@ -1,6 +1,8 @@
 # Phase 8 — React Native mobile
 
-Status: Online feature parity and Expo SDK 54 migration complete — Expo/CNG app, JWT/SecureStore boundary, shared API client, SQLite cache/outbox, and mobile feature routes delivered; native device sign-off remains
+Status: Online feature parity, Expo SDK 54 migration, first-run workspace setup,
+per-account currencies, manual FX transfers, five-item navigation, and local
+theme/language preferences are implemented; native device sign-off remains
 Depends on: [Phase 7](07-WEB-MVP-RELEASE.md), generated OpenAPI client, [auth/session architecture](../AUTH-SESSION-ARCHITECTURE.md)  
 Unblocks: first-class iOS/Android daily capture
 
@@ -41,6 +43,18 @@ controlled offline drafts without creating a second ledger.
   write/share and never posts a journal.
 - Normal logout is blocked until queued/failed financial drafts are synced,
   exported, or explicitly discarded. A new user must never see old partitions.
+- A first-time authenticated user sees workspace setup instead of an implicit
+  personal workspace. Setup atomically creates the owner, one required initial
+  account, its opening balance, and the workspace's default budgets.
+- Budgets are workspace-scoped classifications. The mobile transaction form
+  uses a budget directly and does not expose a separate category selector.
+- Accounts carry their own supported currency and icon key. Balances are
+  grouped by currency; the MVP never adds unlike currencies into one total.
+- Cross-currency transfers are online-only and require either the received
+  destination amount or a positive decimal exchange rate. Conversion uses
+  integer arithmetic and does not fetch an external rate provider.
+- The mobile shell exposes exactly Home, Account, central Add, Report, and
+  Other. Budgets and settings are reached from Other.
 
 ## Data flow
 

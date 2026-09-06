@@ -486,7 +486,7 @@ export default function GroupRoute() {
     createSponsored.mutate();
   }
   return (
-    <AppShell active="group">
+    <AppShell active="other">
       <ScrollScreen>
         <Header
           eyebrow="SHARED MONEY"

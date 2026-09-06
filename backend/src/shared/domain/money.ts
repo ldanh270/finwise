@@ -1,11 +1,12 @@
 import { FinwiseError } from '../errors/finwise-error';
+import { CurrencyCode, isCurrencyCode } from '../../core/domain/currency';
 
 export const MVP_CURRENCY = 'VND' as const;
-export type SupportedCurrency = typeof MVP_CURRENCY;
+export type SupportedCurrency = CurrencyCode;
 
 const MINOR_UNIT_PATTERN = /^(0|[1-9][0-9]*)$/;
 
-/** Exact, non-negative VND minor units. Financial inputs never pass through Number. */
+/** Exact, non-negative minor units. Financial inputs never pass through Number. */
 export class Money {
   private constructor(
     readonly currency: SupportedCurrency,
@@ -13,8 +14,8 @@ export class Money {
   ) {}
 
   static fromMinorUnits(value: string, currency: string = MVP_CURRENCY): Money {
-    if (currency !== MVP_CURRENCY) {
-      throw FinwiseError.validation('Only VND is supported by the MVP.', {
+    if (!isCurrencyCode(currency)) {
+      throw FinwiseError.validation('Currency is not supported by the MVP.', {
         field: 'currency',
       });
     }
@@ -30,14 +31,17 @@ export class Money {
         field: 'minorUnits',
       });
     }
-    return new Money(MVP_CURRENCY, minorUnits);
+    return new Money(currency, minorUnits);
   }
 
-  static fromBigInt(value: bigint): Money {
+  static fromBigInt(
+    value: bigint,
+    currency: CurrencyCode = MVP_CURRENCY,
+  ): Money {
     if (value <= 0n) {
       throw FinwiseError.validation('Amount must be greater than zero.');
     }
-    return new Money(MVP_CURRENCY, value);
+    return new Money(currency, value);
   }
 
   toMinorUnitsString(): string {

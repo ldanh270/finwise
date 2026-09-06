@@ -7,6 +7,7 @@ import type {
   TransactionAuditSummary,
   TransactionSummary,
   TagSummary,
+  CurrencyCode,
 } from "@finwise/api-client";
 
 /**
@@ -41,6 +42,9 @@ export function createAccount(
   input: {
     readonly name: string;
     readonly kind: AccountSummary["kind"];
+    readonly currency?: CurrencyCode;
+    readonly iconKey?: string;
+    readonly openingBalanceMinorUnits?: string;
   },
 ): Promise<AccountSummary> {
   return api.createAccount(workspaceId, input);
@@ -52,6 +56,7 @@ export function postOpeningBalance(
   accountId: string,
   input: {
     readonly amountMinorUnits: string;
+    readonly currency?: CurrencyCode;
     readonly effectiveDate: string;
   },
   idempotencyKey: string,
@@ -143,14 +148,56 @@ export function createTransaction(
   input: {
     readonly type: "income" | "expense" | "transfer";
     readonly amountMinorUnits: string;
+    readonly amount?: {
+      readonly currency: CurrencyCode;
+      readonly minorUnits: string;
+    };
+    readonly currency?: CurrencyCode;
     readonly accountId: string;
     readonly destinationAccountId?: string;
+    readonly destinationAmount?: {
+      readonly currency: CurrencyCode;
+      readonly minorUnits: string;
+    };
+    readonly destinationAmountMinorUnits?: string;
+    readonly destinationCurrency?: CurrencyCode;
+    readonly exchangeRate?: string;
+    readonly budgetId?: string;
     readonly effectiveDate: string;
     readonly description?: string;
   },
   idempotencyKey: string,
 ): Promise<TransactionSummary> {
-  return api.createTransaction(workspaceId, input, idempotencyKey);
+  return api.createTransaction(
+    workspaceId,
+    {
+      type: input.type,
+      amountMinorUnits: input.amountMinorUnits,
+      amount: input.amount ?? {
+        currency: input.currency ?? "VND",
+        minorUnits: input.amountMinorUnits,
+      },
+      accountId: input.accountId,
+      ...(input.destinationAccountId
+        ? { destinationAccountId: input.destinationAccountId }
+        : {}),
+      ...(input.destinationAmount
+        ? { destinationAmount: input.destinationAmount }
+        : input.destinationAmountMinorUnits && input.destinationCurrency
+          ? {
+              destinationAmount: {
+                currency: input.destinationCurrency,
+                minorUnits: input.destinationAmountMinorUnits,
+              },
+            }
+          : {}),
+      ...(input.budgetId ? { budgetId: input.budgetId } : {}),
+      ...(input.exchangeRate ? { exchangeRate: input.exchangeRate } : {}),
+      effectiveDate: input.effectiveDate,
+      ...(input.description ? { description: input.description } : {}),
+    },
+    idempotencyKey,
+  );
 }
 
 export function voidTransaction(
