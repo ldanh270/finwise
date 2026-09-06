@@ -1,6 +1,7 @@
 import type {
   BalanceViewSummary,
   FinwiseApiClient,
+  MoneyDto,
   OverviewResponse,
 } from "@finwise/api-client";
 
@@ -17,4 +18,10 @@ export function getBalanceViews(
   workspaceId: string,
 ): Promise<readonly BalanceViewSummary[]> {
   return api.getBalanceViews(workspaceId);
+}
+
+export function getOverviewAccountBalances(overview: {
+  readonly accountBalances?: readonly MoneyDto[];
+}): readonly MoneyDto[] {
+  return overview.accountBalances ?? [];
 }

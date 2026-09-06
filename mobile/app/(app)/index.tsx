@@ -20,6 +20,7 @@ import { useEffect, useState } from "react";
 import { WorkspaceCache } from "../../src/cache/workspace-cache";
 import {
   getBalanceViews,
+  getOverviewAccountBalances,
   getOverview,
 } from "../../src/features/overview/overview-service";
 
@@ -235,6 +236,8 @@ function ViewCards({
 }: {
   overview: import("@finwise/api-client").OverviewResponse;
 }) {
+  const accountBalances = getOverviewAccountBalances(overview);
+
   return (
     <View style={{ gap: 10 }}>
       <Card
@@ -242,10 +245,10 @@ function ViewCards({
       >
         <TextMuted text="Total balance" />
         <Money value={overview.totals.accountBalance} />
-        {overview.accountBalances.length > 1 ? (
+        {accountBalances.length > 1 ? (
           <View style={{ gap: 4 }}>
             <TextMuted text="Balances by currency" />
-            {overview.accountBalances.map((balance) => (
+            {accountBalances.map((balance) => (
               <View
                 key={balance.currency}
                 style={{
