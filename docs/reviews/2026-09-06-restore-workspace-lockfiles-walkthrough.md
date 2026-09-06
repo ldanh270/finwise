@@ -2,28 +2,24 @@
 
 ## Scope and non-goals
 
-This slice restores the pnpm workspace manifests and lockfiles required by
-GitHub Actions and keeps each workspace lockfile synchronized with its package
-manifest. It does not change application code, runtime behavior, database
-schema, or Vercel routing.
+This slice restores the root pnpm workspace manifest and lockfile required by
+GitHub Actions. Independently deployed web apps use npm lockfiles so Vercel can
+install them without detecting nested pnpm workspaces. It does not change
+application code, runtime behavior, database schema, or API routing.
 
 ## Affected files and modules
 
 - `.gitignore` no longer ignores package-manager lockfiles.
 - `pnpm-workspace.yaml` and `pnpm-lock.yaml` restore the root workspace
-  installation contract.
-- `backend/pnpm-workspace.yaml` and `backend/pnpm-lock.yaml` restore the
-  backend standalone installation contract, including direct
-  `class-transformer`, `class-validator`, and `express` dependencies.
-- `frontend/pnpm-workspace.yaml` and `frontend/pnpm-lock.yaml` restore the
-  frontend standalone installation contract, including direct `prettier`.
+  installation contract, including direct backend dependencies.
+- `backend/package-lock.json` and `frontend/package-lock.json` provide
+  standalone npm installation contracts for Vercel's two app roots.
 
 ## CI data flow
 
-GitHub checkout → tracked workspace manifest and lockfile →
-`actions/setup-node` pnpm cache lookup → frozen dependency installation. The
-cache step can now find the root `pnpm-lock.yaml`, and each nested project also
-has a valid lockfile when deployed from that directory.
+GitHub checkout → tracked root workspace manifest and lockfile →
+`actions/setup-node` pnpm cache lookup → frozen dependency installation. A
+Vercel app-root checkout sees its own `package-lock.json` and selects npm.
 
 ## Compatibility and rollback
 
@@ -34,13 +30,12 @@ data migration or runtime contract change is involved.
 ## Verification
 
 - Root `pnpm install --frozen-lockfile --lockfile-only --ignore-scripts --offline` passed.
-- Standalone backend frozen-lockfile validation passed.
-- Standalone frontend frozen-lockfile validation passed after adding
-  `prettier@^3.4.2` to its importer.
+- Backend and frontend npm lockfiles were generated with lifecycle scripts
+  disabled.
 - `git diff --check` passed.
 
 ## Known gaps and follow-up
 
-The GitHub Actions run must be rerun from a commit containing these restored
-files. The Node 20 deprecation and `punycode` messages are warnings and are
-separate from the missing-lockfile failure.
+The GitHub Actions and Vercel runs must be rerun from a commit containing these
+restored root and app lockfiles. The Node 20 deprecation and `punycode`
+messages are warnings and are separate from the missing-lockfile failure.

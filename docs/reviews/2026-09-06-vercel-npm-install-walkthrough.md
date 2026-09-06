@@ -13,19 +13,23 @@ schema, or API routing.
   entrypoint when the Vercel Root Directory is `backend/`.
 - `frontend/vercel.json` overrides installation when the Root Directory is
   `frontend/`.
+- `backend/package-lock.json` and `frontend/package-lock.json` make npm the
+  automatic fallback even when legacy Vercel `builds` settings ignore the
+  install override.
 
 ## Deployment data flow
 
 Vercel Root Directory → matching `vercel.json` → npm installs the selected
 application dependencies with lifecycle scripts disabled → existing Vercel
 builder runs. The explicit `installCommand` prevents pnpm lockfile detection
-from selecting `pnpm install --frozen-lockfile`.
+from selecting `pnpm install --frozen-lockfile`; the app-root npm lockfiles
+provide the same package-manager selection at Vercel's detection layer.
 
 ## Compatibility and rollback
 
 This is deployment configuration only. The local and GitHub Actions pnpm
-workflow remains supported by the tracked workspace lockfiles. Rollback is a
-normal Git revert; no data migration or runtime contract change is involved.
+workflow remains supported by the tracked root workspace lockfile. Rollback is
+a normal Git revert; no data migration or runtime contract change is involved.
 
 ## Verification
 
