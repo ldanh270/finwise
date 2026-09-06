@@ -1,35 +1,23 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "services": {
-    "frontend": {
-      "root": "frontend/",
-      "framework": "nextjs",
-      "bindings": [
-        {
-          "type": "service",
-          "service": "backend",
-          "format": "url",
-          "env": "FINWISE_INTERNAL_API_URL"
-        }
-      ]
-    },
-    "backend": {
-      "root": "backend/",
-      "framework": "nestjs"
-    }
-  },
-  "rewrites": [
-    {
-      "source": "/v1/(.*)",
-      "destination": {
-        "service": "backend"
-      }
-    },
-    {
-      "source": "/(.*)",
-      "destination": {
-        "service": "frontend"
-      }
-    }
-  ]
+	"version": 2,
+	"builds": [
+		{
+			"src": "frontend/package.json",
+			"use": "@vercel/next"
+		},
+		{
+			"src": "backend/src/main.ts",
+			"use": "@vercel/node"
+		}
+	],
+	"rewrites": [
+		{
+			"source": "/v1/(.*)",
+			"destination": "/backend/src/main.ts"
+		},
+		{
+			"source": "/(.*)",
+			"destination": "/frontend/$1"
+		}
+	]
 }

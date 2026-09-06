@@ -8,9 +8,21 @@ import { requestIdFor } from './shared/presentation/request-id';
 import { safeErrorMessage } from './shared/presentation/safe-log';
 import { readRuntimeConfig } from './config/runtime-config';
 
-async function bootstrap() {
+import { ExpressAdapter } from '@nestjs/platform-express';
+import express from 'express';
+
+// 2. Khởi tạo instance của express ở scope toàn cục
+const server: express.Express = express();
+
+async function bootstrap(expressInstance: express.Express) {
   const config = readRuntimeConfig();
-  const app = await NestFactory.create(AppModule);
+
+  // 3. Khởi tạo NestJS bọc lấy Express instance
+  const app = await NestFactory.create(
+    AppModule,
+    new ExpressAdapter(expressInstance),
+  );
+
   app.setGlobalPrefix('v1');
   app.enableCors({ origin: config.frontendOrigins, credentials: true });
   app.useGlobalPipes(
@@ -28,10 +40,14 @@ async function bootstrap() {
     next();
   });
   app.useGlobalFilters(new FinwiseErrorFilter());
-  await app.listen(config.port);
+  await app.init();
 }
-bootstrap().catch((error: unknown) => {
+
+bootstrap(server).catch((error: unknown) => {
   const message = safeErrorMessage(error);
   console.error(`Backend failed to start: ${message}`);
   process.exitCode = 1;
 });
+
+// 5. BẮT BUỘC: Export express server ra ngoài để Vercel nhận diện
+export default server;
